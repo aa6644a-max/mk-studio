@@ -6,22 +6,38 @@ import MetaPanel from "./meta-panel";
 import Editor from "./editor";
 import { emptyDraft, type PostDraft } from "@/lib/types";
 import { consumePendingPoster } from "@/lib/gallery-store";
+import { clearDraft, loadDraft, saveDraft } from "@/lib/draft-store";
 
 export default function WriteWorkspace() {
   const [draft, setDraft] = useState<PostDraft>(() => emptyDraft());
   const [busy, setBusy] = useState<null | "save" | "publish">(null);
   const [msg, setMsg] = useState("");
+  const [savedAt, setSavedAt] = useState<number | null>(null);
 
   const patch = useCallback(
     (p: Partial<PostDraft>) => setDraft((d) => ({ ...d, ...p })),
     [],
   );
 
-  // 갤러리에서 인계된 포스터 적용
+  // 마운트: 자동저장 드래프트 복원 → 갤러리 인계 포스터 적용
   useEffect(() => {
+    const restored = loadDraft();
     const poster = consumePendingPoster();
-    if (poster) setDraft((d) => ({ ...d, posterUrl: poster }));
+    if (restored || poster) {
+      setDraft((d) => ({ ...(restored ?? d), ...(poster ? { posterUrl: poster } : {}) }));
+    }
   }, []);
+
+  // 자동저장 (1초 디바운스). 빈 초기 상태는 저장 안 함.
+  useEffect(() => {
+    const empty = emptyDraft();
+    if (JSON.stringify(draft) === JSON.stringify(empty)) return;
+    const t = setTimeout(() => {
+      saveDraft(draft);
+      setSavedAt(Date.now());
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [draft]);
 
   async function savePost(status: PostDraft["status"], content: string) {
     const res = await fetch("/api/posts", {
@@ -42,6 +58,7 @@ export default function WriteWorkspace() {
     setMsg("");
     try {
       await savePost("draft", draft.generatedHtml || draft.body);
+      clearDraft();
       setMsg("임시저장 완료");
     } catch (e) {
       setMsg((e as Error).message);
@@ -63,6 +80,7 @@ export default function WriteWorkspace() {
       const { html } = await res.json();
       patch({ generatedHtml: html, status: "published" });
       await savePost("published", html);
+      clearDraft();
       setMsg("발행 완료 — HTML 복사 후 네이버 붙여넣기");
     } catch (e) {
       setMsg((e as Error).message);
@@ -101,7 +119,7 @@ export default function WriteWorkspace() {
       />
       <div className="flex flex-col md:flex-row md:h-[calc(100vh-var(--header-height))]">
         <MetaPanel draft={draft} onChange={patch} />
-        <Editor draft={draft} onChange={patch} />
+        <Editor draft={draft} onChange={patch} savedAt={savedAt} />
       </div>
     </>
   );

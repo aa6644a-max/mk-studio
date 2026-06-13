@@ -7,11 +7,19 @@ const TOOLBAR = ["B", "I", "U", "H1", "H2", "목록", "링크", "이미지"];
 export default function Editor({
   draft,
   onChange,
+  savedAt,
 }: {
   draft: PostDraft;
   onChange: (patch: Partial<PostDraft>) => void;
+  savedAt?: number | null;
 }) {
   const charCount = draft.body.length;
+  const savedLabel = savedAt
+    ? `자동저장됨 ${new Date(savedAt).toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`
+    : "자동저장 대기";
 
   return (
     <section className="flex flex-1 flex-col overflow-hidden p-4">
@@ -47,7 +55,7 @@ export default function Editor({
       {/* 하단: 글자수 · 자동저장 */}
       <div className="mt-2 flex items-center justify-between text-xs text-[var(--text-secondary)]">
         <span>{charCount}자</span>
-        <span>자동저장 대기</span>
+        <span>{savedLabel}</span>
       </div>
 
       {/* 생성 결과 */}
