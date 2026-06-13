@@ -1,0 +1,51 @@
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
+@import "tailwindcss";
+
+/* ── 디자인 토큰 ───────────────────────────────── */
+:root {
+  --sidebar-bg: #171719;
+  --accent: #0066ff;
+  --page-bg: #f7f7f8;
+  --panel-bg: #ffffff;
+  --panel-border: rgba(112, 115, 124, 0.13);
+  --text-primary: #171719;
+  --text-secondary: #5a5c63;
+  --sidebar-width: 228px;
+  --header-height: 52px;
+}
+
+/* Tailwind v4 토큰 노출 (text-accent, bg-page 등) */
+@theme inline {
+  --color-sidebar: var(--sidebar-bg);
+  --color-accent: var(--accent);
+  --color-page: var(--page-bg);
+  --color-panel: var(--panel-bg);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --font-sans: "Pretendard Variable", "Pretendard", -apple-system,
+    BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--page-bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.panel {
+  background: var(--panel-bg);
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px var(--panel-border);
+}
