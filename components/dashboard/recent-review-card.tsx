@@ -1,9 +1,9 @@
 import type { Post } from "@/lib/types";
-import { POST_TYPE_META } from "@/lib/types";
+import { postTypeMeta } from "@/lib/types";
 import { posterColor } from "@/lib/colors";
 
 export default function RecentReviewCard({ post }: { post: Post }) {
-  const meta = POST_TYPE_META[post.postType];
+  const meta = postTypeMeta(post.postType);
   return (
     <div className="panel overflow-hidden">
       <div

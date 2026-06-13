@@ -125,3 +125,8 @@ export const POST_TYPE_META: Record<
   local: { label: "로컬소식/공고문", icon: "📢" },
   pdf: { label: "PDF 요약", icon: "📄" },
 };
+
+/** 알 수 없는(레거시) post_type 도 안전 처리. */
+export function postTypeMeta(t: string): { label: string; icon: string } {
+  return POST_TYPE_META[t as PostType] ?? { label: t || "기타", icon: "📝" };
+}

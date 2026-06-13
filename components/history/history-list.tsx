@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Post, PostStatus } from "@/lib/types";
-import { POST_TYPE_META } from "@/lib/types";
+import { postTypeMeta } from "@/lib/types";
 import { posterColor } from "@/lib/colors";
 
 type Filter = "all" | PostStatus;
@@ -76,14 +76,14 @@ export default function HistoryList({ query }: { query: string }) {
                 className="flex h-14 w-10 shrink-0 items-center justify-center rounded text-lg text-white/90"
                 style={{ background: posterColor(p.movieTitle) }}
               >
-                {POST_TYPE_META[p.postType].icon}
+                {postTypeMeta(p.postType).icon}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="truncate font-bold text-[var(--text-primary)]">
                   {p.movieTitle}
                 </div>
                 <div className="mt-0.5 text-xs text-[var(--text-secondary)]">
-                  {POST_TYPE_META[p.postType].label} · {p.timestamp.slice(0, 10)}
+                  {postTypeMeta(p.postType).label} · {p.timestamp.slice(0, 10)}
                 </div>
               </div>
               <span

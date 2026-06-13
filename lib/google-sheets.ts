@@ -123,10 +123,9 @@ export async function getPosts(filter?: PostStatus): Promise<Post[]> {
       range: SHEET_RANGE,
     });
     const rows = res.data.values ?? [];
-    // 헤더 행 추정: 첫 행이 'timestamp' 류면 스킵
-    const body =
-      rows[0]?.[0]?.toLowerCase().includes("time") ? rows.slice(1) : rows;
-    posts = body.filter((r) => r.length > 0).map(rowToPost);
+    // 데이터 행만: A열이 'YYYY-MM-DD' 타임스탬프인 행 (헤더/빈행 자동 제외)
+    const body = rows.filter((r) => /^\d{4}-\d{2}-\d{2}/.test(r[0] ?? ""));
+    posts = body.map(rowToPost);
   }
 
   posts.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
