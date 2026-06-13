@@ -30,6 +30,11 @@ export type PostDraft = {
   movieTitle: string;
   rating: number; // 1~5
   watchReason: string;
+  // 프리뷰: 개봉일 / 기대 포인트
+  releaseDate: string;
+  expectPoints: string;
+  // 큐레이션·정주행: 항목 목록 (영화 여러 편 / 회차 구성)
+  items: string[];
   // 본문 (사용자 메모/지시) + 생성 결과
   body: string;
   generatedHtml: string;
@@ -45,6 +50,9 @@ export function emptyDraft(postType: PostType = "review"): PostDraft {
     movieTitle: "",
     rating: 0,
     watchReason: "",
+    releaseDate: "",
+    expectPoints: "",
+    items: [],
     body: "",
     generatedHtml: "",
   };

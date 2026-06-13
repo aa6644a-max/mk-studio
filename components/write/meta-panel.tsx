@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { PostDraft, PostType } from "@/lib/types";
 import { POST_TYPE_META } from "@/lib/types";
 import MovieSearch from "./movie-search";
@@ -58,12 +59,46 @@ export default function MetaPanel({
       </Field>
 
       {/* 타입별 고유 필드 */}
-      {draft.postType === "review" ? (
+      {draft.postType === "review" && (
         <ReviewFields draft={draft} onChange={onChange} />
-      ) : (
+      )}
+      {draft.postType === "preview" && (
+        <PreviewFields draft={draft} onChange={onChange} />
+      )}
+      {draft.postType === "curation" && (
+        <ItemListField
+          label="추천 영화 목록"
+          placeholder="영화 제목 입력 후 Enter"
+          items={draft.items}
+          onChange={(items) => onChange({ items })}
+        />
+      )}
+      {draft.postType === "binge" && (
+        <>
+          <Field label="시리즈명">
+            <input
+              value={draft.movieTitle}
+              onChange={(e) =>
+                onChange({ movieTitle: e.target.value, title: draft.title || e.target.value })
+              }
+              placeholder="시리즈 제목"
+              className="w-full rounded-lg border border-[var(--panel-border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            />
+          </Field>
+          <ItemListField
+            label="회차 구성"
+            placeholder="예: 시즌1 1~8화"
+            items={draft.items}
+            onChange={(items) => onChange({ items })}
+          />
+        </>
+      )}
+      {(draft.postType === "photo" ||
+        draft.postType === "local" ||
+        draft.postType === "pdf") && (
         <div className="rounded-lg border border-dashed border-[var(--panel-border)] p-3 text-xs text-[var(--text-secondary)]">
-          {POST_TYPE_META[draft.postType].label} 전용 필드는 곧 추가됩니다
-          (issue #8/#9).
+          {POST_TYPE_META[draft.postType].label} 전용 필드는 파일 업로드 포함
+          (issue #9).
         </div>
       )}
 
@@ -171,6 +206,116 @@ function ReviewFields({
         />
       </Field>
     </>
+  );
+}
+
+function PreviewFields({
+  draft,
+  onChange,
+}: {
+  draft: PostDraft;
+  onChange: (patch: Partial<PostDraft>) => void;
+}) {
+  return (
+    <>
+      <Field label="영화 검색 (TMDB)">
+        <MovieSearch
+          onSelect={(m) =>
+            onChange({
+              movieTitle: m.title,
+              posterUrl: m.posterUrl,
+              title: draft.title || `${m.title} 개봉 프리뷰`,
+            })
+          }
+        />
+        {draft.movieTitle && (
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">
+            선택: {draft.movieTitle}
+          </p>
+        )}
+      </Field>
+      <Field label="개봉일">
+        <input
+          type="date"
+          value={draft.releaseDate}
+          onChange={(e) => onChange({ releaseDate: e.target.value })}
+          className="w-full rounded-lg border border-[var(--panel-border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+        />
+      </Field>
+      <Field label="기대 포인트">
+        <textarea
+          value={draft.expectPoints}
+          onChange={(e) => onChange({ expectPoints: e.target.value })}
+          rows={3}
+          placeholder="이 영화의 기대 포인트"
+          className="w-full resize-none rounded-lg border border-[var(--panel-border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+        />
+      </Field>
+    </>
+  );
+}
+
+function ItemListField({
+  label,
+  placeholder,
+  items,
+  onChange,
+}: {
+  label: string;
+  placeholder: string;
+  items: string[];
+  onChange: (items: string[]) => void;
+}) {
+  const [input, setInput] = useState("");
+  const add = () => {
+    const v = input.trim();
+    if (!v) return;
+    onChange([...items, v]);
+    setInput("");
+  };
+  return (
+    <Field label={label}>
+      <div className="flex gap-1">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              add();
+            }
+          }}
+          placeholder={placeholder}
+          className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+        />
+        <button
+          type="button"
+          onClick={add}
+          className="shrink-0 rounded-lg bg-[var(--accent)] px-3 text-sm font-semibold text-white"
+        >
+          추가
+        </button>
+      </div>
+      {items.length > 0 && (
+        <ul className="mt-2 space-y-1">
+          {items.map((it, i) => (
+            <li
+              key={i}
+              className="flex items-center justify-between rounded-lg bg-page px-3 py-1.5 text-sm"
+            >
+              <span className="truncate">{it}</span>
+              <button
+                type="button"
+                onClick={() => onChange(items.filter((_, j) => j !== i))}
+                className="ml-2 shrink-0 text-[var(--text-secondary)] hover:text-red-500"
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Field>
   );
 }
 

@@ -49,8 +49,10 @@ function byType(d: PostDraft): string {
 개봉 프리뷰(기대작 소개)를 작성하라.
 - 영화: ${d.movieTitle || d.title}
 - 장르: ${genres}
+- 개봉일: ${d.releaseDate || "미정"}
+- 기대 포인트: ${d.expectPoints || "미기재"}
 
-구성: 작품 개요 → 기대 포인트 3가지 → 감독/배우 맥락 → 개봉 전 한 줄 기대평.${memo}
+구성: 작품 개요 → 기대 포인트 → 감독/배우 맥락 → 개봉 전 한 줄 기대평.${memo}
 `.trim();
 
     case "curation":
@@ -58,8 +60,9 @@ function byType(d: PostDraft): string {
 큐레이션 리스트(테마 추천 모음)를 작성하라.
 - 테마/제목: ${d.title}
 - 장르: ${genres}
+- 추천 영화 목록: ${d.items.length ? d.items.join(", ") : "(자유 선정)"}
 
-구성: 테마 도입 → 추천작 3~5편 각각 소제목 + 짧은 추천사 → 마무리 한 줄.${memo}
+구성: 테마 도입 → 추천작 각각 소제목 + 짧은 추천사 → 마무리 한 줄.${memo}
 `.trim();
 
     case "binge":
@@ -67,6 +70,7 @@ function byType(d: PostDraft): string {
 정주행 추천(시리즈)을 작성하라.
 - 시리즈/제목: ${d.title}
 - 장르: ${genres}
+- 회차 구성: ${d.items.length ? d.items.join(", ") : "미기재"}
 
 구성: 시리즈 개요 → 정주행 포인트 → 회차 구성/볼거리 → 한 줄 추천평.${memo}
 `.trim();
