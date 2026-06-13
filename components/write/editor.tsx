@@ -77,6 +77,31 @@ export default function Editor({
             className="panel max-h-80 overflow-y-auto p-4 text-sm leading-relaxed"
             dangerouslySetInnerHTML={{ __html: draft.generatedHtml }}
           />
+
+          {draft.seoTitles.length > 0 && (
+            <div className="mt-3">
+              <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                네이버 SEO 제목 추천
+              </span>
+              <ul className="mt-1.5 space-y-1">
+                {draft.seoTitles.map((t, i) => (
+                  <li
+                    key={i}
+                    className="flex items-center justify-between rounded-lg bg-page px-3 py-1.5 text-sm"
+                  >
+                    <span className="min-w-0 truncate">{t}</span>
+                    <button
+                      type="button"
+                      onClick={() => navigator.clipboard.writeText(t)}
+                      className="ml-2 shrink-0 text-xs font-semibold text-[var(--accent)]"
+                    >
+                      복사
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </section>

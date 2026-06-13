@@ -77,8 +77,8 @@ export default function WriteWorkspace() {
         body: JSON.stringify(draft),
       });
       if (!res.ok) throw new Error("생성 실패");
-      const { html } = await res.json();
-      patch({ generatedHtml: html, status: "published" });
+      const { html, titles } = await res.json();
+      patch({ generatedHtml: html, seoTitles: titles ?? [], status: "published" });
       await savePost("published", html);
       clearDraft();
       setMsg("발행 완료 — HTML 복사 후 네이버 붙여넣기");

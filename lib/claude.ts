@@ -4,63 +4,94 @@ import { getRecentPosts } from "@/lib/google-sheets";
 import { buildPrompt } from "@/lib/prompts";
 
 /**
- * Claude 포스팅 생성. PRD §6: Sonnet 4.6, 스트리밍 없이 완성 후 반환이지만
- * 생성이 길어(1~2분) HTTP 타임아웃 방지 위해 SDK 스트리밍 + finalMessage 사용.
- * adaptive thinking. 키 없으면 mock HTML 반환.
+ * Claude 포스팅 생성 (V2 ClaudeClient 정렬).
+ * Sonnet 4.6, max_tokens 8192, 429/529 재시도, 코드펜스 제거,
+ * <!-- TITLES: --> 추출. 키 없으면 mock 반환.
  */
 
-const MODEL = "claude-sonnet-4-6"; // PRD 명시 모델
+const MODEL = "claude-sonnet-4-6";
+const MAX_RETRIES = 3;
+
+export type GenerateResult = { html: string; titles: string[] };
 
 export function isClaudeConfigured(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY);
 }
 
-export async function generatePost(draft: PostDraft): Promise<string> {
+export async function generatePost(draft: PostDraft): Promise<GenerateResult> {
   if (!process.env.ANTHROPIC_API_KEY) {
-    return mockHtml(draft);
+    return { html: mockHtml(draft), titles: mockTitles(draft) };
   }
 
-  // 문체 레퍼런스 (RAG-lite)
   const references = await getRecentPosts(3).catch(() => []);
   const { system, user } = buildPrompt(draft, references);
-
   const client = new Anthropic();
-  const stream = client.messages.stream({
-    model: MODEL,
-    max_tokens: 16000,
-    thinking: { type: "adaptive" },
-    output_config: { effort: "medium" },
-    system,
-    messages: [{ role: "user", content: user }],
-  });
 
-  const final = await stream.finalMessage();
-  const html = final.content
-    .filter((b): b is Anthropic.TextBlock => b.type === "text")
-    .map((b) => b.text)
-    .join("\n")
-    .trim();
+  let text = "";
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const res = await client.messages.create({
+        model: MODEL,
+        max_tokens: 8192,
+        system,
+        messages: [{ role: "user", content: user }],
+      });
+      const block = res.content.find((b) => b.type === "text");
+      text = block && block.type === "text" ? block.text : "";
+      break;
+    } catch (e) {
+      const msg = String((e as Error).message);
+      const retryable = ["429", "529", "overloaded", "rate_limit"].some((k) =>
+        msg.includes(k),
+      );
+      if (retryable && attempt < MAX_RETRIES - 1) {
+        await sleep((attempt + 1) * 5000);
+        continue;
+      }
+      throw e;
+    }
+  }
 
-  return stripFence(html);
+  return splitTitles(stripFence(text.trim()));
 }
 
-/** 코드펜스로 감싸 나오면 제거. */
+/** 코드펜스 제거. */
 function stripFence(s: string): string {
-  const m = s.match(/^```(?:html)?\s*([\s\S]*?)\s*```$/);
-  return m ? m[1].trim() : s;
+  return s
+    .replace(/^```html?\s*\n?/i, "")
+    .replace(/\n?```\s*$/i, "")
+    .trim();
+}
+
+/** <!-- TITLES: a||b||c --> 추출 → {html(주석제거), titles[]}. */
+function splitTitles(s: string): GenerateResult {
+  const m = s.match(/<!--\s*TITLES:\s*([\s\S]*?)-->/i);
+  const titles = m
+    ? m[1]
+        .split("||")
+        .map((t) => t.trim())
+        .filter(Boolean)
+    : [];
+  const html = s.replace(/<!--\s*TITLES:[\s\S]*?-->/i, "").trim();
+  return { html, titles };
+}
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 function mockHtml(draft: PostDraft): string {
   const title = draft.title || draft.movieTitle || "포스팅";
-  const stars = draft.rating ? "★".repeat(draft.rating) : "";
   return `
 <div style="font-family:'Pretendard',-apple-system,sans-serif;color:#2c2c2c;line-height:1.8;font-size:16px">
   <p>(데모 출력 — <strong>ANTHROPIC_API_KEY</strong> 미설정. 실제 생성은 키 설정 후 동작합니다.)</p>
-  <h3 style="font-size:20px;font-weight:700;color:#171719;margin:32px 0 12px">${title}</h3>
-  <p>장르: ${draft.genres.join(", ") || "미지정"} · 타입: ${draft.postType}</p>
-  ${draft.body ? `<p>${draft.body}</p>` : ""}
-  <div style="background:#f7f7f8;border-left:4px solid #0066ff;padding:16px 20px;border-radius:8px;margin:20px 0">
-    한 줄 총평이 여기에 들어갑니다. ${stars}
-  </div>
+  <table width="100%" border="0" cellpadding="15" bgcolor="#1a1a1a"><tr><td><b style="color:#ffffff; font-size:18px;">${title}</b></td></tr></table>
+  <p>타입: ${draft.postType} · 장르: ${draft.genres.join(", ") || "미지정"}</p>
+  ${draft.comment || draft.body ? `<p>${draft.comment || draft.body}</p>` : ""}
 </div>`.trim();
+}
+
+function mockTitles(draft: PostDraft): string[] {
+  const t = draft.title || draft.movieTitle || "포스팅";
+  return [`${t} 리뷰`, `${t} 후기`, `${t} 줄거리 결말`, `${t} 추천 이유`, `${t} 정보`];
 }

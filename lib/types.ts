@@ -10,6 +10,39 @@ export type PostType =
 
 export type PostStatus = "published" | "draft";
 
+// TMDB 영화 상세 (V2 get_movie_details 이식)
+export type MovieDetails = {
+  id?: number;
+  title: string;
+  originalTitle?: string;
+  country?: string;
+  releaseDate?: string;
+  director?: string;
+  actors?: string;
+  genres?: string;
+  overview?: string;
+  posterUrl?: string;
+  backdropUrls?: string[];
+};
+
+// TMDB TV 상세 (정주행)
+export type TvDetails = {
+  id?: number;
+  title: string;
+  originalTitle?: string;
+  country?: string;
+  firstAirDate?: string;
+  numberOfEpisodes?: number;
+  numberOfSeasons?: number;
+  episodeRuntime?: number;
+  totalWatchTime?: string;
+  genres?: string;
+  overview?: string;
+  cast?: string;
+  posterUrl?: string;
+  backdropUrls?: string[];
+};
+
 // MK_CINELAB_DB 한 행 (A~E 컬럼)
 export type Post = {
   timestamp: string; // A: YYYY-MM-DD HH:MM:SS
@@ -29,7 +62,10 @@ export type PostDraft = {
   // 영화 리뷰 고유
   movieTitle: string;
   rating: number; // 1~5
-  watchReason: string;
+  watchReason: string; // 포스팅 계기/관람 이유 (reason)
+  comment: string; // 나의 주관적 감상평 (review)
+  details: MovieDetails | null; // TMDB 상세 (감독/배우/스틸컷 등)
+  tvDetails: TvDetails | null; // 정주행용
   // 프리뷰: 개봉일 / 기대 포인트
   releaseDate: string;
   expectPoints: string;
@@ -46,6 +82,7 @@ export type PostDraft = {
   // 본문 (사용자 메모/지시) + 생성 결과
   body: string;
   generatedHtml: string;
+  seoTitles: string[]; // 생성 결과의 네이버 SEO 제목 5개
 };
 
 export function emptyDraft(postType: PostType = "review"): PostDraft {
@@ -58,6 +95,9 @@ export function emptyDraft(postType: PostType = "review"): PostDraft {
     movieTitle: "",
     rating: 0,
     watchReason: "",
+    comment: "",
+    details: null,
+    tvDetails: null,
     releaseDate: "",
     expectPoints: "",
     items: [],
@@ -69,6 +109,7 @@ export function emptyDraft(postType: PostType = "review"): PostDraft {
     pdfNames: [],
     body: "",
     generatedHtml: "",
+    seoTitles: [],
   };
 }
 

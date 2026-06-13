@@ -1,5 +1,6 @@
 import type { PostDraft, Post } from "@/lib/types";
-import { buildMoviePrompt, type PromptResult } from "./movie";
+import type { PromptResult } from "./base";
+import { buildMoviePrompt } from "./movie";
 import { buildDailyPrompt } from "./daily";
 import { buildLocalPrompt } from "./local";
 
