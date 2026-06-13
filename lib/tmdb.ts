@@ -44,6 +44,24 @@ export function isTmdbConfigured(): boolean {
   return Boolean(process.env.TMDB_API_KEY);
 }
 
+/**
+ * TMDB 호출. 키가 `eyJ...` (v4 Bearer JWT)면 Authorization 헤더,
+ * 32자 v3 키면 api_key 쿼리. 둘 다 지원.
+ */
+function tmdbGet(
+  path: string,
+  params: Record<string, string> = {},
+): Promise<Response> {
+  const key = process.env.TMDB_API_KEY ?? "";
+  const isV4 = key.startsWith("eyJ");
+  const usp = new URLSearchParams({ language: "ko-KR", ...params });
+  if (!isV4) usp.set("api_key", key);
+  return fetch(`${BASE}${path}?${usp.toString()}`, {
+    headers: isV4 ? { Authorization: `Bearer ${key}` } : undefined,
+    next: { revalidate: 3600 },
+  });
+}
+
 function mapResult(m: {
   id: number;
   title: string;
@@ -73,10 +91,7 @@ export async function searchMovies(query: string): Promise<MovieResult[]> {
     return MOCK_RESULTS.filter((m) => m.title.includes(q) || true);
   }
 
-  const url = `${BASE}/search/movie?api_key=${key}&language=ko-KR&query=${encodeURIComponent(
-    q,
-  )}&include_adult=false`;
-  const res = await fetch(url, { next: { revalidate: 3600 } });
+  const res = await tmdbGet("/search/movie", { query: q, include_adult: "false" });
   if (!res.ok) {
     throw new Error(`TMDB 검색 실패: ${res.status}`);
   }
@@ -89,8 +104,7 @@ export async function searchTv(query: string): Promise<MovieResult[]> {
   if (!q) return [];
   const key = process.env.TMDB_API_KEY;
   if (!key) return MOCK_RESULTS;
-  const url = `${BASE}/search/tv?api_key=${key}&language=ko-KR&query=${encodeURIComponent(q)}`;
-  const res = await fetch(url, { next: { revalidate: 3600 } });
+  const res = await tmdbGet("/search/tv", { query: q });
   if (!res.ok) throw new Error(`TMDB TV 검색 실패: ${res.status}`);
   const data = (await res.json()) as {
     results?: {
@@ -137,8 +151,10 @@ export async function getMovieDetails(id: number): Promise<MovieDetails | null> 
     };
   }
 
-  const url = `${BASE}/movie/${id}?api_key=${key}&language=ko-KR&append_to_response=credits,images&include_image_language=ko,en,null`;
-  const res = await fetch(url, { next: { revalidate: 3600 } });
+  const res = await tmdbGet(`/movie/${id}`, {
+    append_to_response: "credits,images",
+    include_image_language: "ko,en,null",
+  });
   if (!res.ok) throw new Error(`TMDB 상세 실패: ${res.status}`);
   const data = (await res.json()) as {
     id?: number;
@@ -210,8 +226,10 @@ export async function getTvDetails(id: number): Promise<TvDetails | null> {
     };
   }
 
-  const url = `${BASE}/tv/${id}?api_key=${key}&language=ko-KR&append_to_response=credits,images&include_image_language=ko,en,null`;
-  const res = await fetch(url, { next: { revalidate: 3600 } });
+  const res = await tmdbGet(`/tv/${id}`, {
+    append_to_response: "credits,images",
+    include_image_language: "ko,en,null",
+  });
   if (!res.ok) throw new Error(`TMDB TV 상세 실패: ${res.status}`);
   const data = (await res.json()) as {
     id?: number;
