@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { PostDraft } from "@/lib/types";
 import { getRecentPosts } from "@/lib/google-sheets";
-import { buildMoviePrompt } from "@/lib/prompts/movie";
+import { buildPrompt } from "@/lib/prompts";
 
 /**
  * Claude 포스팅 생성. PRD §6: Sonnet 4.6, 스트리밍 없이 완성 후 반환이지만
@@ -22,7 +22,7 @@ export async function generatePost(draft: PostDraft): Promise<string> {
 
   // 문체 레퍼런스 (RAG-lite)
   const references = await getRecentPosts(3).catch(() => []);
-  const { system, user } = buildMoviePrompt(draft, references);
+  const { system, user } = buildPrompt(draft, references);
 
   const client = new Anthropic();
   const stream = client.messages.stream({

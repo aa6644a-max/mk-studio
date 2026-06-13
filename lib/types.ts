@@ -35,6 +35,14 @@ export type PostDraft = {
   expectPoints: string;
   // 큐레이션·정주행: 항목 목록 (영화 여러 편 / 회차 구성)
   items: string[];
+  // 사진 포스팅: 장소명 / 업로드 이미지 이름
+  placeName: string;
+  imageNames: string[];
+  // PDF 요약: 카테고리, 공고문: 소개 목적 / 추출 텍스트
+  category: string;
+  purpose: string;
+  pdfText: string; // PDF에서 추출한 본문 (서버 추출)
+  pdfNames: string[];
   // 본문 (사용자 메모/지시) + 생성 결과
   body: string;
   generatedHtml: string;
@@ -53,6 +61,12 @@ export function emptyDraft(postType: PostType = "review"): PostDraft {
     releaseDate: "",
     expectPoints: "",
     items: [],
+    placeName: "",
+    imageNames: [],
+    category: "",
+    purpose: "",
+    pdfText: "",
+    pdfNames: [],
     body: "",
     generatedHtml: "",
   };

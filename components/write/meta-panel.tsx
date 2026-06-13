@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { PostDraft, PostType } from "@/lib/types";
 import { POST_TYPE_META } from "@/lib/types";
 import MovieSearch from "./movie-search";
+import FileUpload from "./file-upload";
 
 export default function MetaPanel({
   draft,
@@ -93,13 +94,11 @@ export default function MetaPanel({
           />
         </>
       )}
-      {(draft.postType === "photo" ||
-        draft.postType === "local" ||
-        draft.postType === "pdf") && (
-        <div className="rounded-lg border border-dashed border-[var(--panel-border)] p-3 text-xs text-[var(--text-secondary)]">
-          {POST_TYPE_META[draft.postType].label} 전용 필드는 파일 업로드 포함
-          (issue #9).
-        </div>
+      {draft.postType === "photo" && (
+        <PhotoFields draft={draft} onChange={onChange} />
+      )}
+      {(draft.postType === "local" || draft.postType === "pdf") && (
+        <PdfFields draft={draft} onChange={onChange} />
       )}
 
       {/* 공통: 제목 */}
@@ -316,6 +315,143 @@ function ItemListField({
         </ul>
       )}
     </Field>
+  );
+}
+
+function PhotoFields({
+  draft,
+  onChange,
+}: {
+  draft: PostDraft;
+  onChange: (patch: Partial<PostDraft>) => void;
+}) {
+  return (
+    <>
+      <Field label="장소명">
+        <input
+          value={draft.placeName}
+          onChange={(e) => onChange({ placeName: e.target.value })}
+          placeholder="촬영/방문 장소"
+          className="w-full rounded-lg border border-[var(--panel-border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+        />
+      </Field>
+      <Field label={`사진 (${draft.imageNames.length}장)`}>
+        <FileUpload
+          accept="image/png,image/jpeg,image/webp"
+          label="이미지 드래그 또는 클릭"
+          onFiles={(files) =>
+            onChange({
+              imageNames: [...draft.imageNames, ...files.map((f) => f.name)],
+            })
+          }
+        />
+        {draft.imageNames.length > 0 && (
+          <ul className="mt-2 space-y-1">
+            {draft.imageNames.map((n, i) => (
+              <li
+                key={i}
+                className="flex items-center justify-between rounded bg-page px-2 py-1 text-xs"
+              >
+                <span className="truncate">🖼 {n}</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChange({
+                      imageNames: draft.imageNames.filter((_, j) => j !== i),
+                    })
+                  }
+                  className="ml-2 text-[var(--text-secondary)] hover:text-red-500"
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Field>
+    </>
+  );
+}
+
+function PdfFields({
+  draft,
+  onChange,
+}: {
+  draft: PostDraft;
+  onChange: (patch: Partial<PostDraft>) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const isLocal = draft.postType === "local";
+
+  async function handlePdfs(files: File[]) {
+    setBusy(true);
+    try {
+      const texts: string[] = [];
+      const names: string[] = [];
+      for (const f of files) {
+        const fd = new FormData();
+        fd.append("file", f);
+        const res = await fetch("/api/extract-pdf", {
+          method: "POST",
+          body: fd,
+        });
+        const data = await res.json();
+        if (res.ok) {
+          texts.push(data.text ?? "");
+          names.push(data.name ?? f.name);
+        }
+      }
+      onChange({
+        pdfNames: [...draft.pdfNames, ...names],
+        pdfText: [draft.pdfText, ...texts].filter(Boolean).join("\n\n"),
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <Field label={isLocal ? "소개 목적" : "카테고리"}>
+        <input
+          value={isLocal ? draft.purpose : draft.category}
+          onChange={(e) =>
+            onChange(
+              isLocal
+                ? { purpose: e.target.value }
+                : { category: e.target.value },
+            )
+          }
+          placeholder={isLocal ? "예: 주민 안내" : "예: 정책/행사"}
+          className="w-full rounded-lg border border-[var(--panel-border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+        />
+      </Field>
+      <Field label={`PDF (${draft.pdfNames.length}개)`}>
+        <FileUpload
+          accept="application/pdf"
+          label="PDF 드래그 또는 클릭 (텍스트 추출)"
+          busy={busy}
+          onFiles={handlePdfs}
+        />
+        {draft.pdfNames.length > 0 && (
+          <ul className="mt-2 space-y-1">
+            {draft.pdfNames.map((n, i) => (
+              <li
+                key={i}
+                className="truncate rounded bg-page px-2 py-1 text-xs"
+              >
+                📄 {n}
+              </li>
+            ))}
+          </ul>
+        )}
+        {draft.pdfText && (
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">
+            추출 {draft.pdfText.length.toLocaleString()}자
+          </p>
+        )}
+      </Field>
+    </>
   );
 }
 
