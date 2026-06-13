@@ -19,6 +19,37 @@ export type Post = {
   status: PostStatus; // E
 };
 
+// 작성 화면 드래프트 상태
+export type PostDraft = {
+  postType: PostType;
+  title: string; // 포스팅/리뷰 제목
+  posterUrl: string | null;
+  genres: string[];
+  status: PostStatus;
+  // 영화 리뷰 고유
+  movieTitle: string;
+  rating: number; // 1~5
+  watchReason: string;
+  // 본문 (사용자 메모/지시) + 생성 결과
+  body: string;
+  generatedHtml: string;
+};
+
+export function emptyDraft(postType: PostType = "review"): PostDraft {
+  return {
+    postType,
+    title: "",
+    posterUrl: null,
+    genres: [],
+    status: "draft",
+    movieTitle: "",
+    rating: 0,
+    watchReason: "",
+    body: "",
+    generatedHtml: "",
+  };
+}
+
 export const POST_TYPE_META: Record<
   PostType,
   { label: string; icon: string }
