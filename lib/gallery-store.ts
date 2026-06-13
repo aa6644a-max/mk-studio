@@ -49,6 +49,21 @@ export function subscribe(cb: () => void): () => void {
   };
 }
 
+// ── 에디터 포스터 인계 (갤러리 → 작성 화면) ──────────
+const POSTER_KEY = "mk-studio:pending-poster";
+
+export function setPendingPoster(dataUrl: string) {
+  sessionStorage.setItem(POSTER_KEY, dataUrl);
+}
+
+/** 한 번 읽고 비움. */
+export function consumePendingPoster(): string | null {
+  if (typeof window === "undefined") return null;
+  const v = sessionStorage.getItem(POSTER_KEY);
+  if (v) sessionStorage.removeItem(POSTER_KEY);
+  return v;
+}
+
 export function fileToImage(file: File): Promise<GalleryImage> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

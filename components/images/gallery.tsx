@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import FileUpload from "@/components/write/file-upload";
 import {
   addImage,
@@ -8,6 +9,7 @@ import {
   loadImages,
   MAX_BYTES,
   removeImage,
+  setPendingPoster,
   subscribe,
   type GalleryImage,
 } from "@/lib/gallery-store";
@@ -16,6 +18,12 @@ export default function Gallery() {
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [view, setView] = useState<"grid" | "list">("grid");
   const [error, setError] = useState("");
+  const router = useRouter();
+
+  function sendToEditor(img: GalleryImage) {
+    setPendingPoster(img.dataUrl);
+    router.push("/write");
+  }
 
   useEffect(() => {
     setImages(loadImages());
@@ -79,12 +87,20 @@ export default function Gallery() {
                 alt={img.name}
                 className="aspect-square w-full object-cover"
               />
-              <button
-                onClick={() => removeImage(img.id)}
-                className="absolute right-1.5 top-1.5 hidden rounded bg-black/60 px-2 py-0.5 text-xs text-white group-hover:block"
-              >
-                삭제
-              </button>
+              <div className="absolute right-1.5 top-1.5 hidden gap-1 group-hover:flex">
+                <button
+                  onClick={() => sendToEditor(img)}
+                  className="rounded bg-[var(--accent)] px-2 py-0.5 text-xs text-white"
+                >
+                  에디터로
+                </button>
+                <button
+                  onClick={() => removeImage(img.id)}
+                  className="rounded bg-black/60 px-2 py-0.5 text-xs text-white"
+                >
+                  삭제
+                </button>
+              </div>
               <div className="truncate p-2 text-xs text-[var(--text-secondary)]">
                 {img.name}
               </div>
@@ -107,6 +123,12 @@ export default function Gallery() {
               <span className="shrink-0 text-xs text-[var(--text-secondary)]">
                 {(img.size / 1024).toFixed(0)}KB
               </span>
+              <button
+                onClick={() => sendToEditor(img)}
+                className="shrink-0 text-xs font-semibold text-[var(--accent)]"
+              >
+                에디터로
+              </button>
               <button
                 onClick={() => removeImage(img.id)}
                 className="shrink-0 text-xs text-[var(--text-secondary)] hover:text-red-500"

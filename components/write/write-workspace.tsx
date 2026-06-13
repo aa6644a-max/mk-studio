@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Header from "@/components/header";
 import MetaPanel from "./meta-panel";
 import Editor from "./editor";
 import { emptyDraft, type PostDraft } from "@/lib/types";
+import { consumePendingPoster } from "@/lib/gallery-store";
 
 export default function WriteWorkspace() {
   const [draft, setDraft] = useState<PostDraft>(() => emptyDraft());
@@ -15,6 +16,12 @@ export default function WriteWorkspace() {
     (p: Partial<PostDraft>) => setDraft((d) => ({ ...d, ...p })),
     [],
   );
+
+  // 갤러리에서 인계된 포스터 적용
+  useEffect(() => {
+    const poster = consumePendingPoster();
+    if (poster) setDraft((d) => ({ ...d, posterUrl: poster }));
+  }, []);
 
   async function savePost(status: PostDraft["status"], content: string) {
     const res = await fetch("/api/posts", {
