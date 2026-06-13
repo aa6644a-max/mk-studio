@@ -3,8 +3,11 @@
  * TMDB_API_KEY (v3) 사용. 키 없으면 mock 결과 폴백.
  */
 
+import type { MovieDetails, TvDetails } from "@/lib/types";
+
 const BASE = "https://api.themoviedb.org/3";
 const IMG_BASE = "https://image.tmdb.org/t/p/w500";
+const ORIG_BASE = "https://image.tmdb.org/t/p/original";
 
 export type MovieResult = {
   id: number;
@@ -79,4 +82,193 @@ export async function searchMovies(query: string): Promise<MovieResult[]> {
   }
   const data = (await res.json()) as { results?: Parameters<typeof mapResult>[0][] };
   return (data.results ?? []).slice(0, 10).map(mapResult);
+}
+
+export async function searchTv(query: string): Promise<MovieResult[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const key = process.env.TMDB_API_KEY;
+  if (!key) return MOCK_RESULTS;
+  const url = `${BASE}/search/tv?api_key=${key}&language=ko-KR&query=${encodeURIComponent(q)}`;
+  const res = await fetch(url, { next: { revalidate: 3600 } });
+  if (!res.ok) throw new Error(`TMDB TV 검색 실패: ${res.status}`);
+  const data = (await res.json()) as {
+    results?: {
+      id: number;
+      name: string;
+      original_name: string;
+      first_air_date?: string;
+      poster_path?: string | null;
+      overview?: string;
+      vote_average?: number;
+    }[];
+  };
+  return (data.results ?? []).slice(0, 10).map((m) => ({
+    id: m.id,
+    title: m.name,
+    originalTitle: m.original_name,
+    year: m.first_air_date ? m.first_air_date.slice(0, 4) : "",
+    posterUrl: m.poster_path ? `${IMG_BASE}${m.poster_path}` : null,
+    overview: m.overview ?? "",
+    voteAverage: m.vote_average ?? 0,
+  }));
+}
+
+// ── 영화 상세 (V2 get_movie_details 이식) ────────────
+type CreditCrew = { job?: string; name?: string };
+type CreditCast = { name?: string };
+type Backdrop = { file_path?: string };
+
+export async function getMovieDetails(id: number): Promise<MovieDetails | null> {
+  const key = process.env.TMDB_API_KEY;
+  if (!key) {
+    return {
+      id,
+      title: "인셉션",
+      originalTitle: "Inception",
+      country: "미국",
+      releaseDate: "2010-07-21",
+      director: "크리스토퍼 놀란",
+      actors: "레오나르도 디카프리오, 조셉 고든레빗, 엘렌 페이지",
+      genres: "액션, SF, 스릴러",
+      overview: "꿈 속의 꿈을 설계하는 도둑 코브의 마지막 작전.",
+      posterUrl: undefined,
+      backdropUrls: [],
+    };
+  }
+
+  const url = `${BASE}/movie/${id}?api_key=${key}&language=ko-KR&append_to_response=credits,images&include_image_language=ko,en,null`;
+  const res = await fetch(url, { next: { revalidate: 3600 } });
+  if (!res.ok) throw new Error(`TMDB 상세 실패: ${res.status}`);
+  const data = (await res.json()) as {
+    id?: number;
+    title?: string;
+    original_title?: string;
+    release_date?: string;
+    overview?: string;
+    poster_path?: string | null;
+    backdrop_path?: string | null;
+    genres?: { name?: string }[];
+    production_countries?: { name?: string }[];
+    credits?: { crew?: CreditCrew[]; cast?: CreditCast[] };
+    images?: { backdrops?: Backdrop[] };
+  };
+
+  const director =
+    data.credits?.crew?.find((c) => c.job === "Director")?.name ?? "정보 없음";
+  const actors =
+    (data.credits?.cast ?? [])
+      .slice(0, 3)
+      .map((c) => c.name)
+      .filter(Boolean)
+      .join(", ") || "정보 없음";
+  const genres =
+    (data.genres ?? []).map((g) => g.name).filter(Boolean).join(", ") || "정보 없음";
+  const country =
+    (data.production_countries ?? []).map((c) => c.name).filter(Boolean).join(", ") ||
+    "정보 없음";
+
+  let backdropUrls = (data.images?.backdrops ?? [])
+    .slice(0, 10)
+    .map((b) => b.file_path)
+    .filter((p): p is string => Boolean(p))
+    .map((p) => `${ORIG_BASE}${p}`);
+  if (!backdropUrls.length && data.backdrop_path) {
+    backdropUrls = [`${ORIG_BASE}${data.backdrop_path}`];
+  }
+
+  return {
+    id: data.id,
+    title: data.title ?? "",
+    originalTitle: data.original_title ?? "정보 없음",
+    country,
+    releaseDate: data.release_date || "정보 없음",
+    director,
+    actors,
+    genres,
+    overview: data.overview || "TMDB에 등록된 공식 줄거리가 없습니다.",
+    posterUrl: data.poster_path ? `${IMG_BASE}${data.poster_path}` : undefined,
+    backdropUrls,
+  };
+}
+
+// ── TV 상세 (정주행, V2 get_tv_details 이식) ──────────
+export async function getTvDetails(id: number): Promise<TvDetails | null> {
+  const key = process.env.TMDB_API_KEY;
+  if (!key) {
+    return {
+      id,
+      title: "오징어 게임",
+      numberOfEpisodes: 9,
+      numberOfSeasons: 1,
+      episodeRuntime: 55,
+      totalWatchTime: "8시간 15분",
+      genres: "드라마, 스릴러",
+      overview: "빚에 쫓기는 사람들의 목숨을 건 서바이벌.",
+      cast: "이정재, 박해수, 위하준",
+      backdropUrls: [],
+    };
+  }
+
+  const url = `${BASE}/tv/${id}?api_key=${key}&language=ko-KR&append_to_response=credits,images&include_image_language=ko,en,null`;
+  const res = await fetch(url, { next: { revalidate: 3600 } });
+  if (!res.ok) throw new Error(`TMDB TV 상세 실패: ${res.status}`);
+  const data = (await res.json()) as {
+    id?: number;
+    name?: string;
+    original_name?: string;
+    first_air_date?: string;
+    number_of_episodes?: number;
+    number_of_seasons?: number;
+    episode_run_time?: number[];
+    overview?: string;
+    poster_path?: string | null;
+    backdrop_path?: string | null;
+    genres?: { name?: string }[];
+    production_countries?: { name?: string }[];
+    credits?: { cast?: CreditCast[] };
+    images?: { backdrops?: Backdrop[] };
+  };
+
+  const avgRuntime = data.episode_run_time?.[0] ?? 24;
+  const totalEpisodes = data.number_of_episodes ?? 0;
+  const totalMinutes = totalEpisodes * avgRuntime;
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  const totalWatchTime =
+    hours > 0 ? (mins ? `${hours}시간 ${mins}분` : `${hours}시간`) : `${totalMinutes}분`;
+
+  let backdropUrls = (data.images?.backdrops ?? [])
+    .slice(0, 5)
+    .map((b) => b.file_path)
+    .filter((p): p is string => Boolean(p))
+    .map((p) => `${ORIG_BASE}${p}`);
+  if (!backdropUrls.length && data.backdrop_path) {
+    backdropUrls = [`${ORIG_BASE}${data.backdrop_path}`];
+  }
+
+  return {
+    id: data.id,
+    title: data.name ?? "",
+    originalTitle: data.original_name ?? "정보 없음",
+    country:
+      (data.production_countries ?? []).map((c) => c.name).filter(Boolean).join(", ") ||
+      "정보 없음",
+    firstAirDate: data.first_air_date || "정보 없음",
+    numberOfEpisodes: totalEpisodes,
+    numberOfSeasons: data.number_of_seasons ?? 1,
+    episodeRuntime: avgRuntime,
+    totalWatchTime,
+    genres:
+      (data.genres ?? []).map((g) => g.name).filter(Boolean).join(", ") || "정보 없음",
+    overview: data.overview || "TMDB에 등록된 공식 줄거리가 없습니다.",
+    cast:
+      (data.credits?.cast ?? [])
+        .slice(0, 3)
+        .map((c) => c.name)
+        .filter(Boolean)
+        .join(", ") || "정보 없음",
+    posterUrl: data.poster_path ? `${IMG_BASE}${data.poster_path}` : undefined,
+    backdropUrls,
+  };
 }

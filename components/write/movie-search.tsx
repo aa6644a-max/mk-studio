@@ -5,8 +5,10 @@ import type { MovieResult } from "@/lib/tmdb";
 
 export default function MovieSearch({
   onSelect,
+  type = "movie",
 }: {
   onSelect: (m: MovieResult) => void;
+  type?: "movie" | "tv";
 }) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<MovieResult[]>([]);
@@ -23,7 +25,9 @@ export default function MovieSearch({
     const t = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/tmdb?q=${encodeURIComponent(q)}`);
+        const res = await fetch(
+          `/api/tmdb?q=${encodeURIComponent(q)}&type=${type}`,
+        );
         const data = await res.json();
         setResults(data.results ?? []);
         setOpen(true);

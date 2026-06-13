@@ -76,18 +76,28 @@ export default function MetaPanel({
       )}
       {draft.postType === "binge" && (
         <>
-          <Field label="시리즈명">
-            <input
-              value={draft.movieTitle}
-              onChange={(e) =>
-                onChange({ movieTitle: e.target.value, title: draft.title || e.target.value })
-              }
-              placeholder="시리즈 제목"
-              className="w-full rounded-lg border border-[var(--panel-border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+          <Field label="시리즈 검색 (TMDB)">
+            <MovieSearch
+              type="tv"
+              onSelect={async (m) => {
+                onChange({
+                  movieTitle: m.title,
+                  posterUrl: m.posterUrl,
+                  title: draft.title || m.title,
+                });
+                const d = await fetchTvDetails(m.id);
+                if (d) onChange({ tvDetails: d, posterUrl: d.posterUrl ?? m.posterUrl });
+              }}
             />
+            {draft.tvDetails && (
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                {draft.tvDetails.title} · 총 {draft.tvDetails.numberOfEpisodes}화
+                ({draft.tvDetails.numberOfSeasons}시즌) · {draft.tvDetails.totalWatchTime}
+              </p>
+            )}
           </Field>
           <ItemListField
-            label="회차 구성"
+            label="회차 구성 (선택)"
             placeholder="예: 시즌1 1~8화"
             items={draft.items}
             onChange={(items) => onChange({ items })}
@@ -162,17 +172,20 @@ function ReviewFields({
     <>
       <Field label="영화 검색 (TMDB)">
         <MovieSearch
-          onSelect={(m) =>
+          onSelect={async (m) => {
             onChange({
               movieTitle: m.title,
               posterUrl: m.posterUrl,
               title: draft.title || `${m.title} 리뷰`,
-            })
-          }
+            });
+            const d = await fetchMovieDetails(m.id);
+            if (d) onChange({ details: d, posterUrl: d.posterUrl ?? m.posterUrl });
+          }}
         />
-        {draft.movieTitle && (
+        {draft.details && (
           <p className="mt-1 text-xs text-[var(--text-secondary)]">
-            선택: {draft.movieTitle}
+            {draft.details.title} · {draft.details.director} ·{" "}
+            스틸컷 {draft.details.backdropUrls?.length ?? 0}장
           </p>
         )}
       </Field>
@@ -204,8 +217,38 @@ function ReviewFields({
           className="w-full resize-none rounded-lg border border-[var(--panel-border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
         />
       </Field>
+
+      <Field label="나의 감상평">
+        <textarea
+          value={draft.comment}
+          onChange={(e) => onChange({ comment: e.target.value })}
+          rows={3}
+          placeholder="솔직한 감상 (생성 시 본문에 녹여집니다)"
+          className="w-full resize-none rounded-lg border border-[var(--panel-border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+        />
+      </Field>
     </>
   );
+}
+
+async function fetchMovieDetails(id: number) {
+  try {
+    const res = await fetch(`/api/tmdb/details?id=${id}&type=movie`);
+    const data = await res.json();
+    return data.details as import("@/lib/types").MovieDetails | null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchTvDetails(id: number) {
+  try {
+    const res = await fetch(`/api/tmdb/details?id=${id}&type=tv`);
+    const data = await res.json();
+    return data.details as import("@/lib/types").TvDetails | null;
+  } catch {
+    return null;
+  }
 }
 
 function PreviewFields({
@@ -219,17 +262,19 @@ function PreviewFields({
     <>
       <Field label="영화 검색 (TMDB)">
         <MovieSearch
-          onSelect={(m) =>
+          onSelect={async (m) => {
             onChange({
               movieTitle: m.title,
               posterUrl: m.posterUrl,
               title: draft.title || `${m.title} 개봉 프리뷰`,
-            })
-          }
+            });
+            const d = await fetchMovieDetails(m.id);
+            if (d) onChange({ details: d, posterUrl: d.posterUrl ?? m.posterUrl });
+          }}
         />
-        {draft.movieTitle && (
+        {draft.details && (
           <p className="mt-1 text-xs text-[var(--text-secondary)]">
-            선택: {draft.movieTitle}
+            {draft.details.title} · {draft.details.director}
           </p>
         )}
       </Field>

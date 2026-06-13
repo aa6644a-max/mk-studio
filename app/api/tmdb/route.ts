@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { searchMovies } from "@/lib/tmdb";
+import { searchMovies, searchTv } from "@/lib/tmdb";
 
+// GET /api/tmdb?q=...&type=movie|tv → 검색
 export async function GET(req: Request) {
-  const q = new URL(req.url).searchParams.get("q") ?? "";
-  if (!q.trim()) {
-    return NextResponse.json({ results: [] });
-  }
+  const url = new URL(req.url);
+  const q = url.searchParams.get("q") ?? "";
+  const type = url.searchParams.get("type") ?? "movie";
+  if (!q.trim()) return NextResponse.json({ results: [] });
   try {
-    const results = await searchMovies(q);
+    const results = type === "tv" ? await searchTv(q) : await searchMovies(q);
     return NextResponse.json({ results });
   } catch (e) {
     return NextResponse.json(

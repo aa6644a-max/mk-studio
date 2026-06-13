@@ -487,12 +487,23 @@ export function buildMoviePrompt(
         draft.items.length ? draft.items.map((m) => `- ${m}`).join("\n") : "(영화 목록 미지정)",
         refText,
       );
-    case "binge":
-      return buildBingePrompt(
-        draft.title || draft.movieTitle,
-        draft.items.length ? draft.items.join(", ") : "(회차/작품 정보 미지정)",
-        refText,
-      );
+    case "binge": {
+      const tv = draft.tvDetails;
+      const seriesData = tv
+        ? `- 작품: ${tv.title} (${tv.originalTitle})
+- 장르: ${tv.genres} / 국가: ${tv.country}
+- 출연: ${tv.cast}
+- 총 화수: ${tv.numberOfEpisodes}화 (${tv.numberOfSeasons}시즌)
+- 편당 러닝타임: 약 ${tv.episodeRuntime}분 / 총 시청시간: 약 ${tv.totalWatchTime}
+- 줄거리: ${tv.overview}
+- 포스터 HTML: ${tv.posterUrl ? `<div style="text-align:center; margin:25px 0;"><img src="${tv.posterUrl}" alt="${tv.title} 포스터" style="max-width:100%; height:auto; border-radius:12px;"></div>` : "(포스터 없음)"}${
+            draft.items.length ? `\n- 회차 메모: ${draft.items.join(", ")}` : ""
+          }`
+        : draft.items.length
+          ? draft.items.join(", ")
+          : "(회차/작품 정보 미지정)";
+      return buildBingePrompt(draft.title || draft.movieTitle, seriesData, refText);
+    }
     default:
       return buildReviewPrompt(d, draft.comment || draft.body, draft.watchReason, refText);
   }
