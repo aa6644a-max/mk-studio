@@ -8,18 +8,19 @@ import { buildLocalPrompt } from "./local";
 export function buildPrompt(
   draft: PostDraft,
   references: Post[],
+  rssText = "",
 ): PromptResult {
   switch (draft.postType) {
     case "review":
     case "preview":
     case "curation":
     case "binge":
-      return buildMoviePrompt(draft, references);
+      return buildMoviePrompt(draft, references, rssText);
     case "photo":
     case "pdf":
-      return buildDailyPrompt(draft, references);
+      return buildDailyPrompt(draft, references, rssText);
     case "local":
-      return buildLocalPrompt(draft, references);
+      return buildLocalPrompt(draft, references, rssText);
   }
 }
 

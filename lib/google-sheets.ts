@@ -138,6 +138,12 @@ export async function getRecentPosts(n = 3): Promise<Post[]> {
   return posts.slice(0, n);
 }
 
+/** 같은 포스팅 타입만 필터링해서 최근 N개 반환. */
+export async function getPostsByType(postType: string, n = 3): Promise<Post[]> {
+  const posts = await getPosts();
+  return posts.filter((p) => p.postType === postType).slice(0, n);
+}
+
 /** 포스트 1건 추가. */
 export async function appendPost(
   post: Omit<Post, "timestamp"> & { timestamp?: string },
@@ -186,4 +192,43 @@ export function formatTimestamp(d: Date): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(
     d.getHours(),
   )}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+/** 블로그 원본 글 저장 (PostType 제약 없이 raw row 삽입). */
+export async function appendBlogPost(
+  title: string,
+  content: string,
+): Promise<void> {
+  const auth = await getAuth();
+  if (!auth) return;
+  const spreadsheetId = await getSpreadsheetId(auth);
+  const sheets = google.sheets({ version: "v4", auth });
+  await sheets.spreadsheets.values.append({
+    spreadsheetId,
+    range: SHEET_RANGE,
+    valueInputOption: "USER_ENTERED",
+    requestBody: {
+      values: [[formatTimestamp(new Date()), title, "blog", content, "published"]],
+    },
+  });
+}
+
+/** 블로그 원본 글 제목 목록 (중복 체크용). */
+export async function getBlogPostTitles(): Promise<Set<string>> {
+  const auth = await getAuth();
+  if (!auth) return new Set();
+  try {
+    const spreadsheetId = await getSpreadsheetId(auth);
+    const sheets = google.sheets({ version: "v4", auth });
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: "A:C",
+    });
+    const rows = res.data.values ?? [];
+    return new Set(
+      rows.filter((r) => r[2] === "blog").map((r) => r[1] ?? ""),
+    );
+  } catch {
+    return new Set();
+  }
 }

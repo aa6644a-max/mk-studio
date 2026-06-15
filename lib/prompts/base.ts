@@ -49,14 +49,38 @@ export function getCommonConstraints(season: string): string {
 
 export type PromptResult = { system: string; user: string };
 
-/** Post[] → 레퍼런스 텍스트 (최근 N개 본문 결합). */
+function stripHtml(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * 참조 텍스트 생성.
+ * rssText: 네이버 블로그 RSS 원문 (문체 학습 소스)
+ * posts:   같은 타입 Sheets 저장글 (구조/레이아웃 참조)
+ */
 export function referenceText(
   posts: { movieTitle: string; content: string }[],
+  rssText = "",
   n = 3,
 ): string {
-  if (!posts.length) return "";
-  return posts
-    .slice(0, n)
-    .map((p, i) => `--- 레퍼런스 ${i + 1} (${p.movieTitle}) ---\n${p.content}`)
-    .join("\n\n");
+  const rssPart = rssText
+    ? `[📡 내 네이버 블로그 최신 원문 — 말투·문체 참조]\n${rssText}`
+    : "";
+
+  const sheetsPart = posts.length
+    ? posts
+        .slice(0, n)
+        .map((p, i) => {
+          const text = stripHtml(p.content).slice(0, 2000);
+          return `--- 같은 타입 과거글 ${i + 1} (${p.movieTitle}) ---\n${text}`;
+        })
+        .join("\n\n")
+    : "";
+
+  return [rssPart, sheetsPart].filter(Boolean).join("\n\n");
 }

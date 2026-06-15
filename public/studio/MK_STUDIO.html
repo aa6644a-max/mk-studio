@@ -1,0 +1,2606 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MK STUDIO — 카드뉴스 제작소</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700;900&family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --black: #0d0d0d;
+  --white: #ffffff;
+  --gray-100: #f5f5f5;
+  --gray-200: #e8e8e8;
+  --gray-400: #999;
+  --gray-600: #555;
+  --accent: #0066ff;
+  --bg: #f7f7f8;
+  --panel: #ffffff;
+  --panel-border: rgba(112, 115, 124, 0.15);
+  --ui-text: #171719;
+  --nav-h: 56px;
+  --template-bar-h: 48px;
+}
+
+body {
+  background: var(--bg);
+  font-family: 'Noto Sans KR', sans-serif;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  color: var(--ui-text);
+}
+
+/* ── 헤더 (메인 앱에 헤더 있으므로 숨김) ── */
+.studio-header {
+  display: none;
+}
+.studio-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.18em;
+  color: var(--ui-text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.studio-logo .dot {
+  width: 8px; height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%,100%{opacity:1;transform:scale(1)}
+  50%{opacity:.5;transform:scale(.8)}
+}
+.studio-logo .sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  color: var(--gray-400);
+  margin-left: 4px;
+  align-self: flex-end;
+  margin-bottom: 2px;
+}
+.header-right { display: flex; align-items: center; gap: 12px; }
+
+/* 비율 버튼 그룹 (헤더) */
+.ratio-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0,0,0,0.04);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 4px;
+}
+.ratio-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 4px;
+  color: var(--gray-400);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.15s;
+  min-width: 54px;
+}
+.ratio-btn:hover { background: rgba(0,0,0,0.06); color: var(--ui-text); }
+.ratio-btn.active { background: var(--accent); color: var(--white); }
+.ratio-btn .ratio-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ratio-btn .ratio-icon .box {
+  border: 2px solid currentColor;
+  border-radius: 2px;
+  background: rgba(0,0,0,0.06);
+}
+/* 각 비율별 아이콘 박스 크기 */
+.ratio-btn[data-ratio="4:5"]  .box { width: 14px; height: 18px; }
+.ratio-btn[data-ratio="1:1"]  .box { width: 16px; height: 16px; }
+.ratio-btn[data-ratio="4:3"]  .box { width: 20px; height: 15px; }
+.ratio-btn[data-ratio="16:9"] .box { width: 22px; height: 12px; }
+.ratio-btn .ratio-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+.ratio-btn .ratio-px {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  opacity: 0.6;
+  line-height: 1;
+}
+
+.btn-download-all {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 9px 20px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.08em;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-download-all:hover { background: #e03030; transform: translateY(-1px); }
+
+/* ── 템플릿 탭 바 ── */
+.template-bar {
+  height: var(--template-bar-h);
+  background: var(--panel);
+  border-bottom: 1px solid var(--panel-border);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 4px;
+  flex-shrink: 0;
+  z-index: 20;
+  overflow-x: auto;
+}
+.template-tab {
+  background: transparent;
+  color: var(--gray-400);
+  border: 1px solid transparent;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.template-tab:hover { color: var(--ui-text); border-color: var(--panel-border); }
+.template-tab.active { background: var(--accent); color: var(--white); border-color: var(--accent); }
+.template-tab .tag {
+  font-size: 9px;
+  background: rgba(255,255,255,0.15);
+  padding: 1px 5px;
+  border-radius: 2px;
+  margin-left: 6px;
+}
+
+/* ── 워크스페이스 ── */
+.workspace { display: flex; flex: 1; overflow: hidden; }
+
+/* ── 컨트롤 패널 ── */
+.control-panel {
+  width: 360px;
+  background: var(--panel);
+  border-right: 1px solid var(--panel-border);
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px 20px;
+  flex-shrink: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--panel-border) transparent;
+}
+.control-panel::-webkit-scrollbar { width: 4px; }
+.control-panel::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 2px; }
+
+.template-content { display: none; flex-direction: column; gap: 16px; }
+.template-content.active { display: flex; }
+
+.section-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  text-transform: uppercase;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--panel-border);
+}
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-400);
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.05em;
+}
+.form-group input[type="text"],
+.form-group textarea,
+.form-group select {
+  background: #f0f1f3;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  color: var(--ui-text);
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 13px;
+  padding: 9px 12px;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+.form-group input[type="text"]:focus,
+.form-group textarea:focus,
+.form-group select:focus { outline: none; border-color: var(--accent); }
+.form-group textarea { resize: vertical; min-height: 70px; }
+.form-group input[type="range"] { width: 100%; cursor: pointer; accent-color: var(--accent); }
+.form-group select option { background: #f0f1f3; }
+.flex-row { display: flex; gap: 10px; }
+.flex-row .form-group { flex: 1; }
+.range-label { display: flex; justify-content: space-between; align-items: center; }
+.range-label span { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent); }
+.divider { height: 1px; background: var(--panel-border); margin: 4px 0; }
+
+.upload-area {
+  border: 1.5px dashed var(--panel-border);
+  border-radius: 6px;
+  padding: 18px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.upload-area:hover { border-color: var(--accent); background: rgba(0,102,255,0.04); }
+.upload-area .upload-text { font-size: 12px; color: var(--gray-400); }
+.upload-area .upload-icon { font-size: 20px; margin-bottom: 6px; display: block; }
+.upload-area input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.upload-filename { font-size: 11px; color: var(--accent); margin-top: 4px; font-family: 'DM Mono', monospace; }
+
+.color-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.color-chip {
+  width: 28px; height: 28px; border-radius: 4px; cursor: pointer;
+  border: 2px solid transparent; transition: all 0.15s; flex-shrink: 0;
+}
+.color-chip.selected { border-color: var(--white); transform: scale(1.1); }
+.color-input-wrap { display: flex; align-items: center; gap: 8px; flex: 1; }
+.color-input-wrap input[type="color"] { width: 36px; height: 28px; border: none; background: none; cursor: pointer; padding: 0; }
+
+.btn-download {
+  background: var(--accent);
+  color: white; border: none; padding: 12px;
+  font-size: 13px; font-weight: 700; border-radius: 6px; cursor: pointer;
+  transition: all 0.2s; width: 100%; font-family: 'DM Mono', monospace;
+  letter-spacing: 0.06em; margin-top: 4px;
+}
+.btn-download:hover { background: #e03030; transform: translateY(-1px); }
+
+/* ── 미리보기 패널 ── */
+.preview-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 32px 40px 20px;
+  overflow: auto;
+  background: var(--bg);
+  gap: 16px;
+  position: relative;
+}
+.preview-panel::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, rgba(255,77,77,0.03) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+/* ── 카드 컨테이너 ── */
+.card-container {
+  position: relative;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.07);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+  /* 트랜지션: 비율 전환 시 부드럽게 */
+  transition: width 0.35s cubic-bezier(0.4,0,0.2,1), height 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* 비율별 카드 크기 — 미리보기용 (긴쪽 max 480px 기준) */
+.card-container.ratio-4-5  { width: 384px; height: 480px; }
+.card-container.ratio-1-1  { width: 480px; height: 480px; }
+.card-container.ratio-4-3  { width: 480px; height: 360px; }
+.card-container.ratio-16-9 { width: 480px; height: 270px; }
+
+/* 비율 정보 배지 (미리보기 하단) */
+.ratio-info {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--gray-400);
+  letter-spacing: 0.15em;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+.ratio-info strong { color: var(--ui-text); }
+
+/* ════ TEMPLATE 01 — 광고 오버레이 ════ */
+#card-t01 {
+  width: 100%; height: 100%;
+  position: relative;
+  background: #111;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+#t01-canvas {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%; z-index: 0;
+}
+.t01-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top,
+    rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.55) 35%,
+    rgba(0,0,0,0.1) 60%, transparent 100%);
+  z-index: 1; pointer-events: none;
+  transition: background 0.3s;
+}
+.t01-text-area {
+  position: relative; z-index: 2;
+  padding: 0 22px 22px;
+  display: flex; flex-direction: column;
+  transition: padding 0.3s;
+}
+.t01-line1 {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 52px; line-height: 1.05; color: var(--white);
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px;
+  transition: font-size 0.2s;
+}
+.t01-line1 .em { color: var(--accent); }
+.t01-line2-wrap { display: flex; align-items: center; margin-top: 2px; }
+.t01-line2 {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 48px; line-height: 1.1; display: inline-block;
+  transition: font-size 0.2s;
+}
+.t01-line2.style-box { background: var(--accent); color: #fff; padding: 2px 14px; }
+.t01-line2.style-outline { color: #fff; -webkit-text-stroke: 2px var(--accent); }
+.t01-line2.style-plain { color: #fff; }
+.t01-line2.style-highlight { color: #000; background: #ffe500; padding: 2px 14px; }
+.t01-sub {
+  font-size: 12px; color: rgba(255,255,255,0.75);
+  line-height: 1.6; margin-top: 10px; font-weight: 400; letter-spacing: 0.01em;
+  transition: font-size 0.2s;
+}
+.t01-credit {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; color: rgba(255,255,255,0.45);
+  letter-spacing: 0.12em; margin-top: 12px;
+}
+.t01-badge {
+  position: absolute; top: 14px; right: 14px; z-index: 3;
+  background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.18);
+  padding: 5px 10px; border-radius: 3px;
+  font-family: 'DM Mono', monospace; font-size: 8px;
+  letter-spacing: 0.2em; color: rgba(255,255,255,0.6);
+  backdrop-filter: blur(8px);
+}
+
+/* 정렬 */
+#card-t01.align-center .t01-text-area { align-items: center; text-align: center; }
+#card-t01.align-center .t01-line1 { justify-content: center; }
+#card-t01.align-right .t01-text-area { align-items: flex-end; text-align: right; }
+#card-t01.align-right .t01-line1 { justify-content: flex-end; }
+
+/* ── 비율별 텍스트 자동 스케일 ── */
+/* 16:9 — 세로가 좁으므로 텍스트 전체 축소 */
+.card-container.ratio-16-9 .t01-text-area  { padding: 0 16px 16px; }
+.card-container.ratio-16-9 .t01-line1      { font-size: 30px !important; }
+.card-container.ratio-16-9 .t01-line2      { font-size: 28px !important; }
+.card-container.ratio-16-9 .t01-sub        { font-size: 9px !important; margin-top: 6px; }
+.card-container.ratio-16-9 .t01-credit     { margin-top: 6px; }
+
+/* 4:3 */
+.card-container.ratio-4-3 .t01-text-area   { padding: 0 20px 20px; }
+.card-container.ratio-4-3 .t01-line1       { font-size: 40px !important; }
+.card-container.ratio-4-3 .t01-line2       { font-size: 38px !important; }
+.card-container.ratio-4-3 .t01-sub         { font-size: 11px !important; }
+
+/* 1:1 */
+.card-container.ratio-1-1 .t01-text-area   { padding: 0 24px 24px; }
+.card-container.ratio-1-1 .t01-line1       { font-size: 48px !important; }
+.card-container.ratio-1-1 .t01-line2       { font-size: 44px !important; }
+
+/* 4:5 — 기본값 (변경 없음) */
+
+/* ════ TEMPLATE 01 — 슬라이드 2 (리스트형, 하단 좌측) ════ */
+#t01-slide-1 {
+  position: absolute; inset: 0; z-index: 10;
+  display: none; background: #111;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+#t01-canvas-s2 {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%; z-index: 0;
+}
+.t01-s2-overlay {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(to top,
+    rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.80) 35%,
+    rgba(0,0,0,0.35) 60%, transparent 100%);
+}
+.t01-s2-wrap {
+  position: relative; z-index: 2;
+  padding: 0 22px 22px;
+  display: flex; flex-direction: column;
+  align-items: flex-start; text-align: left;
+  width: 100%;
+}
+.t01-s2-tagline {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 0.22em;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.t01-s2-title {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 38px; line-height: 1.05;
+  color: #ffffff; word-break: keep-all;
+  margin-bottom: 12px;
+}
+.t01-s2-divider {
+  width: 100%; height: 1px;
+  background: rgba(255,255,255,0.22);
+  margin-bottom: 12px;
+}
+.t01-s2-section-header {
+  display: flex; align-items: center; gap: 7px;
+  margin-bottom: 10px;
+}
+.t01-s2-section-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
+}
+.t01-s2-section-label {
+  font-size: 11px; font-weight: 700;
+  color: rgba(255,255,255,0.75);
+  letter-spacing: 0.02em; font-family: 'Noto Sans KR', sans-serif;
+}
+.t01-s2-list {
+  display: flex; flex-direction: column; gap: 6px;
+  width: 100%;
+}
+.t01-s2-item {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 3px;
+  padding: 9px 13px;
+}
+.t01-s2-item.hidden { display: none; }
+.t01-s2-item-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 0.06em;
+  color: var(--accent); flex-shrink: 0; font-weight: 500;
+}
+.t01-s2-item-bar {
+  width: 1px; height: 14px;
+  background: rgba(255,255,255,0.2); flex-shrink: 0;
+}
+.t01-s2-item-text {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 15px; color: #ffffff;
+  word-break: keep-all; line-height: 1.2;
+}
+/* 비율별 슬라이드 2 스케일 */
+.card-container.ratio-16-9 .t01-s2-wrap   { padding: 0 16px 14px; }
+.card-container.ratio-16-9 .t01-s2-title  { font-size: 22px !important; }
+.card-container.ratio-16-9 .t01-s2-item-text { font-size: 10px !important; }
+.card-container.ratio-16-9 .t01-s2-item  { padding: 6px 10px; }
+.card-container.ratio-4-3  .t01-s2-title  { font-size: 30px !important; }
+.card-container.ratio-4-3  .t01-s2-item-text { font-size: 13px !important; }
+.card-container.ratio-1-1  .t01-s2-title  { font-size: 44px !important; }
+.card-container.ratio-1-1  .t01-s2-item-text { font-size: 17px !important; }
+
+/* ════ TEMPLATE 01 — 슬라이드 3 (클로징 카드) ════ */
+#t01-slide-2 {
+  position: absolute; inset: 0; z-index: 10;
+  display: none; background: #f5f0eb;
+  flex-direction: column;
+}
+.t01-s3-photo {
+  position: relative; overflow: hidden;
+  flex: 0 0 44%;
+}
+.t01-s3-photo-ph {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: #d8d0c8;
+  font-size: 11px; font-family: 'DM Mono', monospace;
+  color: #888; letter-spacing: 0.12em;
+}
+.t01-s3-photo-img {
+  display: none; position: absolute; inset: 0;
+  width: 100%; height: 100%; object-fit: cover;
+  object-position: 50% 50%; cursor: grab;
+}
+.t01-s3-photo-grad {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 100px;
+  background: linear-gradient(to bottom,
+    transparent 0%,
+    rgba(245,240,235,0.55) 55%,
+    rgba(245,240,235,1) 100%);
+  pointer-events: none;
+}
+.t01-s3-panel {
+  flex: 1; min-height: 0;
+  background: #f5f0eb;
+  padding: 14px 22px 20px;
+  display: flex; flex-direction: column;
+  justify-content: space-between;
+}
+.t01-s3-top { display: flex; flex-direction: column; }
+.t01-s3-qq {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 36px; line-height: 0.9;
+  color: #3a3835;
+  margin-bottom: 6px;
+}
+.t01-s3-msg {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 32px; line-height: 1.1;
+  color: #3a3835; word-break: keep-all;
+}
+.t01-s3-divider {
+  width: 100%; height: 1px;
+  background: rgba(0,0,0,0.10);
+  margin: 12px 0;
+}
+.t01-s3-brand-row {
+  display: flex; flex-direction: column;
+  align-items: flex-end; gap: 2px;
+}
+.t01-s3-brand-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 0.18em;
+  color: #8a8480;
+  text-transform: uppercase;
+}
+.t01-s3-brand {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 26px; color: #3a3835;
+  letter-spacing: 0.04em;
+}
+.t01-s3-credit {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px; color: #a09890;
+  letter-spacing: 0.12em; text-align: right;
+  margin-top: 2px;
+}
+/* 비율별 슬라이드 3 스케일 */
+.card-container.ratio-16-9 #t01-slide-2 .t01-s3-photo { flex: 0 0 50%; }
+.card-container.ratio-16-9 .t01-s3-msg   { font-size: 18px !important; }
+.card-container.ratio-16-9 .t01-s3-brand { font-size: 16px !important; }
+.card-container.ratio-16-9 .t01-s3-qq    { font-size: 22px !important; }
+.card-container.ratio-16-9 .t01-s3-panel { padding: 8px 14px 12px; }
+.card-container.ratio-4-3  .t01-s3-msg   { font-size: 26px !important; }
+.card-container.ratio-4-3  .t01-s3-brand { font-size: 22px !important; }
+.card-container.ratio-1-1  .t01-s3-msg   { font-size: 36px !important; }
+.card-container.ratio-1-1  .t01-s3-brand { font-size: 30px !important; }
+
+/* ── 컨트롤 패널의 슬라이드 탭 ── */
+.slide-tabs {
+  display: flex; gap: 4px;
+  background: #f0f1f3;
+  border-radius: 6px; padding: 4px;
+}
+.slide-tab-btn {
+  flex: 1; background: transparent; border: none;
+  color: var(--gray-400); font-family: 'DM Mono', monospace;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
+  padding: 6px 4px; border-radius: 4px; cursor: pointer;
+  transition: all 0.15s;
+}
+.slide-tab-btn:hover { color: var(--ui-text); }
+.slide-tab-btn.active { background: rgba(0,0,0,0.1); color: var(--ui-text); }
+
+.slide-ctrl { display: none; flex-direction: column; gap: 14px; }
+.slide-ctrl.active { display: flex; }
+.slide-ctrl-hint {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  letter-spacing: 0.15em; color: var(--accent);
+  text-transform: uppercase; margin-bottom: -6px;
+}
+
+/* ════ TEMPLATE 05 — CineLab 모임 카드뉴스 ════ */
+
+/* ── 미리보기 슬라이드 탭 ── */
+.preview-slide-nav {
+  display: flex; gap: 6px; justify-content: center;
+  flex-wrap: wrap; margin-bottom: 10px;
+  position: relative; z-index: 1;
+}
+.preview-slide-btn {
+  background: rgba(0,0,0,0.05);
+  border: 1px solid var(--panel-border);
+  border-radius: 4px; padding: 5px 16px;
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  font-weight: 600; color: var(--gray-400);
+  cursor: pointer; transition: all 0.15s; letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.preview-slide-btn:hover { color: var(--ui-text); background: rgba(0,0,0,0.09); }
+.preview-slide-btn.active {
+  background: var(--ui-text); color: #ffffff;
+  border-color: var(--ui-text);
+}
+
+/* ── 템플릿 관리 버튼 ── */
+.btn-template-mgr {
+  background: transparent;
+  border: 1px solid var(--panel-border);
+  color: var(--ui-text);
+  padding: 8px 14px; font-size: 12px; font-weight: 600;
+  font-family: 'DM Mono', monospace; letter-spacing: 0.05em;
+  border-radius: 4px; cursor: pointer; transition: all 0.2s;
+}
+.btn-template-mgr:hover { background: rgba(0,0,0,0.05); }
+
+/* ── 모달 ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center;
+}
+.modal-box {
+  background: #fdfcfa; border-radius: 8px;
+  width: 480px; max-width: 95vw; max-height: 80vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  overflow: hidden;
+}
+.modal-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--panel-border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-title {
+  font-family: 'DM Mono', monospace; font-size: 13px;
+  font-weight: 700; letter-spacing: 0.1em; color: var(--ui-text);
+}
+.modal-close {
+  background: none; border: none; cursor: pointer;
+  font-size: 18px; color: var(--gray-400); padding: 0 4px;
+}
+.modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+.modal-save-row {
+  display: flex; gap: 8px; margin-bottom: 16px;
+}
+.modal-save-row input {
+  flex: 1; background: #f0f1f3; border: 1px solid var(--panel-border);
+  border-radius: 4px; padding: 8px 12px; font-size: 12px;
+  color: var(--ui-text); font-family: 'Noto Sans KR', sans-serif;
+}
+.modal-save-row input:focus { outline: none; border-color: var(--accent); }
+.modal-save-row button {
+  background: var(--accent); color: #fff; border: none;
+  padding: 8px 16px; border-radius: 4px; font-size: 12px;
+  font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--panel-border);
+  display: flex; gap: 8px;
+}
+.modal-footer button {
+  flex: 1; background: #f0f1f3; border: 1px solid var(--panel-border);
+  border-radius: 4px; padding: 8px; font-size: 11px;
+  font-family: 'DM Mono', monospace; cursor: pointer; color: var(--ui-text);
+}
+.modal-footer button:hover { background: #e0ddd8; }
+.tpl-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 4px; margin-bottom: 6px;
+  background: #f7f7f8; border: 1px solid var(--panel-border);
+}
+.tpl-item-info { flex: 1; }
+.tpl-item-name { font-size: 13px; font-weight: 700; color: var(--ui-text); margin-bottom: 2px; }
+.tpl-item-meta { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--gray-400); }
+.tpl-item-btns { display: flex; gap: 6px; }
+.tpl-item-btns button {
+  background: #fff; border: 1px solid var(--panel-border);
+  border-radius: 3px; padding: 5px 10px; font-size: 11px;
+  cursor: pointer; color: var(--ui-text);
+}
+.tpl-item-btns button:hover { background: #f0f1f3; }
+
+/* ════ TEMPLATE 05 — CineLab 모임 카드뉴스 ════ */
+#card-wrap-t05 { --accent: #d4a574; --accent2: #e8c49a; }
+.t05-slide { position: absolute; inset: 0; display: none; width: 100%; height: 100%; }
+.t05-slide.active { display: flex; flex-direction: column; }
+.t05-slide .canvas-card { width: 100% !important; height: 100% !important; aspect-ratio: unset !important; border-radius: 0 !important; }
+.card1 { background: #1a1510; position: relative; overflow: hidden; flex: 1; }
+.card1-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+.card1-scrim { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.05) 25%, rgba(0,0,0,0.4) 55%, rgba(0,0,0,0.88) 100%); }
+.card1-logo { position: absolute; top: 4.5%; right: 5%; font-size: clamp(7px,1.5vw,11px); letter-spacing: 3px; color: rgba(255,255,255,0.75); border: 0.8px solid rgba(255,255,255,0.35); padding: 3px 10px; border-radius: 3px; font-family: 'Pretendard',sans-serif; }
+.card1-bottom { position: absolute; bottom: 0; left: 0; right: 0; padding: 5% 6% 6%; display: flex; flex-direction: column; }
+.card1-badge { display: inline-flex; align-items: center; gap: 6px; border: 0.8px solid rgba(212,165,116,0.7); border-radius: 20px; padding: 3px 12px; font-size: clamp(7px,1.2vw,9.5px); color: var(--accent2); width: fit-content; margin-bottom: 3.5%; letter-spacing: 1px; font-family: 'Pretendard',sans-serif; }
+.card1-badge .badge-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); animation: cl-pulse 2s ease-in-out infinite; }
+@keyframes cl-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.card1-eyebrow { font-size: clamp(7px,1.3vw,10px); color: rgba(212,165,116,0.8); letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 2%; font-weight: 400; font-family: 'Pretendard',sans-serif; }
+.card1-title { font-size: clamp(18px,5vw,38px); font-weight: 700; color: #fff; line-height: 1.2; margin-bottom: 1%; font-family: 'Pretendard',sans-serif; }
+.card1-title-en { font-size: clamp(8px,1.5vw,11px); color: rgba(255,255,255,0.4); letter-spacing: 1px; margin-bottom: 4%; font-family: 'Pretendard',sans-serif; }
+.card1-divider { height: 0.5px; background: rgba(255,255,255,0.18); margin-bottom: 3.5%; }
+.card1-meta { display: flex; gap: 5%; flex-wrap: wrap; }
+.card1-meta-item { display: flex; align-items: center; gap: 5px; font-size: clamp(7px,1.3vw,10px); color: rgba(255,255,255,0.72); font-family: 'Pretendard',sans-serif; }
+.card1-meta-item svg { width: clamp(9px,1.5vw,12px); height: clamp(9px,1.5vw,12px); stroke: var(--accent); fill: none; flex-shrink: 0; }
+.card2 { background: #0e0c0a; display: flex; flex-direction: column; flex: 1; }
+.card2-photo { height: 42%; position: relative; overflow: hidden; background: #1e1a15; }
+.card2-photo-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+.card2-photo-scrim { position: absolute; inset: 0; background: linear-gradient(to bottom,rgba(0,0,0,0.1),rgba(0,0,0,0.6)); }
+.card2-body { height: 58%; padding: 5% 6%; display: flex; flex-direction: column; }
+.card2-eyebrow { font-size: clamp(7px,1.1vw,9px); font-weight: 700; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; margin-bottom: 5%; font-family: 'Pretendard',sans-serif; }
+.card2-info-list { display: flex; flex-direction: column; flex: 1; }
+.card2-info-row { display: flex; align-items: center; gap: 4%; padding: 3.5% 0; border-bottom: 0.5px solid rgba(255,255,255,0.06); }
+.card2-info-row:last-of-type { border-bottom: none; }
+.card2-info-icon { width: clamp(14px,2.5vw,20px); height: clamp(14px,2.5vw,20px); stroke: var(--accent); fill: none; flex-shrink: 0; }
+.card2-info-key { font-size: clamp(7px,1.1vw,9px); color: rgba(255,255,255,0.35); min-width: 15%; letter-spacing: 0.5px; font-family: 'Pretendard',sans-serif; }
+.card2-info-val { font-size: clamp(9px,1.6vw,12px); color: rgba(255,255,255,0.88); font-weight: 500; flex: 1; line-height: 1.4; font-family: 'Pretendard',sans-serif; }
+.card2-include { margin-top: auto; background: rgba(212,165,116,0.08); border: 0.5px solid rgba(212,165,116,0.25); border-radius: 8px; padding: 3% 4%; font-size: clamp(8px,1.3vw,10px); color: rgba(255,255,255,0.6); line-height: 1.6; display: flex; align-items: center; gap: 6px; font-family: 'Pretendard',sans-serif; }
+.card2-include svg { width: clamp(10px,1.8vw,14px); height: clamp(10px,1.8vw,14px); stroke: var(--accent); fill: none; flex-shrink: 0; }
+.card3 { background: #0e0c0a; display: flex; flex-direction: column; flex: 1; }
+.card3-photo { height: 35%; position: relative; overflow: hidden; background: #1a1510; flex-shrink: 0; }
+.card3-photo-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+.card3-photo-scrim { position: absolute; inset: 0; background: linear-gradient(to bottom,rgba(0,0,0,0.1),rgba(0,0,0,0.7)); }
+.card3-film-strip { position: absolute; bottom: 6%; left: 5%; display: flex; gap: 4px; align-items: center; }
+.film-dot { width: clamp(4px,0.8vw,6px); height: clamp(4px,0.8vw,6px); border-radius: 50%; background: rgba(212,165,116,0.6); }
+.film-dot:nth-child(2){opacity:0.4} .film-dot:nth-child(3){opacity:0.2}
+.card3-body { flex: 1; padding: 5% 6%; display: flex; flex-direction: column; justify-content: space-between; }
+.card3-section-label { font-size: clamp(7px,1.1vw,9px); font-weight: 700; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; margin-bottom: 5%; font-family: 'Pretendard',sans-serif; }
+.card3-items { display: flex; flex-direction: column; flex: 1; }
+.card3-item { display: flex; align-items: flex-start; gap: 3%; padding: 3.5% 0; border-bottom: 0.5px solid rgba(255,255,255,0.06); }
+.card3-item:last-of-type { border-bottom: none; }
+.card3-item-dot { width: clamp(4px,0.9vw,6px); height: clamp(4px,0.9vw,6px); border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: clamp(4px,0.9vw,7px); }
+.card3-item-text { font-size: clamp(9px,1.55vw,12px); color: rgba(255,255,255,0.82); line-height: 1.5; font-family: 'Pretendard',sans-serif; }
+.card3-closing { padding-top: 4%; font-size: clamp(8px,1.3vw,10.5px); color: rgba(212,165,116,0.75); font-style: italic; letter-spacing: 0.3px; border-top: 0.5px solid rgba(255,255,255,0.08); font-family: 'Pretendard',sans-serif; }
+.card4 { background: #0e0c0a; display: flex; flex-direction: column; flex: 1; }
+.card4-photo { height: 50%; position: relative; overflow: hidden; background: #1a1510; flex-shrink: 0; }
+.card4-photo-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+.card4-photo-scrim { position: absolute; inset: 0; background: linear-gradient(to bottom,rgba(0,0,0,0.1),rgba(0,0,0,0.65)); }
+.card4-body { height: 50%; padding: 5% 6%; display: flex; flex-direction: column; justify-content: space-between; }
+.card4-how-label { font-size: clamp(7px,1.1vw,9px); font-weight: 700; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; margin-bottom: 3%; font-family: 'Pretendard',sans-serif; }
+.card4-how-text { font-size: clamp(9px,1.5vw,11.5px); color: rgba(255,255,255,0.65); line-height: 1.7; font-family: 'Pretendard',sans-serif; }
+.card4-divider { height: 0.5px; background: rgba(255,255,255,0.1); margin-bottom: 4%; }
+.card4-account-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4%; }
+.card4-account { font-size: clamp(10px,1.8vw,13px); font-weight: 700; color: rgba(255,255,255,0.8); font-family: 'Pretendard',sans-serif; }
+.card4-host { font-size: clamp(7px,1.1vw,9px); color: rgba(255,255,255,0.3); font-family: 'Pretendard',sans-serif; }
+.card4-cta-btn { width: 100%; background: var(--accent); border-radius: 8px; padding: 4% 0; text-align: center; font-size: clamp(9px,1.6vw,12px); font-weight: 700; color: #1a0f00; letter-spacing: 1px; border: none; font-family: 'Pretendard',sans-serif; display: block; }
+
+/* ════ TEMPLATE 06 — 넷플릭스 썸네일 ════ */
+#t06-preview-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#t06-drag-hint { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: rgba(255,255,255,0.3); font-size: 13px; pointer-events: none; font-family: 'Noto Sans KR',sans-serif; }
+#t06-drag-hint svg { opacity: .35; }
+#t06-drag-hint.hidden { display: none; }
+#t06-move-hint { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.65); color: rgba(255,255,255,0.75); font-size: 11px; padding: 5px 12px; border-radius: 20px; pointer-events: none; white-space: nowrap; transition: opacity 1.2s; font-family: 'Noto Sans KR',sans-serif; }
+#t06-move-hint.fade { opacity: 0; }
+#card-wrap-t06 { cursor: grab; background: #1a1a1a; }
+#card-wrap-t06:active { cursor: grabbing; }
+.t06-size-row { display: flex; gap: 8px; }
+.t06-size-btn { flex: 1; padding: 8px 4px; border-radius: 6px; border: 1px solid var(--panel-border); background: transparent; color: var(--gray-400); font-size: 12px; font-family: 'DM Mono',monospace; cursor: pointer; transition: all .2s; }
+.t06-size-btn.active { border-color: var(--accent); color: var(--ui-text); background: rgba(0,102,255,0.06); }
+
+</style>
+</head>
+<body>
+
+<!-- 템플릿 저장 모달 -->
+<div class="modal-overlay" id="template-modal" onclick="if(event.target===this)closeTemplateModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">📁 내 템플릿</span>
+      <button class="modal-close" onclick="closeTemplateModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-save-row">
+        <input type="text" id="tpl-name-input" placeholder="템플릿 이름 입력 (예: 봄 이벤트 T02)">
+        <button onclick="saveCurrentTemplate()">현재 상태 저장</button>
+      </div>
+      <div id="template-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="exportJSON()">↓ JSON 파일로 내보내기</button>
+      <button onclick="importJSON()">↑ JSON 파일 가져오기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 헤더 -->
+<div class="studio-header">
+  <div class="studio-logo">
+    <span class="dot"></span>
+    MK STUDIO
+    <span class="sub">CARD NEWS MAKER</span>
+  </div>
+
+  <div class="header-right">
+    <!-- 비율 선택 버튼 그룹 -->
+    <div class="ratio-group" id="ratio-group">
+      <button class="ratio-btn active" data-ratio="4:5" data-class="ratio-4-5"
+              data-w="1080" data-h="1350" data-scale="2.8125" onclick="switchRatio(this)">
+        <div class="ratio-icon"><div class="box"></div></div>
+        <div class="ratio-label">4:5</div>
+        <div class="ratio-px">1080×1350</div>
+      </button>
+      <button class="ratio-btn" data-ratio="1:1" data-class="ratio-1-1"
+              data-w="1080" data-h="1080" data-scale="2.25" onclick="switchRatio(this)">
+        <div class="ratio-icon"><div class="box"></div></div>
+        <div class="ratio-label">1:1</div>
+        <div class="ratio-px">1080×1080</div>
+      </button>
+      <button class="ratio-btn" data-ratio="4:3" data-class="ratio-4-3"
+              data-w="1080" data-h="810" data-scale="2.25" onclick="switchRatio(this)">
+        <div class="ratio-icon"><div class="box"></div></div>
+        <div class="ratio-label">4:3</div>
+        <div class="ratio-px">1080×810</div>
+      </button>
+      <button class="ratio-btn" data-ratio="16:9" data-class="ratio-16-9"
+              data-w="1920" data-h="1080" data-scale="4" onclick="switchRatio(this)">
+        <div class="ratio-icon"><div class="box"></div></div>
+        <div class="ratio-label">16:9</div>
+        <div class="ratio-px">1920×1080</div>
+      </button>
+    </div>
+
+    <button class="btn-template-mgr" onclick="openTemplateModal()">📁 내 템플릿</button>
+    <button class="btn-download-all" id="btn-dl-all" onclick="downloadCard()">
+      ↓ 다운로드
+    </button>
+  </div>
+</div>
+
+<!-- 템플릿 탭 바 -->
+<div class="template-bar">
+  <button class="template-tab active" onclick="switchTemplate('t01', this)">
+    TYPE 01 <span class="tag">광고 오버레이</span>
+  </button>
+  <button class="template-tab" onclick="switchTemplate('t05', this)">
+    TYPE 05 <span class="tag">CineLab 모임</span>
+  </button>
+  <button class="template-tab" onclick="switchTemplate('t06', this)">
+    TYPE 06 <span class="tag">넷플릭스 썸네일</span>
+  </button>
+</div>
+
+<!-- 워크스페이스 -->
+<div class="workspace">
+
+  <!-- 컨트롤 패널 -->
+  <div class="control-panel">
+    <div id="ctrl-t01" class="template-content active">
+
+      <!-- 슬라이드 탭 -->
+      <div class="slide-tabs">
+        <button class="slide-tab-btn active" onclick="goT01Slide(0)">슬라이드 1</button>
+        <button class="slide-tab-btn" onclick="goT01Slide(1)">슬라이드 2</button>
+        <button class="slide-tab-btn" onclick="goT01Slide(2)">슬라이드 3</button>
+      </div>
+
+      <!-- ── 슬라이드 1 컨트롤 ── -->
+      <div class="slide-ctrl active" id="t01-s-ctrl-0">
+
+        <div class="section-title">배경 이미지</div>
+
+        <div class="form-group">
+          <label>이미지 업로드</label>
+          <div class="upload-area">
+            <span class="upload-icon">🖼</span>
+            <div class="upload-text">클릭하여 이미지 선택</div>
+            <div class="upload-filename" id="t01-filename">파일 없음</div>
+            <input type="file" id="t01-img-input" accept="image/*">
+          </div>
+          <p style="font-size:11px;color:var(--gray-400);margin-top:4px">💡 미리보기에서 드래그로 위치 조정 가능</p>
+        </div>
+
+        <div class="form-group">
+          <div class="range-label">
+            <label>이미지 줌</label>
+            <span id="t01-scale-val">1.0×</span>
+          </div>
+          <input type="range" id="t01-scale" min="0.3" max="3" value="1" step="0.05">
+        </div>
+
+        <div class="form-group">
+          <div class="range-label">
+            <label>오버레이 강도</label>
+            <span id="t01-overlay-val">55%</span>
+          </div>
+          <input type="range" id="t01-overlay" min="0" max="100" value="55" step="5">
+        </div>
+
+        <div class="divider"></div>
+        <div class="section-title">텍스트 — 라인 1</div>
+
+        <div class="form-group">
+          <label>일반 텍스트</label>
+          <input type="text" id="t01-l1a" value="[제목 텍스트]">
+        </div>
+        <div class="form-group">
+          <label>강조 텍스트 (강조색)</label>
+          <input type="text" id="t01-l1b" value="[강조 문구]">
+        </div>
+        <div class="form-group">
+          <div class="range-label">
+            <label>라인1 크기 (기준)</label>
+            <span id="t01-size1-val">52px</span>
+          </div>
+          <input type="range" id="t01-size1" min="24" max="80" value="52" step="1">
+        </div>
+
+        <div class="divider"></div>
+        <div class="section-title">텍스트 — 라인 2</div>
+
+        <div class="form-group">
+          <label>텍스트</label>
+          <input type="text" id="t01-l2" value="[핵심 문구]">
+        </div>
+        <div class="form-group">
+          <label>스타일</label>
+          <select id="t01-l2-style">
+            <option value="style-box" selected>■ 배경 박스 (강조색 배경)</option>
+            <option value="style-plain">텍스트만 (흰색)</option>
+            <option value="style-outline">아웃라인 (테두리)</option>
+            <option value="style-highlight">하이라이트 (노란 배경)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <div class="range-label">
+            <label>라인2 크기 (기준)</label>
+            <span id="t01-size2-val">48px</span>
+          </div>
+          <input type="range" id="t01-size2" min="20" max="80" value="48" step="1">
+        </div>
+
+        <div class="divider"></div>
+        <div class="section-title">서브 텍스트</div>
+
+        <div class="form-group">
+          <label>설명 문구</label>
+          <textarea id="t01-sub">[부제목 또는 설명 문구를 입력하세요]</textarea>
+        </div>
+
+        <div class="divider"></div>
+        <div class="section-title">크레딧 / 브랜드</div>
+
+        <div class="flex-row">
+          <div class="form-group">
+            <label>크레딧 텍스트</label>
+            <input type="text" id="t01-credit" value="[크레딧 / 출처]">
+          </div>
+          <div class="form-group">
+            <label>우상단 뱃지</label>
+            <input type="text" id="t01-badge" value="[브랜드명]">
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <div class="section-title">레이아웃</div>
+
+        <div class="form-group">
+          <label>텍스트 정렬</label>
+          <select id="t01-align">
+            <option value="align-left" selected>왼쪽 정렬</option>
+            <option value="align-center">가운데 정렬</option>
+            <option value="align-right">오른쪽 정렬</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>강조 컬러</label>
+          <div class="color-row">
+            <div class="color-chip selected" style="background:#ff4d4d" data-color="#ff4d4d" onclick="setAccentColor(this)"></div>
+            <div class="color-chip" style="background:#ff8c00" data-color="#ff8c00" onclick="setAccentColor(this)"></div>
+            <div class="color-chip" style="background:#ffe500" data-color="#ffe500" onclick="setAccentColor(this)"></div>
+            <div class="color-chip" style="background:#26c6a4" data-color="#26c6a4" onclick="setAccentColor(this)"></div>
+            <div class="color-chip" style="background:#4c9fff" data-color="#4c9fff" onclick="setAccentColor(this)"></div>
+            <div class="color-chip" style="background:#bf5fff" data-color="#bf5fff" onclick="setAccentColor(this)"></div>
+            <div class="color-input-wrap">
+              <input type="color" id="custom-accent" value="#ff4d4d" oninput="setAccentColorHex(this.value)">
+              <span style="font-size:10px;color:var(--gray-400);font-family:'DM Mono',monospace">직접입력</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-download" onclick="downloadT01S1()">↓ 슬라이드 1 다운로드</button>
+
+      </div>
+
+      <!-- ── 슬라이드 2 컨트롤 ── -->
+      <div class="slide-ctrl" id="t01-s-ctrl-1">
+
+        <div class="section-title">배경 이미지</div>
+        <p style="font-size:11px;color:var(--gray-400)">슬라이드 1과 동일 이미지 공유. 이미지·줌은 슬라이드 1에서 조정.</p>
+
+        <div class="form-group" style="margin-top:8px;">
+          <div class="range-label">
+            <label>오버레이 강도 (독립)</label>
+            <span id="t01-s2-overlay-val">80%</span>
+          </div>
+          <input type="range" id="t01-s2-overlay" min="0" max="100" value="80" step="5">
+        </div>
+
+        <div class="divider"></div>
+        <div class="section-title">타이틀</div>
+
+        <div class="form-group">
+          <label>태그라인 (작은 글씨)</label>
+          <input type="text" id="t01-s2-tagline" value="[태그라인]">
+        </div>
+        <div class="form-group">
+          <label>메인 타이틀</label>
+          <textarea id="t01-s2-title" rows="2">[메인 타이틀]</textarea>
+        </div>
+        <div class="form-group">
+          <div class="range-label">
+            <label>타이틀 크기</label>
+            <span id="t01-s2-title-size-val">38px</span>
+          </div>
+          <input type="range" id="t01-s2-title-size" min="20" max="72" value="38" step="1">
+        </div>
+        <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;">
+          <input type="checkbox" id="t01-s2-divider-show" checked style="width:auto;cursor:pointer;accent-color:var(--accent);">
+          <label for="t01-s2-divider-show" style="cursor:pointer;color:var(--gray-400);font-size:11px;font-family:'DM Mono',monospace;letter-spacing:0.05em;">구분선 표시</label>
+        </div>
+
+        <div class="divider"></div>
+        <div class="section-title">목록</div>
+
+        <div class="form-group">
+          <label>섹션 헤더</label>
+          <input type="text" id="t01-s2-section" value="[섹션 헤더]">
+        </div>
+        <div class="form-group">
+          <label>항목 1</label>
+          <input type="text" id="t01-s2-i1" value="[항목 1]">
+        </div>
+        <div class="form-group">
+          <label>항목 2</label>
+          <input type="text" id="t01-s2-i2" value="[항목 2]">
+        </div>
+        <div class="form-group">
+          <label>항목 3</label>
+          <input type="text" id="t01-s2-i3" value="[항목 3]">
+        </div>
+        <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;">
+          <input type="checkbox" id="t01-s2-item4-show" checked style="width:auto;cursor:pointer;accent-color:var(--accent);">
+          <label for="t01-s2-item4-show" style="cursor:pointer;color:var(--gray-400);font-size:11px;font-family:'DM Mono',monospace;letter-spacing:0.05em;">항목 4 표시</label>
+        </div>
+        <div class="form-group">
+          <label>항목 4</label>
+          <input type="text" id="t01-s2-i4" value="[항목 4]">
+        </div>
+
+        <button class="btn-download" onclick="downloadT01S2()">↓ 슬라이드 2 다운로드</button>
+
+      </div>
+
+      <!-- ── 슬라이드 3 컨트롤 ── -->
+      <div class="slide-ctrl" id="t01-s-ctrl-2">
+
+        <div class="section-title">사진 영역</div>
+
+        <div class="form-group">
+          <label>이미지 업로드</label>
+          <div class="upload-area">
+            <span class="upload-icon">🖼</span>
+            <div class="upload-text">클릭하여 이미지 선택</div>
+            <div class="upload-filename" id="t01-s3-img-name">파일 없음</div>
+            <input type="file" id="t01-s3-img-input" accept="image/*">
+          </div>
+          <p style="font-size:11px;color:var(--gray-400);margin-top:4px">💡 미리보기에서 드래그로 위치 조정 가능</p>
+        </div>
+
+        <div class="divider"></div>
+        <div class="section-title">클로징 멘트</div>
+
+        <div class="form-group">
+          <label>메인 문구</label>
+          <textarea id="t01-s3-msg" rows="3">[클로징 멘트를
+입력하세요]</textarea>
+        </div>
+        <div class="form-group">
+          <div class="range-label">
+            <label>문구 크기</label>
+            <span id="t01-s3-msg-size-val">32px</span>
+          </div>
+          <input type="range" id="t01-s3-msg-size" min="18" max="60" value="32" step="1">
+        </div>
+
+        <div class="divider"></div>
+        <div class="section-title">브랜딩</div>
+
+        <div class="form-group">
+          <label>브랜드 라벨 (작은 글씨)</label>
+          <input type="text" id="t01-s3-label" value="대구의 모든 커뮤니티">
+        </div>
+        <div class="form-group">
+          <label>브랜드명 (강조색)</label>
+          <input type="text" id="t01-s3-brand" value="MK LINK">
+        </div>
+        <div class="form-group">
+          <label>크레딧 / SNS</label>
+          <input type="text" id="t01-s3-credit" value="[SNS 핸들 / 연락처]">
+        </div>
+
+        <button class="btn-download" onclick="downloadT01S3()">↓ 슬라이드 3 다운로드</button>
+
+      </div>
+
+      <button class="btn-download" style="background:#8a8480;margin-top:4px" onclick="downloadT01All()">↓ 전체 3장 다운로드</button>
+
+    </div>
+    <!-- ══ TYPE 05 — CineLab 모임 ══ -->
+    <div id="ctrl-t05" class="template-content">
+
+      <div class="slide-tabs">
+        <button class="slide-tab-btn active" onclick="goT05Slide(0)">카드 1</button>
+        <button class="slide-tab-btn" onclick="goT05Slide(1)">카드 2</button>
+        <button class="slide-tab-btn" onclick="goT05Slide(2)">카드 3</button>
+        <button class="slide-tab-btn" onclick="goT05Slide(3)">카드 4</button>
+      </div>
+
+      <!-- 카드 1 컨트롤 -->
+      <div class="slide-ctrl active" id="t05-s-ctrl-0">
+        <div class="section-title">배경 이미지</div>
+        <div class="form-group">
+          <div class="upload-area">
+            <span class="upload-icon">🎬</span>
+            <div class="upload-text">영화 스틸컷 / 포스터 업로드</div>
+            <div class="upload-filename" id="t05-prev1-name">파일 없음</div>
+            <input type="file" id="t05-img1-input" accept="image/*">
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="section-title">텍스트</div>
+        <div class="form-group"><label>상단 레이블</label><input type="text" id="c1-eyebrow" value="5월 대구영화모임" oninput="updateT05()"></div>
+        <div class="form-group"><label>영화 제목 (한글)</label><input type="text" id="c1-title" value="펀치 드렁크 러브" oninput="updateT05()"></div>
+        <div class="form-group"><label>영화 제목 (영문 + 연도)</label><input type="text" id="c1-title-en" value="Punch-Drunk Love, 2002" oninput="updateT05()"></div>
+        <div class="form-group"><label>날짜</label><input type="date" id="c1-date" onchange="updateT05Dates()"></div>
+        <div class="form-group"><label>장소</label><input type="text" id="c1-place" value="Lawns, 대구" oninput="updateT05()"></div>
+        <div class="form-group"><label>모집 뱃지 문구</label><input type="text" id="c1-badge" value="인원 모집 중" oninput="updateT05()"></div>
+      </div>
+
+      <!-- 카드 2 컨트롤 -->
+      <div class="slide-ctrl" id="t05-s-ctrl-1">
+        <div class="section-title">배경 이미지</div>
+        <div class="form-group">
+          <div class="upload-area">
+            <span class="upload-icon">🏠</span>
+            <div class="upload-text">장소 / 공간 분위기 사진</div>
+            <div class="upload-filename" id="t05-prev2-name">파일 없음</div>
+            <input type="file" id="t05-img2-input" accept="image/*">
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="section-title">모임 정보</div>
+        <div class="form-group"><label>날짜</label><input type="date" id="c2-date" onchange="updateT05Dates()"></div>
+        <div class="form-group"><label>시작 시간</label><input type="time" id="c2-time-start" value="19:00" onchange="updateT05Dates()"></div>
+        <div class="form-group"><label>종료 시간</label><input type="time" id="c2-time-end" value="22:30" onchange="updateT05Dates()"></div>
+        <div class="form-group"><label>장소</label><input type="text" id="c2-place" value="Lawns (론스)" oninput="updateT05()"></div>
+        <div class="form-group"><label>참가비</label><input type="text" id="c2-fee" value="15,000원 / 1인" oninput="updateT05()"></div>
+        <div class="form-group"><label>신청 방법</label><input type="text" id="c2-apply" value="인스타그램 DM 신청" oninput="updateT05()"></div>
+        <div class="form-group"><label>포함 사항</label><input type="text" id="c2-include" value="웰컴 드링크 1잔 포함" oninput="updateT05()"></div>
+      </div>
+
+      <!-- 카드 3 컨트롤 -->
+      <div class="slide-ctrl" id="t05-s-ctrl-2">
+        <div class="section-title">배경 이미지</div>
+        <div class="form-group">
+          <div class="upload-area">
+            <span class="upload-icon">✨</span>
+            <div class="upload-text">감성 소품 / 공간 사진</div>
+            <div class="upload-filename" id="t05-prev3-name">파일 없음</div>
+            <input type="file" id="t05-img3-input" accept="image/*">
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="section-title">모임 소개 문구</div>
+        <div class="form-group"><label>섹션 레이블</label><input type="text" id="c3-label" value="이런 분들 오세요" oninput="updateT05()"></div>
+        <div class="form-group"><label>항목 1</label><input type="text" id="c3-item1" value="다른 사람들과 영화에 대해 이야기하고 싶은 분" oninput="updateT05()"></div>
+        <div class="form-group"><label>항목 2</label><input type="text" id="c3-item2" value="영화 한 편으로 다양한 이야기를 나누고 싶은 분" oninput="updateT05()"></div>
+        <div class="form-group"><label>항목 3</label><input type="text" id="c3-item3" value="보고 싶었지만 혼자 보기 아쉬웠던 영화가 있는 분" oninput="updateT05()"></div>
+        <div class="form-group"><label>항목 4 (선택)</label><input type="text" id="c3-item4" value="좋은 공간에서 편안하게 영화를 즐기고 싶은 분" oninput="updateT05()"></div>
+        <div class="form-group"><label>하단 한마디</label><input type="text" id="c3-closing" value="영화를 좋아한다면, 그걸로 충분합니다." oninput="updateT05()"></div>
+      </div>
+
+      <!-- 카드 4 컨트롤 -->
+      <div class="slide-ctrl" id="t05-s-ctrl-3">
+        <div class="section-title">배경 이미지</div>
+        <div class="form-group">
+          <div class="upload-area">
+            <span class="upload-icon">✨</span>
+            <div class="upload-text">감성 소품 / 공간 사진</div>
+            <div class="upload-filename" id="t05-prev4-name">파일 없음</div>
+            <input type="file" id="t05-img4-input" accept="image/*">
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="section-title">신청 안내</div>
+        <div class="form-group"><label>신청 안내 문구</label><textarea id="c4-howtext" oninput="updateT05()">참가 신청은 인스타그램
+DM으로 받습니다.
+선착순 마감이니 서둘러주세요.</textarea></div>
+        <div class="form-group"><label>인스타그램 계정</label><input type="text" id="c4-account" value="@daegu_movie" oninput="updateT05()"></div>
+        <div class="form-group"><label>기획·주최</label><input type="text" id="c4-host" value="기획·주최 MK CINELAB" oninput="updateT05()"></div>
+        <div class="form-group"><label>CTA 버튼 문구</label><input type="text" id="c4-cta" value="DM으로 신청하기" oninput="updateT05()"></div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-title">포인트 컬러</div>
+      <div class="flex-row">
+        <div class="form-group"><label>메인 포인트</label><input type="color" id="t05-color-accent" value="#d4a574" oninput="updateT05Color()"></div>
+        <div class="form-group"><label>포인트 밝기</label><input type="color" id="t05-color-accent2" value="#e8c49a" oninput="updateT05Color()"></div>
+      </div>
+
+      <button class="btn-download" onclick="downloadT05Current()">↓ 현재 카드 다운로드</button>
+      <button class="btn-download" style="background:#8a8480;margin-top:0" onclick="downloadT05All()">↓ 전체 4장 다운로드</button>
+
+    </div>
+
+    <!-- ══ TYPE 06 — 넷플릭스 썸네일 ══ -->
+    <div id="ctrl-t06" class="template-content">
+
+      <div class="section-title">배경 이미지</div>
+      <div class="form-group">
+        <div class="upload-area">
+          <span class="upload-icon">🖼</span>
+          <div class="upload-text">클릭하여 이미지 선택 (JPG, PNG)</div>
+          <div class="upload-filename" id="t06-file-name">파일 없음</div>
+          <input type="file" id="t06-file-input" accept="image/*">
+        </div>
+        <p style="font-size:11px;color:var(--gray-400);margin-top:4px">💡 업로드 후 미리보기에서 드래그로 위치 조정 가능</p>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-title">텍스트</div>
+      <div class="form-group"><label>제목</label><input type="text" id="t06-inp-title" placeholder="예: 악마는 프라다를 입는다2"></div>
+      <div class="form-group"><label>부제목</label><input type="text" id="t06-inp-sub" placeholder="예: 20년만의 속편 보기전 꼭 알아야 할 정보"></div>
+
+      <div class="divider"></div>
+      <div class="section-title">재생 위치</div>
+      <div class="form-group">
+        <div class="range-label">
+          <label>진행 바 위치</label>
+          <span id="t06-progress-val">20%</span>
+        </div>
+        <input type="range" id="t06-progress-slider" min="0" max="100" value="20" step="1">
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-title">저장 크기</div>
+      <div class="form-group">
+        <div class="t06-size-row">
+          <button class="t06-size-btn active" data-size="1080">1080×1080</button>
+          <button class="t06-size-btn" data-size="800">800×800</button>
+          <button class="t06-size-btn" data-size="600">600×600</button>
+        </div>
+      </div>
+
+      <button class="btn-download" onclick="downloadT06()">↓ 썸네일 다운로드</button>
+
+    </div>
+
+  </div><!-- /control-panel -->
+
+  <!-- 미리보기 패널 -->
+  <div class="preview-panel">
+
+    <!-- ══ TYPE 01 미리보기 ══ -->
+    <div id="t01-preview-area" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;width:100%;height:100%;position:absolute;inset:0;">
+      <div class="preview-slide-nav" id="t01-prev-nav">
+        <button class="preview-slide-btn active" onclick="goT01Slide(0)">슬라이드 1</button>
+        <button class="preview-slide-btn" onclick="goT01Slide(1)">슬라이드 2</button>
+        <button class="preview-slide-btn" onclick="goT01Slide(2)">슬라이드 3</button>
+      </div>
+
+      <!-- 카드 컨테이너 (비율에 따라 클래스 변경) -->
+      <div class="card-container ratio-4-5" id="card-wrap">
+        <div id="card-t01">
+          <!-- 슬라이드 1: 기존 광고 오버레이 -->
+          <canvas id="t01-canvas"></canvas>
+          <div class="t01-overlay" id="t01-overlay-el"></div>
+          <div class="t01-badge" id="t01-badge-el">[브랜드명]</div>
+          <div class="t01-text-area">
+            <div class="t01-line1" id="t01-line1-el">
+              <span id="t01-l1a-el">[제목 텍스트]</span>
+              <span class="em" id="t01-l1b-el">[강조 문구]</span>
+            </div>
+            <div class="t01-line2-wrap">
+              <span class="t01-line2 style-box" id="t01-l2-el">[핵심 문구]</span>
+            </div>
+            <div class="t01-sub" id="t01-sub-el">[부제목 또는 설명 문구를 입력하세요]</div>
+            <div class="t01-credit" id="t01-credit-el">[크레딧 / 출처]</div>
+          </div>
+
+          <!-- 슬라이드 3: 클로징 카드 (사진 상단 + 다크 패널 하단) -->
+          <div id="t01-slide-2">
+            <div class="t01-s3-photo" id="t01-s3-photo-wrap">
+              <div class="t01-s3-photo-ph" id="t01-s3-ph">이미지를 업로드하세요</div>
+              <img class="t01-s3-photo-img" id="t01-s3-img-el" src="" alt="">
+              <div class="t01-s3-photo-grad"></div>
+            </div>
+            <div class="t01-s3-panel">
+              <div class="t01-s3-top">
+                <div class="t01-s3-qq">"</div>
+                <div class="t01-s3-msg" id="t01-s3-msg-el">[클로징 멘트를<br>입력하세요]</div>
+              </div>
+              <div>
+                <div class="t01-s3-divider"></div>
+                <div class="t01-s3-brand-row">
+                  <div class="t01-s3-brand-label" id="t01-s3-label-el">대구의 모든 커뮤니티</div>
+                  <div class="t01-s3-brand" id="t01-s3-brand-el">MK LINK</div>
+                  <div class="t01-s3-credit" id="t01-s3-credit-el">[SNS 핸들 / 연락처]</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 슬라이드 2: 리스트형 하단 좌측 -->
+          <div id="t01-slide-1">
+            <canvas id="t01-canvas-s2"></canvas>
+            <div class="t01-s2-overlay" id="t01-s2-overlay-el"></div>
+            <div class="t01-s2-wrap" id="t01-s2-wrap-el">
+              <div class="t01-s2-tagline" id="t01-s2-tagline-el">[태그라인]</div>
+              <div class="t01-s2-title" id="t01-s2-title-el">[메인 타이틀]</div>
+              <div class="t01-s2-divider" id="t01-s2-div-el"></div>
+              <div class="t01-s2-section-header" id="t01-s2-sec-wrap">
+                <span class="t01-s2-section-dot" id="t01-s2-sec-dot"></span>
+                <span class="t01-s2-section-label" id="t01-s2-sec-el">[섹션 헤더]</span>
+              </div>
+              <div class="t01-s2-list">
+                <div class="t01-s2-item" id="t01-s2-item-0">
+                  <span class="t01-s2-item-num">01</span>
+                  <span class="t01-s2-item-bar"></span>
+                  <span class="t01-s2-item-text" id="t01-s2-i1-el">[항목 1]</span>
+                </div>
+                <div class="t01-s2-item" id="t01-s2-item-1">
+                  <span class="t01-s2-item-num">02</span>
+                  <span class="t01-s2-item-bar"></span>
+                  <span class="t01-s2-item-text" id="t01-s2-i2-el">[항목 2]</span>
+                </div>
+                <div class="t01-s2-item" id="t01-s2-item-2">
+                  <span class="t01-s2-item-num">03</span>
+                  <span class="t01-s2-item-bar"></span>
+                  <span class="t01-s2-item-text" id="t01-s2-i3-el">[항목 3]</span>
+                </div>
+                <div class="t01-s2-item" id="t01-s2-item-3">
+                  <span class="t01-s2-item-num">04</span>
+                  <span class="t01-s2-item-bar"></span>
+                  <span class="t01-s2-item-text" id="t01-s2-i4-el">[항목 4]</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 비율 정보 표시 -->
+      <div class="ratio-info" id="ratio-info" style="margin-top:6px;">
+        <strong>4:5</strong> &nbsp;·&nbsp; 출력 해상도 1080 × 1350 px &nbsp;·&nbsp; 슬라이드 <strong id="t01-slide-num">1</strong>/3
+      </div>
+    </div>
+
+    <!-- ══ TYPE 05 미리보기 — CineLab 모임 ══ -->
+    <div id="t05-preview-area" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:0;width:100%;height:100%;position:absolute;inset:0;">
+      <div class="preview-slide-nav" id="t05-prev-nav">
+        <button class="preview-slide-btn active" onclick="goT05Slide(0)">카드 01</button>
+        <button class="preview-slide-btn" onclick="goT05Slide(1)">카드 02</button>
+        <button class="preview-slide-btn" onclick="goT05Slide(2)">카드 03</button>
+        <button class="preview-slide-btn" onclick="goT05Slide(3)">카드 04</button>
+      </div>
+      <div class="card-container ratio-4-5" id="card-wrap-t05">
+        <div id="t05-slider-wrap" style="width:100%;height:100%;position:relative;overflow:hidden;">
+
+          <!-- 카드 1 — 모집 커버 -->
+          <div class="t05-slide active" id="t05-slide-0">
+            <div class="canvas-card card1">
+              <div class="card1-bg" id="card1-bg"></div>
+              <div class="card1-scrim"></div>
+              <div class="card1-logo">MK CINELAB</div>
+              <div class="card1-bottom">
+                <div class="card1-badge"><div class="badge-dot"></div><span id="d-c1-badge">인원 모집 중</span></div>
+                <div class="card1-eyebrow" id="d-c1-eyebrow">5월 대구영화모임</div>
+                <div class="card1-title" id="d-c1-title">펀치 드렁크 러브</div>
+                <div class="card1-title-en" id="d-c1-title-en">Punch-Drunk Love, 2002</div>
+                <div class="card1-divider"></div>
+                <div class="card1-meta">
+                  <div class="card1-meta-item">
+                    <svg viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <span id="d-c1-date">5월 3일 (일)</span>
+                  </div>
+                  <div class="card1-meta-item">
+                    <svg viewBox="0 0 24 24" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span id="d-c1-place">Lawns, 대구</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 카드 2 — 모임 정보 -->
+          <div class="t05-slide" id="t05-slide-1">
+            <div class="canvas-card card2">
+              <div class="card2-photo"><div class="card2-photo-bg" id="card2-photo-bg"></div><div class="card2-photo-scrim"></div></div>
+              <div class="card2-body">
+                <div class="card2-eyebrow">모임 정보</div>
+                <div class="card2-info-list">
+                  <div class="card2-info-row"><svg class="card2-info-icon" viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="card2-info-key">일시</span><span class="card2-info-val" id="d-c2-datetime">5월 3일 (일)&nbsp;&nbsp;19:00 ~ 22:30</span></div>
+                  <div class="card2-info-row"><svg class="card2-info-icon" viewBox="0 0 24 24" stroke-width="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="card2-info-key">장소</span><span class="card2-info-val" id="d-c2-place">Lawns (론스)</span></div>
+                  <div class="card2-info-row"><svg class="card2-info-icon" viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span class="card2-info-key">비용</span><span class="card2-info-val" id="d-c2-fee">15,000원 / 1인</span></div>
+                  <div class="card2-info-row"><svg class="card2-info-icon" viewBox="0 0 24 24" stroke-width="1.8"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span class="card2-info-key">신청</span><span class="card2-info-val" id="d-c2-apply">인스타그램 DM 신청</span></div>
+                </div>
+                <div class="card2-include"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M8 12l2 2 4-4"/></svg><span id="d-c2-include">웰컴 드링크 1잔 포함</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 카드 3 — 모임 소개 -->
+          <div class="t05-slide" id="t05-slide-2">
+            <div class="canvas-card card3">
+              <div class="card3-photo"><div class="card3-photo-bg" id="card3-photo-bg"></div><div class="card3-photo-scrim"></div><div class="card3-film-strip"><div class="film-dot"></div><div class="film-dot"></div><div class="film-dot"></div></div></div>
+              <div class="card3-body">
+                <div>
+                  <div class="card3-section-label" id="d-c3-label">이런 분들 오세요</div>
+                  <div class="card3-items">
+                    <div class="card3-item"><div class="card3-item-dot"></div><span class="card3-item-text" id="d-c3-item1">다른 사람들과 영화에 대해 이야기하고 싶은 분</span></div>
+                    <div class="card3-item"><div class="card3-item-dot"></div><span class="card3-item-text" id="d-c3-item2">영화 한 편으로 다양한 이야기를 나누고 싶은 분</span></div>
+                    <div class="card3-item"><div class="card3-item-dot"></div><span class="card3-item-text" id="d-c3-item3">보고 싶었지만 혼자 보기 아쉬웠던 영화가 있는 분</span></div>
+                    <div class="card3-item"><div class="card3-item-dot"></div><span class="card3-item-text" id="d-c3-item4">좋은 공간에서 편안하게 영화를 즐기고 싶은 분</span></div>
+                  </div>
+                </div>
+                <div class="card3-closing" id="d-c3-closing">영화를 좋아한다면, 그걸로 충분합니다.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 카드 4 — 신청 안내 -->
+          <div class="t05-slide" id="t05-slide-3">
+            <div class="canvas-card card4">
+              <div class="card4-photo"><div class="card4-photo-bg" id="card4-photo-bg"></div><div class="card4-photo-scrim"></div></div>
+              <div class="card4-body">
+                <div>
+                  <div class="card4-how-label">신청 방법</div>
+                  <div class="card4-how-text" id="d-c4-howtext">참가 신청은 인스타그램<br>DM으로 받습니다.<br>선착순 마감이니 서둘러주세요.</div>
+                </div>
+                <div>
+                  <div class="card4-divider"></div>
+                  <div class="card4-account-row"><div class="card4-account" id="d-c4-account">@daegu_movie</div><div class="card4-host" id="d-c4-host">기획·주최 MK CINELAB</div></div>
+                  <div class="card4-cta-btn" id="d-c4-cta">DM으로 신청하기</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="ratio-info" style="margin-top:6px;">
+        고정 <strong>4:5</strong> &nbsp;·&nbsp; 출력 해상도 1080 × 1350 px &nbsp;·&nbsp; 카드 <strong id="t05-slide-num">1</strong>/4
+      </div>
+    </div>
+
+    <!-- ══ TYPE 06 미리보기 — 넷플릭스 썸네일 ══ -->
+    <div id="t06-preview-area" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:0;width:100%;height:100%;position:absolute;inset:0;">
+      <div class="card-container ratio-1-1" id="card-wrap-t06">
+        <canvas id="t06-preview-canvas"></canvas>
+        <div id="t06-drag-hint">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          <span>이미지를 업로드해 주세요</span>
+        </div>
+        <div id="t06-move-hint" style="display:none;">✥ 드래그해서 이미지 위치 조정</div>
+      </div>
+      <div class="ratio-info" style="margin-top:6px;">
+        고정 <strong>1:1</strong> &nbsp;·&nbsp; 저장 크기: <strong id="t06-size-info">1080×1080</strong>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════
+   비율 전환
+═══════════════════════════════════════ */
+const RATIOS = {
+  '4:5':  { cls: 'ratio-4-5',  w: 1080, h: 1350, scale: 2.8125 },
+  '1:1':  { cls: 'ratio-1-1',  w: 1080, h: 1080, scale: 2.25   },
+  '4:3':  { cls: 'ratio-4-3',  w: 1080, h: 810,  scale: 2.25   },
+  '16:9': { cls: 'ratio-16-9', w: 1920, h: 1080, scale: 4.0    },
+};
+let currentRatio = '4:5';
+
+function switchRatio(btn) {
+  const ratio = btn.dataset.ratio;
+  currentRatio = ratio;
+
+  // 탭 버튼 활성화
+  document.querySelectorAll('.ratio-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  // 카드 컨테이너 클래스 교체
+  const wrap = document.getElementById('card-wrap');
+  Object.values(RATIOS).forEach(r => wrap.classList.remove(r.cls));
+  wrap.classList.add(RATIOS[ratio].cls);
+
+  // 비율 정보 업데이트
+  const r = RATIOS[ratio];
+  document.getElementById('ratio-info').innerHTML =
+    `<strong>${ratio}</strong> &nbsp;·&nbsp; 출력 해상도 ${r.w} × ${r.h} px`;
+
+  // 다운로드 버튼 텍스트 업데이트
+  document.getElementById('btn-dl-all').textContent = `↓ ${ratio} 다운로드`;
+
+  // 캔버스 재동기화 (비율 바뀌면 캔버스 크기도 맞춰야 함)
+  setTimeout(() => {
+    syncCanvasToWrap();
+    redrawCanvas();
+  }, 380); // 트랜지션 끝나고
+}
+
+/* ═══════════════════════════════════════
+   캔버스 이미지 로직
+═══════════════════════════════════════ */
+const canvas = document.getElementById('t01-canvas');
+const ctx = canvas.getContext('2d');
+const canvas2 = document.getElementById('t01-canvas-s2');
+const ctx2 = canvas2.getContext('2d');
+const wrap = document.getElementById('card-wrap');
+const scaleInput = document.getElementById('t01-scale');
+const scaleLabel = document.getElementById('t01-scale-val');
+
+let img = null, imgX = 0, imgY = 0;
+let drawW = 0, drawH = 0, baseScale = 1;
+let isDragging = false, sx = 0, sy = 0;
+let currentT01Slide = 0;
+
+function syncCanvasToWrap() {
+  const r = wrap.getBoundingClientRect();
+  canvas.width  = r.width  * 2.5;
+  canvas.height = r.height * 2.5;
+  canvas2.width  = r.width  * 2.5;
+  canvas2.height = r.height * 2.5;
+}
+
+function clearCanvas() {
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function redrawCanvas() {
+  clearCanvas();
+  if (!img) return;
+  ctx.drawImage(img, imgX, imgY, drawW, drawH);
+  ctx2.fillStyle = '#111';
+  ctx2.fillRect(0, 0, canvas2.width, canvas2.height);
+  ctx2.drawImage(img, imgX, imgY, drawW, drawH);
+}
+
+document.getElementById('t01-img-input').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('t01-filename').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const i = new Image();
+    i.onload = () => {
+      img = i;
+      syncCanvasToWrap();
+      baseScale = Math.max(canvas.width / img.width, canvas.height / img.height);
+      scaleInput.value = 1;
+      scaleLabel.textContent = '1.0×';
+      drawW = img.width * baseScale;
+      drawH = img.height * baseScale;
+      imgX = (canvas.width - drawW) / 2;
+      imgY = (canvas.height - drawH) / 2;
+      redrawCanvas();
+    };
+    i.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+scaleInput.addEventListener('input', function() {
+  if (!img) return;
+  const s = parseFloat(this.value);
+  scaleLabel.textContent = `${s.toFixed(2)}×`;
+  const oldW = drawW, oldH = drawH;
+  drawW = img.width * baseScale * s;
+  drawH = img.height * baseScale * s;
+  imgX -= (drawW - oldW) / 2;
+  imgY -= (drawH - oldH) / 2;
+  redrawCanvas();
+});
+
+// 드래그
+wrap.addEventListener('mousedown', e => { if (!img) return; isDragging = true; sx = e.clientX; sy = e.clientY; });
+window.addEventListener('mousemove', e => {
+  if (!isDragging || !img) return;
+  const r = canvas.getBoundingClientRect();
+  imgX += (e.clientX - sx) * (canvas.width / r.width);
+  imgY += (e.clientY - sy) * (canvas.height / r.height);
+  sx = e.clientX; sy = e.clientY;
+  redrawCanvas();
+});
+window.addEventListener('mouseup', () => isDragging = false);
+wrap.addEventListener('touchstart', e => {
+  if (!img) return; isDragging = true;
+  sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+}, { passive: true });
+window.addEventListener('touchmove', e => {
+  if (!isDragging || !img) return; e.preventDefault();
+  const r = canvas.getBoundingClientRect();
+  imgX += (e.touches[0].clientX - sx) * (canvas.width / r.width);
+  imgY += (e.touches[0].clientY - sy) * (canvas.height / r.height);
+  sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+  redrawCanvas();
+}, { passive: false });
+window.addEventListener('touchend', () => isDragging = false);
+
+/* ═══════════════════════════════════════
+   텍스트 바인딩
+═══════════════════════════════════════ */
+function bindText(inputId, viewId) {
+  const inp = document.getElementById(inputId);
+  const view = document.getElementById(viewId);
+  if (!inp || !view) return;
+  inp.addEventListener('input', e => { view.textContent = e.target.value; });
+}
+function bindHtml(inputId, viewId) {
+  const inp = document.getElementById(inputId);
+  const view = document.getElementById(viewId);
+  if (!inp || !view) return;
+  inp.addEventListener('input', e => { view.innerHTML = e.target.value.replace(/\n/g,'<br>'); });
+}
+
+/* 슬라이더 → 폰트 크기 (비율별 override CSS가 있어서 data속성으로 기준값만 저장) */
+function bindSize(inputId, viewId, labelId) {
+  const inp = document.getElementById(inputId);
+  const view = document.getElementById(viewId);
+  const label = document.getElementById(labelId);
+  if (!inp || !view) return;
+  inp.addEventListener('input', e => {
+    const sz = e.target.value;
+    view.style.setProperty('font-size', sz + 'px', 'important');
+    if (label) label.textContent = sz + 'px';
+  });
+}
+/* ═══════════════════════════════════════
+   TYPE 01 — 슬라이드 전환
+═══════════════════════════════════════ */
+function goT01Slide(idx) {
+  currentT01Slide = idx;
+  document.getElementById('t01-slide-1').style.display = idx === 1 ? 'flex' : 'none';
+  document.getElementById('t01-slide-2').style.display = idx === 2 ? 'flex' : 'none';
+  if (idx === 1) {
+    ctx2.fillStyle = '#111';
+    ctx2.fillRect(0, 0, canvas2.width, canvas2.height);
+    if (img) ctx2.drawImage(img, imgX, imgY, drawW, drawH);
+  }
+  document.querySelectorAll('#ctrl-t01 .slide-tab-btn').forEach((el, i) => el.classList.toggle('active', i === idx));
+  document.querySelectorAll('#ctrl-t01 .slide-ctrl').forEach((el, i) => el.classList.toggle('active', i === idx));
+  document.querySelectorAll('#t01-prev-nav .preview-slide-btn').forEach((el, i) => el.classList.toggle('active', i === idx));
+  const sn = document.getElementById('t01-slide-num');
+  if (sn) sn.textContent = idx + 1;
+}
+
+/* ═══════════════════════════════════════
+   TYPE 01 — 다운로드
+═══════════════════════════════════════ */
+function downloadT01S1() {
+  if (currentT01Slide !== 0) goT01Slide(0);
+  const card = document.getElementById('card-t01');
+  const r = RATIOS[currentRatio];
+  html2canvas(card, {
+    scale: r.scale, useCORS: true, backgroundColor: '#111111', logging: false,
+    width: wrap.offsetWidth, height: wrap.offsetHeight,
+  }).then(c => {
+    const a = document.createElement('a');
+    a.download = `mk_t01_slide1_${currentRatio.replace(':','-')}.png`;
+    a.href = c.toDataURL('image/png'); a.click();
+  });
+}
+
+function downloadT01S2() {
+  goT01Slide(1);
+  const card = document.getElementById('card-t01');
+  const r = RATIOS[currentRatio];
+  setTimeout(() => {
+    html2canvas(card, {
+      scale: r.scale, useCORS: true, backgroundColor: '#111111', logging: false,
+      width: wrap.offsetWidth, height: wrap.offsetHeight,
+    }).then(c => {
+      const a = document.createElement('a');
+      a.download = `mk_t01_slide2_${currentRatio.replace(':','-')}.png`;
+      a.href = c.toDataURL('image/png'); a.click();
+    });
+  }, 120);
+}
+
+function downloadT01S3() {
+  goT01Slide(2);
+  const card = document.getElementById('card-t01');
+  const r = RATIOS[currentRatio];
+  setTimeout(() => {
+    html2canvas(card, {
+      scale: r.scale, useCORS: true, backgroundColor: '#f5f0eb', logging: false,
+      width: wrap.offsetWidth, height: wrap.offsetHeight,
+    }).then(c => {
+      const a = document.createElement('a');
+      a.download = `mk_t01_slide3_${currentRatio.replace(':','-')}.png`;
+      a.href = c.toDataURL('image/png'); a.click();
+    });
+  }, 120);
+}
+
+async function downloadT01All() {
+  const card = document.getElementById('card-t01');
+  const r = RATIOS[currentRatio];
+  const bgColors = ['#111111', '#111111', '#f5f0eb'];
+  for (let i = 0; i < 3; i++) {
+    goT01Slide(i);
+    await new Promise(res => setTimeout(res, 180));
+    const c = await html2canvas(card, {
+      scale: r.scale, useCORS: true, backgroundColor: bgColors[i], logging: false,
+      width: wrap.offsetWidth, height: wrap.offsetHeight,
+    });
+    const a = document.createElement('a');
+    a.download = `mk_t01_slide${i+1}_${currentRatio.replace(':','-')}.png`;
+    a.href = c.toDataURL('image/png'); a.click();
+    await new Promise(res => setTimeout(res, 350));
+  }
+}
+
+/* ═══════════════════════════════════════
+   오버레이 강도
+═══════════════════════════════════════ */
+document.getElementById('t01-overlay').addEventListener('input', function() {
+  const v = this.value;
+  document.getElementById('t01-overlay-val').textContent = `${v}%`;
+  const o = v / 100;
+  document.getElementById('t01-overlay-el').style.background =
+    `linear-gradient(to top,
+      rgba(0,0,0,${Math.min(o+0.33,1)}) 0%,
+      rgba(0,0,0,${o}) 35%,
+      rgba(0,0,0,${Math.max(o-0.45,0)}) 60%,
+      transparent 100%)`;
+});
+
+/* 슬라이드 2 오버레이 (그라디언트) */
+document.getElementById('t01-s2-overlay').addEventListener('input', function() {
+  const v = this.value;
+  document.getElementById('t01-s2-overlay-val').textContent = `${v}%`;
+  const o = v / 100;
+  document.getElementById('t01-s2-overlay-el').style.background =
+    `linear-gradient(to top,
+      rgba(0,0,0,${Math.min(o+0.15,1).toFixed(2)}) 0%,
+      rgba(0,0,0,${o.toFixed(2)}) 35%,
+      rgba(0,0,0,${Math.max(o-0.45,0).toFixed(2)}) 60%,
+      transparent 100%)`;
+});
+
+/* ═══════════════════════════════════════
+   라인2 스타일
+═══════════════════════════════════════ */
+document.getElementById('t01-l2-style').addEventListener('change', function() {
+  const el = document.getElementById('t01-l2-el');
+  el.className = 't01-line2 ' + this.value;
+  const cur = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  if (this.value === 'style-box') {
+    el.style.background = cur; el.style.color = ''; el.style.webkitTextStroke = '';
+  } else if (this.value === 'style-outline') {
+    el.style.background = ''; el.style.color = '#fff'; el.style.webkitTextStroke = `2px ${cur}`;
+  } else if (this.value === 'style-highlight') {
+    el.style.background = '#ffe500'; el.style.color = '#000'; el.style.webkitTextStroke = '';
+  } else {
+    el.style.background = ''; el.style.color = '#fff'; el.style.webkitTextStroke = '';
+  }
+});
+
+/* ═══════════════════════════════════════
+   텍스트 정렬
+═══════════════════════════════════════ */
+document.getElementById('t01-align').addEventListener('change', function() {
+  const card = document.getElementById('card-t01');
+  card.className = card.className.replace(/align-\w+/g, '');
+  card.classList.add(this.value);
+});
+
+/* ═══════════════════════════════════════
+   강조 컬러
+═══════════════════════════════════════ */
+function setAccentColor(chip) {
+  setAccentColorHex(chip.dataset.color);
+  document.getElementById('custom-accent').value = chip.dataset.color;
+  document.querySelectorAll('.color-chip').forEach(c => c.classList.remove('selected'));
+  chip.classList.add('selected');
+}
+function setAccentColorHex(color) {
+  document.documentElement.style.setProperty('--accent', color);
+  const l2 = document.getElementById('t01-l2-el');
+  if (l2.classList.contains('style-box'))    l2.style.background = color;
+  if (l2.classList.contains('style-outline')) l2.style.webkitTextStroke = `2px ${color}`;
+}
+
+/* ═══════════════════════════════════════
+   템플릿 전환
+═══════════════════════════════════════ */
+let currentTemplate = 't01';
+
+function switchTemplate(id, btn) {
+  currentTemplate = id;
+  document.querySelectorAll('.template-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.template-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById(`ctrl-${id}`).classList.add('active');
+  btn.classList.add('active');
+
+  const t01Preview = document.getElementById('t01-preview-area');
+  const t05Preview = document.getElementById('t05-preview-area');
+  const t06Preview = document.getElementById('t06-preview-area');
+  const ratioGroup = document.getElementById('ratio-group');
+
+  t01Preview.style.display = 'none';
+  if (t05Preview) t05Preview.style.display = 'none';
+  if (t06Preview) t06Preview.style.display = 'none';
+
+  if (id === 't01') {
+    t01Preview.style.display = 'flex';
+    ratioGroup.style.visibility = 'visible';
+  } else if (id === 't05') {
+    if (t05Preview) t05Preview.style.display = 'flex';
+    ratioGroup.style.visibility = 'hidden';
+  } else if (id === 't06') {
+    if (t06Preview) { t06Preview.style.display = 'flex'; t06ResizeCanvas(); }
+    ratioGroup.style.visibility = 'hidden';
+  }
+}
+/* ═══════════════════════════════════════
+   다운로드 (헤더 버튼 — 현재 템플릿 기준)
+═══════════════════════════════════════ */
+function downloadCard() {
+  if (currentTemplate === 't05') { downloadT05Current(); return; }
+  if (currentTemplate === 't06') { downloadT06(); return; }
+  if (currentT01Slide === 1) { downloadT01S2(); return; }
+  downloadT01S1();
+}
+
+/* ═══════════════════════════════════════
+   switchRatio 패치
+═══════════════════════════════════════ */
+const _origSwitchRatio = window.switchRatio;
+window.switchRatio = function(btn) {
+  _origSwitchRatio(btn);
+};
+function makeDraggableImg(containerEl, imgEl) {
+  if (containerEl._dragInit) return;
+  containerEl._dragInit = true;
+  let dragging = false, sx = 0, sy = 0, px = 50, py = 50;
+
+  containerEl.style.cursor = 'grab';
+
+  function onDown(cx, cy) {
+    if (!imgEl.src || imgEl.style.display === 'none') return;
+    dragging = true; sx = cx; sy = cy;
+    containerEl.style.cursor = 'grabbing';
+  }
+  function onMove(cx, cy) {
+    if (!dragging) return;
+    const r = containerEl.getBoundingClientRect();
+    px = Math.max(0, Math.min(100, px - (cx - sx) / r.width * 100));
+    py = Math.max(0, Math.min(100, py - (cy - sy) / r.height * 100));
+    imgEl.style.objectPosition = `${px}% ${py}%`;
+    sx = cx; sy = cy;
+  }
+  function onUp() { if (dragging) { dragging = false; containerEl.style.cursor = 'grab'; } }
+
+  containerEl.addEventListener('mousedown', e => { onDown(e.clientX, e.clientY); e.preventDefault(); });
+  window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+  window.addEventListener('mouseup', onUp);
+  containerEl.addEventListener('touchstart', e => { onDown(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+  window.addEventListener('touchmove', e => { if (dragging) { onMove(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); } }, { passive: false });
+  window.addEventListener('touchend', onUp);
+}
+
+
+/* ═══════════════════════════════════════
+   템플릿 저장/불러오기
+═══════════════════════════════════════ */
+const LS_TEMPLATES = 'mk_studio_templates';
+const LS_AUTOSAVE  = 'mk_studio_autosave';
+let autoSaveTimer = null;
+
+function getInputValues() {
+  const vals = {};
+  document.querySelectorAll('input[type="text"],input[type="range"],textarea,select,input[type="color"]').forEach(el => {
+    if (el.id) vals[el.id] = el.value;
+  });
+  return {
+    template: currentTemplate,
+    ratio: currentRatio,
+    accentColor: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
+    inputs: vals,
+  };
+}
+
+function restoreState(state) {
+  if (!state) return;
+  if (state.inputs) {
+    Object.entries(state.inputs).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    });
+    document.querySelectorAll('input[type="text"],textarea').forEach(el => {
+      el.dispatchEvent(new Event('input'));
+    });
+    document.querySelectorAll('input[type="range"]').forEach(el => {
+      el.dispatchEvent(new Event('input'));
+    });
+    document.querySelectorAll('select').forEach(el => {
+      el.dispatchEvent(new Event('change'));
+    });
+  }
+  if (state.images) {
+    Object.entries(state.images).forEach(([id, src]) => {
+      const imgEl = document.getElementById(id);
+      const phId = id.replace('-img-el','').replace('-img1-el','-img1').replace('-img2-el','-img2') + '-ph';
+      const phEl = document.getElementById(phId) || document.getElementById(id.replace('-el','').replace('-img','') + '-s0-ph');
+      if (imgEl) { imgEl.src = src; imgEl.style.display = 'block'; }
+    });
+  }
+  if (state.accentColor) setAccentColorHex(state.accentColor);
+}
+
+function scheduleAutoSave() {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(LS_AUTOSAVE, JSON.stringify(getInputValues()));
+    } catch(e) {}
+  }, 800);
+}
+
+function loadTemplates() {
+  try { return JSON.parse(localStorage.getItem(LS_TEMPLATES) || '[]'); } catch(e) { return []; }
+}
+function saveTemplates(list) {
+  try { localStorage.setItem(LS_TEMPLATES, JSON.stringify(list)); } catch(e) {
+    alert('저장 공간 부족! JSON 파일로 내보내기를 사용하세요.');
+  }
+}
+
+function openTemplateModal() {
+  document.getElementById('template-modal').style.display = 'flex';
+  renderTemplateList();
+}
+function closeTemplateModal() {
+  document.getElementById('template-modal').style.display = 'none';
+}
+
+function renderTemplateList() {
+  const list = loadTemplates();
+  const el = document.getElementById('template-list');
+  if (list.length === 0) {
+    el.innerHTML = '<div style="text-align:center;color:var(--gray-400);font-size:12px;padding:24px 0;">저장된 템플릿이 없습니다</div>';
+    return;
+  }
+  el.innerHTML = list.map((t, i) => `
+    <div class="tpl-item">
+      <div class="tpl-item-info">
+        <div class="tpl-item-name">${t.name}</div>
+        <div class="tpl-item-meta">${t.template?.toUpperCase() || ''} &nbsp;·&nbsp; ${t.ratio || ''} &nbsp;·&nbsp; ${t.date || ''}</div>
+      </div>
+      <div class="tpl-item-btns">
+        <button onclick="loadTemplate(${i})">불러오기</button>
+        <button onclick="deleteTemplate(${i})" style="color:#ff4d4d;">삭제</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function saveCurrentTemplate() {
+  const name = document.getElementById('tpl-name-input').value.trim();
+  if (!name) { alert('이름을 입력하세요'); return; }
+  const list = loadTemplates();
+  const state = getInputValues();
+  state.name = name;
+  state.date = new Date().toLocaleDateString('ko-KR');
+  list.unshift(state);
+  saveTemplates(list);
+  document.getElementById('tpl-name-input').value = '';
+  renderTemplateList();
+}
+
+function loadTemplate(idx) {
+  const list = loadTemplates();
+  const state = list[idx];
+  if (!state) return;
+  const tab = document.querySelector(`.template-tab:nth-child(${['t01','t05','t06'].indexOf(state.template)+1})`);
+  if (tab) switchTemplate(state.template, tab);
+  restoreState(state);
+  closeTemplateModal();
+}
+
+function deleteTemplate(idx) {
+  if (!confirm('삭제하시겠어요?')) return;
+  const list = loadTemplates();
+  list.splice(idx, 1);
+  saveTemplates(list);
+  renderTemplateList();
+}
+
+function exportJSON() {
+  const list = loadTemplates();
+  const blob = new Blob([JSON.stringify(list, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `mk_studio_templates_${Date.now()}.json`;
+  a.click();
+}
+
+function importJSON() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json';
+  inp.addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const imported = JSON.parse(ev.target.result);
+        if (!Array.isArray(imported)) { alert('올바른 형식이 아닙니다'); return; }
+        const list = loadTemplates();
+        saveTemplates([...imported, ...list]);
+        renderTemplateList();
+        alert(`${imported.length}개 불러왔습니다`);
+      } catch(e) { alert('파일 읽기 실패'); }
+    };
+    reader.readAsText(file);
+  });
+  inp.click();
+}
+
+/* ═══════════════════════════════════════
+   초기화
+═══════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  // T01 슬라이드 1 바인딩
+  bindText('t01-l1a', 't01-l1a-el');
+  bindText('t01-l1b', 't01-l1b-el');
+  bindText('t01-l2',  't01-l2-el');
+  bindHtml('t01-sub', 't01-sub-el');
+  bindText('t01-credit', 't01-credit-el');
+  bindText('t01-badge',  't01-badge-el');
+  bindSize('t01-size1', 't01-line1-el', 't01-size1-val');
+  bindSize('t01-size2', 't01-l2-el',    't01-size2-val');
+  document.getElementById('t01-l1b').addEventListener('input', function() {
+    document.getElementById('t01-l1b-el').style.display = this.value.trim() === '' ? 'none' : '';
+  });
+
+  // T01 슬라이드 2 바인딩
+  document.getElementById('t01-s2-tagline').addEventListener('input', function() {
+    document.getElementById('t01-s2-tagline-el').textContent = this.value;
+  });
+  document.getElementById('t01-s2-title').addEventListener('input', function() {
+    document.getElementById('t01-s2-title-el').innerHTML = this.value.replace(/\n/g, '<br>');
+  });
+  document.getElementById('t01-s2-title-size').addEventListener('input', function() {
+    document.getElementById('t01-s2-title-el').style.setProperty('font-size', this.value + 'px', 'important');
+    document.getElementById('t01-s2-title-size-val').textContent = this.value + 'px';
+  });
+  document.getElementById('t01-s2-divider-show').addEventListener('change', function() {
+    document.getElementById('t01-s2-div-el').style.display = this.checked ? '' : 'none';
+  });
+  document.getElementById('t01-s2-section').addEventListener('input', function() {
+    document.getElementById('t01-s2-sec-el').textContent = this.value;
+  });
+  ['i1','i2','i3','i4'].forEach(k => {
+    document.getElementById(`t01-s2-${k}`).addEventListener('input', function() {
+      document.getElementById(`t01-s2-${k}-el`).textContent = this.value;
+    });
+  });
+  document.getElementById('t01-s2-item4-show').addEventListener('change', function() {
+    document.getElementById('t01-s2-item-3').classList.toggle('hidden', !this.checked);
+  });
+
+  // T01 슬라이드 3 바인딩
+  document.getElementById('t01-s3-msg').addEventListener('input', function() {
+    document.getElementById('t01-s3-msg-el').innerHTML = this.value.replace(/\n/g, '<br>');
+  });
+  document.getElementById('t01-s3-msg-size').addEventListener('input', function() {
+    document.getElementById('t01-s3-msg-el').style.setProperty('font-size', this.value + 'px', 'important');
+    document.getElementById('t01-s3-msg-size-val').textContent = this.value + 'px';
+  });
+  document.getElementById('t01-s3-label').addEventListener('input', function() {
+    document.getElementById('t01-s3-label-el').textContent = this.value;
+  });
+  document.getElementById('t01-s3-brand').addEventListener('input', function() {
+    document.getElementById('t01-s3-brand-el').textContent = this.value;
+  });
+  document.getElementById('t01-s3-credit').addEventListener('input', function() {
+    document.getElementById('t01-s3-credit-el').textContent = this.value;
+  });
+  // 슬라이드 3 이미지 업로드 + 드래그
+  document.getElementById('t01-s3-img-input').addEventListener('change', function(e) {
+    const file = e.target.files[0]; if (!file) return;
+    document.getElementById('t01-s3-img-name').textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const imgEl = document.getElementById('t01-s3-img-el');
+      const phEl  = document.getElementById('t01-s3-ph');
+      imgEl.src = ev.target.result;
+      imgEl.style.display = 'block';
+      phEl.style.display = 'none';
+      makeDraggableImg(document.getElementById('t01-s3-photo-wrap'), imgEl);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  initT05Bindings();
+  initT06Bindings();
+  syncCanvasToWrap();
+  clearCanvas();
+
+  // 자동복원
+  try {
+    const saved = localStorage.getItem(LS_AUTOSAVE);
+    if (saved) restoreState(JSON.parse(saved));
+  } catch(e) {}
+
+  // 자동저장 트리거
+  document.addEventListener('input', scheduleAutoSave);
+  document.addEventListener('change', scheduleAutoSave);
+
+  // T05 초기 날짜
+  const todayStr = new Date().toLocaleDateString('en-CA');
+  const c1d = document.getElementById('c1-date');
+  const c2d = document.getElementById('c2-date');
+  if (c1d && !c1d.value) c1d.value = todayStr;
+  if (c2d && !c2d.value) c2d.value = todayStr;
+  updateT05(); updateT05Dates();
+});
+
+/* ═══════════════════════════════════════
+   TYPE 05 — CineLab 모임 카드뉴스
+═══════════════════════════════════════ */
+let currentT05Slide = 0;
+
+function goT05Slide(idx) {
+  currentT05Slide = idx;
+  document.querySelectorAll('.t05-slide').forEach((el, i) => el.classList.toggle('active', i === idx));
+  document.querySelectorAll('#t05-prev-nav .preview-slide-btn').forEach((el, i) => el.classList.toggle('active', i === idx));
+  document.querySelectorAll('#ctrl-t05 .slide-ctrl').forEach((el, i) => el.classList.toggle('active', i === idx));
+  document.querySelectorAll('#ctrl-t05 .slide-tab-btn').forEach((el, i) => el.classList.toggle('active', i === idx));
+  const sn = document.getElementById('t05-slide-num');
+  if (sn) sn.textContent = idx + 1;
+}
+
+function updateT05() {
+  const map = {
+    'c1-eyebrow':'d-c1-eyebrow','c1-badge':'d-c1-badge','c1-title':'d-c1-title',
+    'c1-title-en':'d-c1-title-en','c1-place':'d-c1-place',
+    'c2-place':'d-c2-place','c2-fee':'d-c2-fee','c2-apply':'d-c2-apply','c2-include':'d-c2-include',
+    'c3-label':'d-c3-label','c3-item1':'d-c3-item1','c3-item2':'d-c3-item2',
+    'c3-item3':'d-c3-item3','c3-item4':'d-c3-item4','c3-closing':'d-c3-closing',
+    'c4-account':'d-c4-account','c4-host':'d-c4-host','c4-cta':'d-c4-cta'
+  };
+  for (const [src, dst] of Object.entries(map)) {
+    const el = document.getElementById(src);
+    const out = document.getElementById(dst);
+    if (el && out) out.textContent = el.value;
+  }
+  const hw = document.getElementById('c4-howtext');
+  const hout = document.getElementById('d-c4-howtext');
+  if (hw && hout) hout.innerHTML = hw.value.replace(/\n/g, '<br>');
+}
+
+function updateT05Dates() {
+  const DAYS = ['일','월','화','수','목','금','토'];
+  function fmtDate(id) {
+    const el = document.getElementById(id);
+    if (!el || !el.value) return '';
+    const d = new Date(el.value + 'T00:00:00');
+    return `${d.getMonth()+1}월 ${d.getDate()}일 (${DAYS[d.getDay()]})`;
+  }
+  const d1 = document.getElementById('d-c1-date');
+  if (d1) d1.textContent = fmtDate('c1-date');
+  const d2 = document.getElementById('d-c2-datetime');
+  if (d2) {
+    const ts = (document.getElementById('c2-time-start') || {}).value || '';
+    const te = (document.getElementById('c2-time-end') || {}).value || '';
+    d2.textContent = `${fmtDate('c2-date')}  ${ts} ~ ${te}`;
+  }
+}
+
+function updateT05Color() {
+  const cw = document.getElementById('card-wrap-t05');
+  if (!cw) return;
+  const a = document.getElementById('t05-color-accent').value;
+  const a2 = document.getElementById('t05-color-accent2').value;
+  cw.style.setProperty('--accent', a);
+  cw.style.setProperty('--accent2', a2);
+}
+
+function t05LoadImg(inputId, bgId, nameId) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  inp.addEventListener('change', function(e) {
+    const file = e.target.files[0]; if (!file) return;
+    const nameEl = document.getElementById(nameId);
+    if (nameEl) nameEl.textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const bg = document.getElementById(bgId);
+      if (bg) bg.style.backgroundImage = `url(${ev.target.result})`;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function initT05Bindings() {
+  t05LoadImg('t05-img1-input', 'card1-bg', 't05-prev1-name');
+  t05LoadImg('t05-img2-input', 'card2-photo-bg', 't05-prev2-name');
+  t05LoadImg('t05-img3-input', 'card3-photo-bg', 't05-prev3-name');
+  t05LoadImg('t05-img4-input', 'card4-photo-bg', 't05-prev4-name');
+}
+
+/* CineLab 카드 canvas 렌더링 (다운로드용) */
+function t05GetAc() {
+  const cw = document.getElementById('card-wrap-t05');
+  return cw ? getComputedStyle(cw).getPropertyValue('--accent').trim() || '#d4a574' : '#d4a574';
+}
+function t05GetAc2() {
+  const cw = document.getElementById('card-wrap-t05');
+  return cw ? getComputedStyle(cw).getPropertyValue('--accent2').trim() || '#e8c49a' : '#e8c49a';
+}
+function t05LoadImg2(src) {
+  return new Promise(res => {
+    const m = (src||'').match(/url\("?(.+?)"?\)/);
+    const url = m ? m[1] : src;
+    if (!url || url === 'none') return res(null);
+    const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null); img.src = url;
+  });
+}
+function t05BgCover(ctx, img, x, y, w, h) {
+  if (!img) return;
+  const s = Math.max(w/img.width, h/img.height);
+  ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
+  ctx.drawImage(img, x+(w-img.width*s)/2, y+(h-img.height*s)/2, img.width*s, img.height*s);
+  ctx.restore();
+}
+function t05ApplyGrad(ctx, x, y, w, h, stops) {
+  const g = ctx.createLinearGradient(x,y,x,y+h);
+  stops.forEach(([p,c]) => g.addColorStop(p,c));
+  ctx.fillStyle = g; ctx.fillRect(x,y,w,h);
+}
+function t05Rr(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+r,r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.arcTo(x,y+h,x,y+h-r,r); ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
+}
+function t05WrapLines(ctx, text, maxW) {
+  const res = [];
+  for (const seg of (text||'').split('\n')) {
+    if (!seg.trim()) continue;
+    if (ctx.measureText(seg).width <= maxW) { res.push(seg); continue; }
+    let cur = '';
+    for (const ch of seg) {
+      if (ctx.measureText(cur+ch).width <= maxW) cur += ch;
+      else { res.push(cur); cur = ch; }
+    }
+    if (cur) res.push(cur);
+  }
+  return res;
+}
+function t05GetBg(id) { return ((document.getElementById(id)||{style:{}}).style.backgroundImage)||''; }
+function t05V(id) { return (document.getElementById(id)||{}).value||''; }
+function t05T(id) { return ((document.getElementById(id)||{}).textContent||'').trim(); }
+
+const T05_ICONS = {
+  calendar(ctx,x,y,sz,col){ const s=sz/24; ctx.save(); ctx.translate(x,y); ctx.scale(s,s); ctx.strokeStyle=col; ctx.lineWidth=2/s; ctx.lineJoin='round'; t05Rr(ctx,3,4,18,18,2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(16,2);ctx.lineTo(16,6);ctx.moveTo(8,2);ctx.lineTo(8,6);ctx.moveTo(3,10);ctx.lineTo(21,10); ctx.stroke(); ctx.restore(); },
+  pin(ctx,x,y,sz,col){ const s=sz/24; ctx.save(); ctx.translate(x,y); ctx.scale(s,s); ctx.strokeStyle=col; ctx.lineWidth=2/s; ctx.lineJoin='round'; ctx.beginPath(); ctx.moveTo(21,10); ctx.bezierCurveTo(21,17,12,23,12,23); ctx.bezierCurveTo(12,23,3,17,3,10); ctx.bezierCurveTo(3,5,7,1,12,1); ctx.bezierCurveTo(17,1,21,5,21,10); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.arc(12,10,3,0,Math.PI*2); ctx.stroke(); ctx.restore(); },
+  clock(ctx,x,y,sz,col){ const s=sz/24; ctx.save(); ctx.translate(x,y); ctx.scale(s,s); ctx.strokeStyle=col; ctx.lineWidth=2/s; ctx.beginPath(); ctx.arc(12,12,10,0,Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(12,6);ctx.lineTo(12,12);ctx.lineTo(16,14); ctx.stroke(); ctx.restore(); },
+  chat(ctx,x,y,sz,col){ const s=sz/24; ctx.save(); ctx.translate(x,y); ctx.scale(s,s); ctx.strokeStyle=col; ctx.lineWidth=2/s; ctx.lineJoin='round'; ctx.beginPath(); ctx.moveTo(21,15); ctx.bezierCurveTo(21,16.1,20.1,17,19,17); ctx.lineTo(7,17); ctx.lineTo(3,21); ctx.lineTo(3,5); ctx.bezierCurveTo(3,3.9,3.9,3,5,3); ctx.lineTo(19,3); ctx.bezierCurveTo(20.1,3,21,3.9,21,5); ctx.closePath(); ctx.stroke(); ctx.restore(); },
+  check(ctx,x,y,sz,col){ const s=sz/24; ctx.save(); ctx.translate(x,y); ctx.scale(s,s); ctx.strokeStyle=col; ctx.lineWidth=2/s; ctx.beginPath(); ctx.arc(12,12,10,0,Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(8,12);ctx.lineTo(10,14);ctx.lineTo(14,10); ctx.stroke(); ctx.restore(); },
+};
+
+async function renderT05Card(n) {
+  const W=1080, H=1350, PX=W*0.06;
+  const cv = document.createElement('canvas'); cv.width=W; cv.height=H;
+  const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  const A=t05GetAc(), A2=t05GetAc2();
+  const F=(w,sz) => `${w} ${sz}px Pretendard,sans-serif`;
+  if (n===0) {
+    ctx.fillStyle='#1a1510'; ctx.fillRect(0,0,W,H);
+    t05BgCover(ctx, await t05LoadImg2(t05GetBg('card1-bg')), 0,0,W,H);
+    t05ApplyGrad(ctx,0,0,W,H,[[0,'rgba(0,0,0,0.15)'],[0.25,'rgba(0,0,0,0.05)'],[0.55,'rgba(0,0,0,0.4)'],[1,'rgba(0,0,0,0.88)']]);
+    const logoFSz=22; ctx.font=F('400',logoFSz); const ltxt='MK CINELAB', ltxtW=ctx.measureText(ltxt).width;
+    const lPX=26,lPY=14,lW=ltxtW+lPX*2,lH=logoFSz+lPY*2; const lx=W-W*0.05-lW, ly=H*0.045;
+    ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=1.5; t05Rr(ctx,lx,ly,lW,lH,4); ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.75)'; ctx.fillText(ltxt,lx+lPX,ly+lH*0.7);
+    let cy=H-W*0.06;
+    const metaFSz=22,metaISZ=28; ctx.font=F('400',metaFSz); ctx.fillStyle='rgba(255,255,255,0.72)';
+    const ds=t05T('d-c1-date'),ps=t05T('d-c1-place');
+    T05_ICONS.calendar(ctx,PX,cy-metaISZ,metaISZ,A); ctx.fillText(ds,PX+metaISZ+8,cy-2);
+    const dW=ctx.measureText(ds).width; const pinX=PX+metaISZ+8+dW+W*0.05;
+    T05_ICONS.pin(ctx,pinX,cy-metaISZ,metaISZ,A); ctx.fillText(ps,pinX+metaISZ+8,cy-2);
+    cy -= metaISZ+W*0.035;
+    ctx.beginPath(); ctx.moveTo(PX,cy); ctx.lineTo(W-PX,cy); ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.lineWidth=1; ctx.stroke();
+    cy -= W*0.04;
+    const titleEnFSz=26; ctx.font=F('400',titleEnFSz); ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.fillText(t05V('c1-title-en'),PX,cy);
+    cy -= titleEnFSz+W*0.01;
+    const titleStr=t05V('c1-title'),maxTW=W-PX*2; let tSz=86;
+    while(tSz>44){ ctx.font=F('700',tSz); if(ctx.measureText(titleStr).width<=maxTW) break; tSz-=4; }
+    ctx.font=F('700',tSz); ctx.fillStyle='#fff';
+    const tLines=t05WrapLines(ctx,titleStr,maxTW);
+    for(let i=tLines.length-1;i>=0;i--){ ctx.fillText(tLines[i],PX,cy); cy-=tSz*1.2; }
+    cy -= W*0.02;
+    ctx.font=F('400',24); ctx.fillStyle=A+'cc'; ctx.fillText((t05V('c1-eyebrow')||'').toUpperCase(),PX,cy);
+    cy -= 24+W*0.035;
+    const badgeFSz=22; ctx.font=F('400',badgeFSz); const bStr=t05V('c1-badge'),bTW=ctx.measureText(bStr).width;
+    const bPadX=W*0.012,bH=44,dotR=7,dotGap=12; const bTotalW=bPadX+dotR*2+dotGap+bTW+bPadX;
+    const bX=PX,bY=cy-bH; ctx.strokeStyle=A+'b3'; ctx.lineWidth=1.5; t05Rr(ctx,bX,bY,bTotalW,bH,bH/2); ctx.stroke();
+    ctx.fillStyle=A; ctx.beginPath(); ctx.arc(bX+bPadX+dotR,bY+bH/2,dotR,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=A2; ctx.fillText(bStr,bX+bPadX+dotR*2+dotGap,bY+bH*0.68);
+  } else if (n===1) {
+    const PH=H*0.42; ctx.fillStyle='#0e0c0a'; ctx.fillRect(0,0,W,H);
+    t05BgCover(ctx, await t05LoadImg2(t05GetBg('card2-photo-bg')),0,0,W,PH);
+    t05ApplyGrad(ctx,0,0,W,PH,[[0,'rgba(0,0,0,0.1)'],[1,'rgba(0,0,0,0.6)']]);
+    const bPT=W*0.05,bPB=W*0.05; const bodyTop=PH+bPT,bodyBottom=H-bPB;
+    ctx.font=F('700',19); ctx.fillStyle=A; ctx.fillText('모임 정보',PX,bodyTop+19);
+    const ISZ2=26,incTextFSz=22,incPadY=W*0.03,incPadX=W*0.04; const incH=Math.max(ISZ2,incTextFSz)+incPadY*2; const incY=bodyBottom-incH;
+    const ISZ=32,keyFSz=19,valFSz=24; const GAP=W*0.04,KEY_W=W*0.15; const KEY_X=PX+ISZ+GAP,VAL_X=KEY_X+KEY_W+GAP;
+    const listTop=bodyTop+19+W*0.05; const rH=(incY-W*0.02-listTop)/4;
+    const rows=[{icon:'calendar',key:'일시',val:t05T('d-c2-datetime')},{icon:'pin',key:'장소',val:t05T('d-c2-place')},{icon:'clock',key:'비용',val:t05T('d-c2-fee')},{icon:'chat',key:'신청',val:t05T('d-c2-apply')}];
+    rows.forEach((row,i)=>{ const ry=listTop+i*rH,mid=ry+rH/2; if(i<rows.length-1){ctx.beginPath();ctx.moveTo(PX,ry+rH);ctx.lineTo(W-PX,ry+rH);ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;ctx.stroke();} T05_ICONS[row.icon](ctx,PX,mid-ISZ/2,ISZ,A); ctx.font=F('400',keyFSz); ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.fillText(row.key,KEY_X,mid+keyFSz*0.38); ctx.font=F('500',valFSz); ctx.fillStyle='rgba(255,255,255,0.88)'; ctx.fillText(row.val,VAL_X,mid+valFSz*0.38); });
+    ctx.fillStyle=A+'14'; t05Rr(ctx,PX,incY,W-PX*2,incH,10); ctx.fill(); ctx.strokeStyle=A+'40'; ctx.lineWidth=1; t05Rr(ctx,PX,incY,W-PX*2,incH,10); ctx.stroke();
+    T05_ICONS.check(ctx,PX+incPadX,incY+(incH-ISZ2)/2,ISZ2,A); ctx.font=F('400',incTextFSz); ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.fillText(t05T('d-c2-include'),PX+incPadX+ISZ2+12,incY+incH/2+incTextFSz*0.38);
+  } else if (n===2) {
+    const PH=H*0.35; ctx.fillStyle='#0e0c0a'; ctx.fillRect(0,0,W,H);
+    t05BgCover(ctx, await t05LoadImg2(t05GetBg('card3-photo-bg')),0,0,W,PH);
+    t05ApplyGrad(ctx,0,0,W,PH,[[0,'rgba(0,0,0,0.1)'],[1,'rgba(0,0,0,0.7)']]);
+    const filmDotR=6; [1,0.4,0.2].forEach((op,i)=>{ ctx.fillStyle=`rgba(212,165,116,${op*0.6})`; ctx.beginPath(); ctx.arc(PX+i*(filmDotR*2+10),PH-PH*0.06,filmDotR,0,Math.PI*2); ctx.fill(); });
+    const bPT=W*0.05; const bodyTop=PH+bPT;
+    ctx.font=F('700',19); ctx.fillStyle=A; ctx.fillText((t05T('d-c3-label')||'').toUpperCase(),PX,bodyTop+19);
+    const closFSz=22,closPT=W*0.04; const closBaselineY=H-W*0.05; const closBorderY=closBaselineY-closFSz*1.2-closPT;
+    const items=[t05T('d-c3-item1'),t05T('d-c3-item2'),t05T('d-c3-item3'),t05T('d-c3-item4')].filter(x=>x.trim());
+    const iStart=bodyTop+19+W*0.05; const iH=(closBorderY-8-iStart)/Math.max(items.length,1);
+    const itemFSz=24,dotR2=6;
+    items.forEach((item,i)=>{ const iy=iStart+i*iH,mid=iy+iH/2; if(i<items.length-1){ctx.beginPath();ctx.moveTo(PX,iy+iH);ctx.lineTo(W-PX,iy+iH);ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;ctx.stroke();} ctx.fillStyle=A; ctx.beginPath(); ctx.arc(PX+dotR2,mid-itemFSz*0.35,dotR2,0,Math.PI*2); ctx.fill(); ctx.font=F('400',itemFSz); ctx.fillStyle='rgba(255,255,255,0.82)'; const ls=t05WrapLines(ctx,item,W-PX*2-dotR2*2-W*0.03); const lineH=itemFSz*1.5; const startY=mid-ls.length*lineH/2+lineH*0.75; ls.forEach((l,li)=>ctx.fillText(l,PX+dotR2*2+W*0.03,startY+li*lineH)); });
+    ctx.beginPath(); ctx.moveTo(PX,closBorderY); ctx.lineTo(W-PX,closBorderY); ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=1; ctx.stroke();
+    ctx.font=`italic 400 ${closFSz}px Pretendard,sans-serif`; ctx.fillStyle=A+'bf'; ctx.fillText(t05T('d-c3-closing'),PX,closBaselineY);
+  } else if (n===3) {
+    const PH=H*0.5; ctx.fillStyle='#0e0c0a'; ctx.fillRect(0,0,W,H);
+    t05BgCover(ctx, await t05LoadImg2(t05GetBg('card4-photo-bg')),0,0,W,PH);
+    t05ApplyGrad(ctx,0,0,W,PH,[[0,'rgba(0,0,0,0.1)'],[1,'rgba(0,0,0,0.65)']]);
+    const bPT=W*0.05,bPB=W*0.06; const bodyTop=PH+bPT,bodyBottom=H-bPB;
+    const ctaFSz=26; const ctaH=Math.min(ctaFSz+W*0.08,H*0.5*0.15); const ctaTopY=bodyBottom-ctaH;
+    ctx.fillStyle=A; t05Rr(ctx,PX,ctaTopY,W-PX*2,ctaH,10); ctx.fill();
+    ctx.font=F('700',ctaFSz); ctx.fillStyle='#1a0f00';
+    const ctaStr=t05T('d-c4-cta'); ctx.fillText(ctaStr,(W-ctx.measureText(ctaStr).width)/2,ctaTopY+ctaH/2+ctaFSz*0.36);
+    const accFSz=26,hostFSz=19; const accBaseline=ctaTopY-W*0.04;
+    ctx.font=F('700',accFSz); ctx.fillStyle='rgba(255,255,255,0.8)'; ctx.fillText(t05T('d-c4-account'),PX,accBaseline);
+    const hostStr=t05T('d-c4-host'); ctx.font=F('400',hostFSz); ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.fillText(hostStr,W-PX-ctx.measureText(hostStr).width,accBaseline);
+    const divY=accBaseline-accFSz-W*0.04; ctx.beginPath(); ctx.moveTo(PX,divY); ctx.lineTo(W-PX,divY); ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=1; ctx.stroke();
+    ctx.font=F('700',19); ctx.fillStyle=A; ctx.fillText('신청 방법',PX,bodyTop+19);
+    const howFSz=24; ctx.font=F('400',howFSz); ctx.fillStyle='rgba(255,255,255,0.65)';
+    const howLines=t05V('c4-howtext').split(/\r?\n/).filter(l=>l.trim()); const howFirstY=bodyTop+19+W*0.03+howFSz;
+    howLines.forEach((line,i)=>{ ctx.fillText(line,PX,howFirstY+i*howFSz*1.7); });
+  }
+  return cv;
+}
+
+function t05ShowToast(msg) {
+  let toast = document.getElementById('toast');
+  if (!toast) { toast = document.createElement('div'); toast.id='toast-t05'; document.body.appendChild(toast); toast.style.cssText='position:fixed;bottom:28px;right:28px;background:#d4a574;color:#1a0f00;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;transform:translateY(8px);transition:all 0.3s;pointer-events:none;z-index:999;'; }
+  toast.textContent = msg; toast.style.opacity = '1'; toast.style.transform = 'translateY(0)';
+  setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(8px)'; }, 2400);
+}
+
+async function downloadT05Current() {
+  await document.fonts.ready;
+  t05ShowToast(`카드 ${currentT05Slide+1} 저장 중...`);
+  try {
+    const cv = await renderT05Card(currentT05Slide);
+    const a = document.createElement('a');
+    a.download = `mkcinelab_card${currentT05Slide+1}.png`;
+    a.href = cv.toDataURL('image/png'); a.click();
+    t05ShowToast(`카드 ${currentT05Slide+1} 저장 완료!`);
+  } catch(e) { t05ShowToast('저장 실패'); console.error(e); }
+}
+
+async function downloadT05All() {
+  await document.fonts.ready;
+  const labels = ['cover','info','intro','cta'];
+  for (let i = 0; i < 4; i++) {
+    goT05Slide(i);
+    await new Promise(res => setTimeout(res, 150));
+    t05ShowToast(`카드 ${i+1}/4 저장 중...`);
+    try {
+      const cv = await renderT05Card(i);
+      const a = document.createElement('a');
+      a.download = `mkcinelab_card${i+1}_${labels[i]}.png`;
+      a.href = cv.toDataURL('image/png'); a.click();
+    } catch(e) { console.error(e); }
+    await new Promise(res => setTimeout(res, 350));
+  }
+  t05ShowToast('전체 4장 저장 완료!');
+}
+
+/* ═══════════════════════════════════════
+   TYPE 06 — 넷플릭스 썸네일
+═══════════════════════════════════════ */
+let t06LoadedImage = null;
+let t06ImgOffsetX = 0.5, t06ImgOffsetY = 0.5;
+let t06SelectedSize = 1080;
+let t06ProgressPct = 20;
+let t06TitleText = '제목을 입력하세요';
+let t06SubText = '부제목을 입력하세요';
+let t06IsDragging = false, t06LastX = 0, t06LastY = 0;
+
+function t06ResizeCanvas() {
+  const box = document.getElementById('card-wrap-t06');
+  const canvas = document.getElementById('t06-preview-canvas');
+  if (!box || !canvas) return;
+  canvas.width = box.offsetWidth;
+  canvas.height = box.offsetHeight;
+  t06DrawPreview();
+}
+
+function t06RenderThumb(ctx, S) {
+  ctx.clearRect(0,0,S,S);
+  if (t06LoadedImage) {
+    const iw=t06LoadedImage.naturalWidth, ih=t06LoadedImage.naturalHeight;
+    const sc=Math.max(S/iw,S/ih);
+    const sw=iw*sc, sh=ih*sc;
+    ctx.globalAlpha = 0.75;
+    ctx.drawImage(t06LoadedImage,(S-sw)*t06ImgOffsetX,(S-sh)*t06ImgOffsetY,sw,sh);
+    ctx.globalAlpha = 1;
+  } else {
+    ctx.fillStyle='#1a1a1a'; ctx.fillRect(0,0,S,S);
+  }
+  const grad=ctx.createLinearGradient(0,0,0,S);
+  grad.addColorStop(0,'rgba(0,0,0,0.38)'); grad.addColorStop(0.45,'rgba(0,0,0,0.08)'); grad.addColorStop(1,'rgba(0,0,0,0.72)');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,S,S);
+  ctx.textBaseline='alphabetic';
+  const leftX=S*0.05, maxW=S*0.90;
+  let curY=S*0.13;
+  let titleFs=Math.round(S*0.088); const minTitleFs=Math.round(S*0.030);
+  ctx.fillStyle='#fff'; ctx.shadowColor='rgba(0,0,0,0.75)'; ctx.shadowBlur=S*0.016;
+  ctx.font=`900 ${titleFs}px "Noto Sans KR",sans-serif`;
+  while(titleFs>minTitleFs&&ctx.measureText(t06TitleText).width>maxW){ titleFs-=2; ctx.font=`900 ${titleFs}px "Noto Sans KR",sans-serif`; }
+  ctx.fillText(t06TitleText,leftX,curY+titleFs); curY+=titleFs+S*0.018;
+  let subFs=Math.round(S*0.034); const minSubFs=Math.round(S*0.014);
+  ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.shadowBlur=S*0.009;
+  ctx.font=`500 ${subFs}px "Noto Sans KR",sans-serif`;
+  while(subFs>minSubFs&&ctx.measureText(t06SubText).width>maxW){ subFs--; ctx.font=`500 ${subFs}px "Noto Sans KR",sans-serif`; }
+  ctx.fillText(t06SubText,leftX,curY+subFs); curY+=subFs+S*0.028;
+  ctx.shadowBlur=0;
+  const btnH=S*0.05,btnR=S*0.01,btnFs=Math.round(S*0.022);
+  ctx.font=`700 ${btnFs}px "Noto Sans KR",sans-serif`;
+  const playLabel='▶  감상 하기'; const playW=ctx.measureText(playLabel).width+S*0.038;
+  ctx.fillStyle='#fff'; t06RoundRect(ctx,leftX,curY,playW,btnH,btnR); ctx.fill();
+  ctx.fillStyle='#111'; ctx.fillText(playLabel,leftX+S*0.018,curY+btnH*0.665);
+  const infoLabel='ⓘ  More Info'; const infoW=ctx.measureText(infoLabel).width+S*0.038;
+  ctx.fillStyle='rgba(80,80,80,0.78)'; t06RoundRect(ctx,leftX+playW+S*0.014,curY,infoW,btnH,btnR); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.fillText(infoLabel,leftX+playW+S*0.014+S*0.018,curY+btnH*0.665);
+  const pbH=Math.max(2,Math.round(S*0.004)); const pbY=S*0.918,pbL=S*0.04,pbW=S*0.92;
+  const fillW=pbW*(t06ProgressPct/100);
+  ctx.fillStyle='rgba(255,255,255,0.28)'; ctx.fillRect(pbL,pbY,pbW,pbH);
+  ctx.fillStyle='#e50914'; ctx.fillRect(pbL,pbY,fillW,pbH);
+  ctx.beginPath(); ctx.arc(pbL+fillW,pbY+pbH/2,Math.max(4,S*0.007),0,Math.PI*2); ctx.fill();
+  t06DrawCtrlBar(ctx, S);
+}
+function t06DrawCtrlBar(ctx, S) {
+  const sz=S*0.027, cy=S*0.955, gap=S*0.050, lx=S*0.040, rx=S-S*0.040, k=sz/24;
+  ctx.save(); ctx.shadowBlur=0; ctx.fillStyle='rgba(255,255,255,0.90)'; ctx.strokeStyle='rgba(255,255,255,0.90)';
+  function at(cx, fn) { ctx.save(); ctx.translate(cx-sz/2,cy-sz/2); ctx.scale(k,k); ctx.lineWidth=2.2/k; ctx.lineCap='round'; ctx.lineJoin='round'; fn(); ctx.restore(); }
+  at(lx, ()=>{ ctx.fillRect(5.5,4,4.5,16); ctx.fillRect(14,4,4.5,16); });
+  at(lx+gap, ()=>{ ctx.beginPath(); ctx.arc(12,12.5,8,0.55,Math.PI*1.45,false); ctx.stroke(); const a=Math.PI*1.45,px=12+8*Math.cos(a),py=12.5+8*Math.sin(a),tdx=Math.sin(a),tdy=-Math.cos(a); ctx.beginPath(); ctx.moveTo(px+tdx*3,py+tdy*3); ctx.lineTo(px-tdy*2.5,py+tdx*2.5); ctx.lineTo(px+tdy*2.5,py-tdx*2.5); ctx.closePath(); ctx.fill(); ctx.font='bold 7px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('10',12,12.5); });
+  at(lx+gap*2, ()=>{ ctx.beginPath(); ctx.arc(12,12.5,8,Math.PI-0.55,-Math.PI*0.45,true); ctx.stroke(); const a=-Math.PI*0.45,px=12+8*Math.cos(a),py=12.5+8*Math.sin(a),tdx=-Math.sin(a),tdy=Math.cos(a); ctx.beginPath(); ctx.moveTo(px+tdx*3,py+tdy*3); ctx.lineTo(px-tdy*2.5,py+tdx*2.5); ctx.lineTo(px+tdy*2.5,py-tdx*2.5); ctx.closePath(); ctx.fill(); ctx.font='bold 7px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('10',12,12.5); });
+  at(lx+gap*3, ()=>{ ctx.beginPath(); ctx.moveTo(11,5); ctx.lineTo(6,9); ctx.lineTo(2.5,9); ctx.lineTo(2.5,15); ctx.lineTo(6,15); ctx.lineTo(11,19); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.arc(12.5,12,4,-Math.PI*0.5,Math.PI*0.5,false); ctx.stroke(); ctx.beginPath(); ctx.arc(12.5,12,7.5,-Math.PI*0.5,Math.PI*0.5,false); ctx.stroke(); });
+  at(rx-gap*3, ()=>{ ctx.beginPath(); ctx.moveTo(4,4); ctx.lineTo(17,12); ctx.lineTo(4,20); ctx.closePath(); ctx.fill(); ctx.fillRect(18,4,2.5,16); });
+  at(rx-gap*2, ()=>{ [6,12,18].forEach(y=>{ ctx.beginPath(); ctx.arc(3.5,y,1.5,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.moveTo(8,y); ctx.lineTo(22,y); ctx.stroke(); }); });
+  at(rx-gap, ()=>{ ctx.beginPath(); ctx.moveTo(4,3.5); ctx.lineTo(20,3.5); ctx.arcTo(22.5,3.5,22.5,6,2.5); ctx.lineTo(22.5,16); ctx.arcTo(22.5,18.5,20,18.5,2.5); ctx.lineTo(14,18.5); ctx.lineTo(10,22); ctx.lineTo(10,18.5); ctx.lineTo(4,18.5); ctx.arcTo(1.5,18.5,1.5,16,2.5); ctx.lineTo(1.5,6); ctx.arcTo(1.5,3.5,4,3.5,2.5); ctx.closePath(); ctx.stroke(); });
+  at(rx, ()=>{ const d=4.5,m=2; ctx.beginPath(); ctx.moveTo(m+d,m); ctx.lineTo(m,m); ctx.lineTo(m,m+d); ctx.stroke(); ctx.beginPath(); ctx.moveTo(24-m-d,m); ctx.lineTo(24-m,m); ctx.lineTo(24-m,m+d); ctx.stroke(); ctx.beginPath(); ctx.moveTo(m+d,24-m); ctx.lineTo(m,24-m); ctx.lineTo(m,24-m-d); ctx.stroke(); ctx.beginPath(); ctx.moveTo(24-m-d,24-m); ctx.lineTo(24-m,24-m); ctx.lineTo(24-m,24-m-d); ctx.stroke(); });
+  ctx.restore();
+}
+function t06RoundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r); ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r); ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r); ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r); ctx.closePath(); }
+function t06DrawPreview() {
+  const canvas = document.getElementById('t06-preview-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  t06RenderThumb(ctx, canvas.width);
+}
+
+function initT06Bindings() {
+  const canvas = document.getElementById('t06-preview-canvas');
+  const box = document.getElementById('card-wrap-t06');
+  if (!canvas || !box) return;
+
+  document.getElementById('t06-inp-title').addEventListener('input', e => {
+    t06TitleText = e.target.value || '제목을 입력하세요'; t06DrawPreview();
+  });
+  document.getElementById('t06-inp-sub').addEventListener('input', e => {
+    t06SubText = e.target.value || '부제목을 입력하세요'; t06DrawPreview();
+  });
+  document.getElementById('t06-file-input').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    document.getElementById('t06-file-name').textContent = file.name;
+    const img = new Image();
+    img.onload = () => {
+      t06LoadedImage = img; t06ImgOffsetX=0.5; t06ImgOffsetY=0.5;
+      const hint = document.getElementById('t06-drag-hint');
+      if (hint) hint.classList.add('hidden');
+      const mhint = document.getElementById('t06-move-hint');
+      if (mhint) { mhint.style.display='block'; mhint.style.opacity='1'; clearTimeout(window._t06HintTimer); window._t06HintTimer=setTimeout(()=>mhint.classList.add('fade'),2500); }
+      t06ResizeCanvas();
+    };
+    img.src = URL.createObjectURL(file);
+  });
+  document.getElementById('t06-progress-slider').addEventListener('input', e => {
+    t06ProgressPct = parseInt(e.target.value);
+    document.getElementById('t06-progress-val').textContent = t06ProgressPct + '%';
+    t06DrawPreview();
+  });
+  document.querySelectorAll('.t06-size-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.t06-size-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      t06SelectedSize = parseInt(btn.dataset.size);
+      const info = document.getElementById('t06-size-info');
+      if (info) info.textContent = `${t06SelectedSize}×${t06SelectedSize}`;
+    });
+  });
+
+  function t06GetXY(e) { return e.touches ? {x:e.touches[0].clientX,y:e.touches[0].clientY} : {x:e.clientX,y:e.clientY}; }
+  box.addEventListener('mousedown', e => { if (!t06LoadedImage) return; t06IsDragging=true; const p=t06GetXY(e); t06LastX=p.x; t06LastY=p.y; });
+  box.addEventListener('touchstart', e => { if (!t06LoadedImage) return; t06IsDragging=true; const p=t06GetXY(e); t06LastX=p.x; t06LastY=p.y; }, {passive:true});
+  window.addEventListener('mousemove', e => {
+    if (!t06IsDragging||!t06LoadedImage) return;
+    const p=t06GetXY(e),dx=p.x-t06LastX,dy=p.y-t06LastY; t06LastX=p.x; t06LastY=p.y;
+    const S=canvas.width; const sc=Math.max(S/t06LoadedImage.naturalWidth,S/t06LoadedImage.naturalHeight);
+    const rx=t06LoadedImage.naturalWidth*sc-S,ry=t06LoadedImage.naturalHeight*sc-S;
+    if(rx>0) t06ImgOffsetX=Math.min(1,Math.max(0,t06ImgOffsetX-dx/rx));
+    if(ry>0) t06ImgOffsetY=Math.min(1,Math.max(0,t06ImgOffsetY-dy/ry));
+    t06DrawPreview();
+  });
+  window.addEventListener('touchmove', e => {
+    if (!t06IsDragging||!t06LoadedImage) return;
+    if (e.cancelable) e.preventDefault();
+    const p=t06GetXY(e),dx=p.x-t06LastX,dy=p.y-t06LastY; t06LastX=p.x; t06LastY=p.y;
+    const S=canvas.width; const sc=Math.max(S/t06LoadedImage.naturalWidth,S/t06LoadedImage.naturalHeight);
+    const rx=t06LoadedImage.naturalWidth*sc-S,ry=t06LoadedImage.naturalHeight*sc-S;
+    if(rx>0) t06ImgOffsetX=Math.min(1,Math.max(0,t06ImgOffsetX-dx/rx));
+    if(ry>0) t06ImgOffsetY=Math.min(1,Math.max(0,t06ImgOffsetY-dy/ry));
+    t06DrawPreview();
+  }, {passive:false});
+  window.addEventListener('mouseup', () => t06IsDragging=false);
+  window.addEventListener('touchend', () => t06IsDragging=false);
+}
+
+async function downloadT06() {
+  await document.fonts.ready;
+  const S = t06SelectedSize;
+  const cv = document.createElement('canvas'); cv.width=S; cv.height=S;
+  const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  t06RenderThumb(ctx, S);
+  const title = document.getElementById('t06-inp-title').value || 'thumbnail';
+  const a = document.createElement('a');
+  a.download = (title.slice(0,20).replace(/[^\w가-힣]/g,'_')||'thumbnail')+'_'+S+'.png';
+  a.href = cv.toDataURL('image/png'); a.click();
+}
+</script>
+</body>
+</html>

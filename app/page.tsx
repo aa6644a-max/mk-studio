@@ -1,16 +1,15 @@
 import Link from "next/link";
 import Header from "@/components/header";
 import StatCard from "@/components/dashboard/stat-card";
-import RecentReviewCard from "@/components/dashboard/recent-review-card";
-import { getRecentPosts, getStats } from "@/lib/google-sheets";
+import { getRssLatestPosts, type BlogPost } from "@/lib/rss-client";
 import { getBoxOffice } from "@/lib/kobis";
+import { posterColor } from "@/lib/colors";
 
-export const dynamic = "force-dynamic"; // Sheets/KOBIS 실시간 조회
+export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [stats, recent, boxoffice] = await Promise.all([
-    getStats().catch(() => ({ total: 0, thisMonth: 0, publishedRatio: 0 })),
-    getRecentPosts(3).catch(() => []),
+  const [rssPosts, boxoffice] = await Promise.all([
+    getRssLatestPosts("shock552", 5).catch(() => [] as BlogPost[]),
     getBoxOffice(5).catch(() => []),
   ]);
 
@@ -21,6 +20,9 @@ export default async function HomePage() {
     weekday: "long",
   }).format(new Date());
 
+  const ym = new Date().toISOString().slice(0, 7);
+  const thisMonthCount = rssPosts.filter((p) => p.pubDate.startsWith(ym)).length;
+
   return (
     <>
       <Header
@@ -30,7 +32,7 @@ export default async function HomePage() {
             href="/write"
             className="rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-semibold text-white hover:opacity-90"
           >
-            새 리뷰
+            새 포스팅
           </Link>
         }
       />
@@ -43,11 +45,10 @@ export default async function HomePage() {
           <p className="mt-1 text-sm text-[var(--text-secondary)]">{today}</p>
         </div>
 
-        {/* 통계 3칸 */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <StatCard label="총 리뷰 수" value={stats.total} suffix="편" />
-          <StatCard label="이번 달 작성" value={stats.thisMonth} suffix="편" />
-          <StatCard label="발행 비율" value={stats.publishedRatio} suffix="%" />
+        {/* 통계 */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <StatCard label="RSS 최신 글" value={rssPosts.length} suffix="편" />
+          <StatCard label="이번 달 포스팅" value={thisMonthCount} suffix="편" />
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -81,21 +82,58 @@ export default async function HomePage() {
             </ol>
           </section>
 
-          {/* 최근 리뷰 */}
+          {/* 최근 블로그 포스팅 (RSS) */}
           <section>
             <h3 className="mb-3 font-bold text-[var(--text-primary)]">
-              최근 리뷰
+              내 블로그 최근 포스팅
+              <span className="ml-2 text-xs font-normal text-[var(--text-secondary)]">
+                Naver 기준
+              </span>
             </h3>
-            {recent.length === 0 ? (
+            {rssPosts.length === 0 ? (
               <div className="panel p-8 text-sm text-[var(--text-secondary)]">
-                아직 작성한 리뷰가 없습니다.
+                RSS 로드 실패 또는 포스팅 없음
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-                {recent.map((p) => (
-                  <RecentReviewCard key={p.timestamp} post={p} />
+              <ul className="space-y-2">
+                {rssPosts.map((p, i) => (
+                  <li key={i}>
+                    <a
+                      href={p.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="panel flex items-center gap-3 p-3 hover:border-[var(--accent)] transition-colors"
+                    >
+                      {p.thumbnail ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={p.thumbnail}
+                          alt=""
+                          className="h-12 w-12 shrink-0 rounded object-cover"
+                        />
+                      ) : (
+                        <div
+                          className="flex h-12 w-12 shrink-0 items-center justify-center rounded text-xl"
+                          style={{ background: posterColor(p.title) }}
+                        >
+                          ✍️
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-bold text-[var(--text-primary)]">
+                          {p.title}
+                        </div>
+                        <div className="mt-0.5 line-clamp-1 text-xs text-[var(--text-secondary)]">
+                          {p.excerpt}
+                        </div>
+                      </div>
+                      <span className="shrink-0 text-xs text-[var(--text-secondary)]">
+                        {p.pubDate}
+                      </span>
+                    </a>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </section>
         </div>

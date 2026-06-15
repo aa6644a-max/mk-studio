@@ -45,10 +45,17 @@ export default function Sidebar() {
 
       {/* 하단 설정/유저 */}
       <div className="px-3 py-3 border-t border-white/10 space-y-1">
-        <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+        <Link
+          href="/settings"
+          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+            pathname.startsWith("/settings")
+              ? "bg-[var(--accent)] font-semibold text-white"
+              : "text-white/70 hover:bg-white/10 hover:text-white"
+          }`}
+        >
           <span className="text-base leading-none">⚙️</span>
           설정
-        </button>
+        </Link>
         <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/70">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-xs font-bold">
             MK

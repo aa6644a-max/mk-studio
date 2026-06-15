@@ -1,7 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { PostDraft } from "@/lib/types";
-import { getRecentPosts } from "@/lib/google-sheets";
+import { getPostsByType } from "@/lib/google-sheets";
+import { getRssLatestText } from "@/lib/rss-client";
 import { buildPrompt } from "@/lib/prompts";
+import { wrapHtml } from "@/lib/html-formatter";
 
 /**
  * Claude 포스팅 생성 (V2 ClaudeClient 정렬).
@@ -23,8 +25,12 @@ export async function generatePost(draft: PostDraft): Promise<GenerateResult> {
     return { html: mockHtml(draft), titles: mockTitles(draft) };
   }
 
-  const references = await getRecentPosts(3).catch(() => []);
-  const { system, user } = buildPrompt(draft, references);
+  // RSS 원문(문체 학습) + 같은 타입 Sheets 글(구조 참조) 병렬 로드
+  const [rssText, references] = await Promise.all([
+    getRssLatestText("shock552", 5).catch(() => ""),
+    getPostsByType(draft.postType, 3).catch(() => []),
+  ]);
+  const { system, user } = buildPrompt(draft, references, rssText);
   const client = new Anthropic();
 
   let text = "";
@@ -52,7 +58,10 @@ export async function generatePost(draft: PostDraft): Promise<GenerateResult> {
     }
   }
 
-  return splitTitles(stripFence(text.trim()));
+  const { html: rawHtml, titles } = splitTitles(stripFence(text.trim()));
+  const wrappedTitle = draft.title || draft.movieTitle || "포스팅";
+  const html = wrapHtml(rawHtml, wrappedTitle, draft.postType);
+  return { html, titles };
 }
 
 /** 코드펜스 제거. */
@@ -82,13 +91,11 @@ function sleep(ms: number) {
 
 function mockHtml(draft: PostDraft): string {
   const title = draft.title || draft.movieTitle || "포스팅";
-  return `
-<div style="font-family:'Pretendard',-apple-system,sans-serif;color:#2c2c2c;line-height:1.8;font-size:16px">
-  <p>(데모 출력 — <strong>ANTHROPIC_API_KEY</strong> 미설정. 실제 생성은 키 설정 후 동작합니다.)</p>
-  <table width="100%" border="0" cellpadding="15" bgcolor="#1a1a1a"><tr><td><b style="color:#ffffff; font-size:18px;">${title}</b></td></tr></table>
-  <p>타입: ${draft.postType} · 장르: ${draft.genres.join(", ") || "미지정"}</p>
-  ${draft.comment || draft.body ? `<p>${draft.comment || draft.body}</p>` : ""}
-</div>`.trim();
+  const raw = `<p>(데모 출력 — <strong>ANTHROPIC_API_KEY</strong> 미설정. 실제 생성은 키 설정 후 동작합니다.)</p>
+<table width="100%" border="0" cellpadding="15" bgcolor="#1a1a1a"><tr><td><b style="color:#ffffff; font-size:18px;">${title}</b></td></tr></table>
+<p>타입: ${draft.postType} · 장르: ${draft.genres.join(", ") || "미지정"}</p>
+${draft.comment || draft.body ? `<p>${draft.comment || draft.body}</p>` : ""}`;
+  return wrapHtml(raw, title, draft.postType);
 }
 
 function mockTitles(draft: PostDraft): string[] {

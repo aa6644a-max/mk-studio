@@ -49,3 +49,14 @@ body {
   border-radius: 12px;
   box-shadow: inset 0 0 0 1px var(--panel-border);
 }
+
+@keyframes wizardSlideInRight {
+  from { transform: translateX(48px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes wizardSlideInLeft {
+  from { transform: translateX(-48px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+.wizard-slide-fwd { animation: wizardSlideInRight 0.25s ease both; }
+.wizard-slide-bwd { animation: wizardSlideInLeft  0.25s ease both; }

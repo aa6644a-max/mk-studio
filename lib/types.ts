@@ -52,10 +52,33 @@ export type Post = {
   status: PostStatus; // E
 };
 
+// 큐레이션·정주행 단위 작품
+export type CurationItem = {
+  title: string;
+  originalTitle?: string;
+  posterUrl: string | null;
+  tmdbId?: number;
+  // movie (curation)
+  country?: string;
+  releaseDate?: string;
+  director?: string;
+  actors?: string;
+  genres?: string;
+  overview?: string;
+  // TV/anime (binge)
+  cast?: string;
+  numberOfEpisodes?: number;
+  numberOfSeasons?: number;
+  episodeRuntime?: number;
+  totalWatchTime?: string;
+  // 사용자 입력: 이 작품을 추천하는 이유
+  reason: string;
+};
+
 // 작성 화면 드래프트 상태
 export type PostDraft = {
   postType: PostType;
-  title: string; // 포스팅/리뷰 제목
+  title: string; // 블로그 포스팅 제목 (SEO)
   posterUrl: string | null;
   genres: string[];
   status: PostStatus;
@@ -65,12 +88,12 @@ export type PostDraft = {
   watchReason: string; // 포스팅 계기/관람 이유 (reason)
   comment: string; // 나의 주관적 감상평 (review)
   details: MovieDetails | null; // TMDB 상세 (감독/배우/스틸컷 등)
-  tvDetails: TvDetails | null; // 정주행용
   // 프리뷰: 개봉일 / 기대 포인트
   releaseDate: string;
   expectPoints: string;
-  // 큐레이션·정주행: 항목 목록 (영화 여러 편 / 회차 구성)
-  items: string[];
+  // 큐레이션·정주행: 테마 + 다중 작품 목록
+  theme: string; // 포스팅 메인 테마 (예: "스티븐 스필버그의 필모그래피")
+  items: CurationItem[];
   // 사진 포스팅: 장소명 / 업로드 이미지 이름
   placeName: string;
   imageNames: string[];
@@ -79,6 +102,8 @@ export type PostDraft = {
   purpose: string;
   pdfText: string; // PDF에서 추출한 본문 (서버 추출)
   pdfNames: string[];
+  // 로컬소식 브랜드 색상 (섹션 헤더 bg)
+  brandColor: string;
   // 본문 (사용자 메모/지시) + 생성 결과
   body: string;
   generatedHtml: string;
@@ -97,9 +122,9 @@ export function emptyDraft(postType: PostType = "review"): PostDraft {
     watchReason: "",
     comment: "",
     details: null,
-    tvDetails: null,
     releaseDate: "",
     expectPoints: "",
+    theme: "",
     items: [],
     placeName: "",
     imageNames: [],
@@ -107,6 +132,7 @@ export function emptyDraft(postType: PostType = "review"): PostDraft {
     purpose: "",
     pdfText: "",
     pdfNames: [],
+    brandColor: "#1a2e4a",
     body: "",
     generatedHtml: "",
     seoTitles: [],

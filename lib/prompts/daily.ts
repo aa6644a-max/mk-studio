@@ -201,8 +201,9 @@ ${ref}
 export function buildDailyPrompt(
   draft: PostDraft,
   references: { movieTitle: string; content: string }[],
+  rssText = "",
 ): PromptResult {
-  const refText = referenceText(references);
+  const refText = referenceText(references, rssText);
   if (draft.postType === "photo") {
     const placeInfo = draft.placeName ? `[장소 정보]\n- ${draft.placeName}` : "";
     const photoMemos = draft.imageNames.length

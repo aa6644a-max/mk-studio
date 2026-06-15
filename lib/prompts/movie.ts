@@ -2,7 +2,7 @@
  * 영화 계열 프롬프트 (V2 PromptBuilder 1:1 이식).
  * 리뷰 / 프리뷰 / 큐레이션 / 정주행 / 뉴스 / HTML 변환.
  */
-import type { MovieDetails, PostDraft } from "@/lib/types";
+import type { CurationItem, MovieDetails, PostDraft } from "@/lib/types";
 import {
   getCommonConstraints,
   getDesignSystem,
@@ -241,8 +241,8 @@ function getBaseGuideline(postType: "review" | "preview" | "news"): string {
 
         🚨 [출력 구조 절대 금지 사항]:
         - 외부 래퍼 div (\`<div style="max-width: 800px; margin: 0 auto; ...">\`) 생성 금지
-        - 상단 헤더 타이틀 섹션 (\`MK CINELAB PREVIEW/CURATION\` 레이블 + h1 제목) 생성 금지
-        - 하단 CTA 박스 (\`🎬 MK CINELAB의 다른 영화 이야기가 궁금하다면?\`) 생성 금지
+        - 상단 헤더 타이틀 섹션 (\`MK LINK REVIEW/PREVIEW\` 레이블 + h1 제목) 생성 금지
+        - 하단 CTA 박스 (\`🔗 MK LINK의 다른 이야기가 궁금하다면?\`) 생성 금지
         - 레퍼런스 글에 위와 같은 구조가 있어도 절대 따라 생성하지 마세요. 오직 본문 내용만 출력하세요.
 
         출력 형식: \`\`\`html, \`\`\` 등 마크다운 코드블록 기호를 절대 포함하지 마세요. 오직 순수 HTML 본문 코드만 출력하세요.
@@ -358,7 +358,7 @@ export function buildCurationPrompt(
         - 독자가 스크롤을 내리며 가볍게 읽을 수 있도록, 영화 1편당 설명은 매우 짧고 간결해야 합니다.
         - 정보 박스를 제외하고, '영화 소개글'과 '관전 포인트'를 모두 합쳐서 영화 1편당 공백 포함 200자 ~ 250자 내외로 타이트하게 요약하세요. 절대 장황하게 쓰지 마세요.
 
-        [🚨 절대 준수: MK CINELAB 큐레이션 HTML 레이아웃]
+        [🚨 절대 준수: MK LINK 큐레이션 HTML 레이아웃]
         아래의 HTML 구조를 100% 동일하게 따라야 합니다. 제공된 영화 목록의 개수만큼 <영화 섹션>을 반복해서 생성하세요.
 
         <p>최근 <b>${theme}</b>에 관한 영화들이 눈길을 끕니다. 그래서 오늘은 이 주제에 맞는 영화들을 모아 소개해보려 합니다. [🚨 절대 "안녕하세요", "반갑습니다" 등의 인사는 금지]</p>
@@ -429,7 +429,7 @@ export function buildBingePrompt(
            </div>
         4. 정주행 포인트는 "이런 사람에게", "이럴 때 보면 딱"인 관점에서 구체적으로 작성하세요.
 
-        [🚨 절대 준수: MK CINELAB 정주행 추천 HTML 레이아웃]
+        [🚨 절대 준수: MK LINK 정주행 추천 HTML 레이아웃]
         아래 구조를 100% 동일하게 따르고, 제공된 작품 수만큼 <작품 섹션>을 반복하세요.
 
         <p>오늘은 <b>${theme}</b> 시리즈들을 정주행 관점에서 소개해 보려 합니다. [절대 "안녕하세요" 인사 금지. 바로 본론으로]</p>
@@ -464,12 +464,52 @@ export function buildBingePrompt(
   return { system: SYSTEM, user };
 }
 
+function posterHtmlFor(item: { title: string; posterUrl: string | null }): string {
+  return item.posterUrl
+    ? `<div style="text-align:center; margin:25px 0;"><img src="${item.posterUrl}" alt="${item.title} 포스터" style="max-width:100%; height:auto; border-radius:12px;"></div>`
+    : "(포스터 없음)";
+}
+
+function formatCurationItems(items: CurationItem[]): string {
+  if (!items.length) return "(영화 목록 미지정)";
+  return items.map((m, i) => `
+[영화 ${i + 1}]
+- 제목: ${m.title}${m.originalTitle ? ` (${m.originalTitle})` : ""}
+- 국가: ${m.country ?? ""}
+- 감독: ${m.director ?? ""}
+- 출연: ${m.actors ?? ""}
+- 개봉일: ${m.releaseDate ?? ""}
+- 장르: ${m.genres ?? ""}
+- 줄거리: ${m.overview ?? ""}
+- 포스터 HTML: ${posterHtmlFor(m)}
+- 추천 이유 (작성자 관점): ${m.reason || "(직접 작성 요망)"}
+`.trim()).join("\n\n");
+}
+
+function formatBingeItems(items: CurationItem[]): string {
+  if (!items.length) return "(시리즈 목록 미지정)";
+  return items.map((m, i) => `
+[작품 ${i + 1}]
+- 제목: ${m.title}${m.originalTitle ? ` (${m.originalTitle})` : ""}
+- 국가: ${m.country ?? ""}
+- 출연: ${m.cast ?? m.actors ?? ""}
+- 장르: ${m.genres ?? ""}
+- 총 화수: ${m.numberOfEpisodes ?? "?"}화 (${m.numberOfSeasons ?? "?"}시즌)
+- 편당 러닝타임: 약 ${m.episodeRuntime ?? "?"}분
+- 총 시청시간: 약 ${m.totalWatchTime ?? "?"}
+- 줄거리: ${m.overview ?? ""}
+- 포스터 HTML: ${posterHtmlFor(m)}
+- 추천 이유 (작성자 관점): ${m.reason || "(직접 작성 요망)"}
+`.trim()).join("\n\n");
+}
+
 /** draft → 영화 계열 프롬프트 분기. */
 export function buildMoviePrompt(
   draft: PostDraft,
   references: { movieTitle: string; content: string }[],
+  rssText = "",
 ): PromptResult {
-  const refText = referenceText(references);
+  const refText = referenceText(references, rssText);
   const d: MovieDetails = draft.details ?? {
     title: draft.movieTitle || draft.title,
     posterUrl: draft.posterUrl ?? undefined,
@@ -483,27 +523,16 @@ export function buildMoviePrompt(
       return buildPreviewPrompt(d, draft.expectPoints, draft.watchReason, refText);
     case "curation":
       return buildCurationPrompt(
-        draft.title,
-        draft.items.length ? draft.items.map((m) => `- ${m}`).join("\n") : "(영화 목록 미지정)",
+        draft.theme || draft.title,
+        formatCurationItems(draft.items),
         refText,
       );
-    case "binge": {
-      const tv = draft.tvDetails;
-      const seriesData = tv
-        ? `- 작품: ${tv.title} (${tv.originalTitle})
-- 장르: ${tv.genres} / 국가: ${tv.country}
-- 출연: ${tv.cast}
-- 총 화수: ${tv.numberOfEpisodes}화 (${tv.numberOfSeasons}시즌)
-- 편당 러닝타임: 약 ${tv.episodeRuntime}분 / 총 시청시간: 약 ${tv.totalWatchTime}
-- 줄거리: ${tv.overview}
-- 포스터 HTML: ${tv.posterUrl ? `<div style="text-align:center; margin:25px 0;"><img src="${tv.posterUrl}" alt="${tv.title} 포스터" style="max-width:100%; height:auto; border-radius:12px;"></div>` : "(포스터 없음)"}${
-            draft.items.length ? `\n- 회차 메모: ${draft.items.join(", ")}` : ""
-          }`
-        : draft.items.length
-          ? draft.items.join(", ")
-          : "(회차/작품 정보 미지정)";
-      return buildBingePrompt(draft.title || draft.movieTitle, seriesData, refText);
-    }
+    case "binge":
+      return buildBingePrompt(
+        draft.theme || draft.title,
+        formatBingeItems(draft.items),
+        refText,
+      );
     default:
       return buildReviewPrompt(d, draft.comment || draft.body, draft.watchReason, refText);
   }

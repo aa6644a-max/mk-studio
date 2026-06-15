@@ -92,7 +92,7 @@ function designSystem(brandColor: string): string {
 <table width="100%" border="0" cellpadding="20" cellspacing="0" bgcolor="#f4f6f8" style="border-left:4px solid #26C6A4; margin-top:40px;">
   <tr><td>
     <p style="margin:0 0 6px 0; font-size:14px; color:#333; font-weight:bold;"><b>🔗 MK LINK</b></p>
-    <p style="margin:0; font-size:13px; color:#555; line-height:1.8;">대구 기반의 IT·문화 소식, 로컬 커뮤니티 이야기를 전합니다.<br>유용한 정보가 있다면 주변에도 공유해주세요.</p>
+    <p style="margin:0; font-size:13px; color:#555; line-height:1.8;">대구 로컬 소식·행사·공고를 전합니다.<br>공유할 소식 있으면 댓글로 알려주세요, MK LINK가 함께 전해드립니다.</p>
   </td></tr>
 </table>
 `;
@@ -183,7 +183,7 @@ ${refSection}
 [출력 형식]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 - \`\`\`html 마크다운 기호 절대 포함 금지
-- 전체를 <div style="max-width:680px; margin:0 auto; font-family:'NanumSquare','나눔스퀘어',sans-serif; color:#333; line-height:1.8;"> 로 감싸기
+- 전체를 <div style="font-family:'NanumSquare','나눔스퀘어',sans-serif; color:#333; line-height:1.8;"> 로 감싸기
 - 오직 순수 HTML 본문 코드만 출력
 - 맨 마지막 줄에 반드시:
 <!-- TITLES: 제목1||제목2||제목3||제목4||제목5 -->
@@ -195,10 +195,12 @@ ${refSection}
 export function buildLocalPrompt(
   draft: PostDraft,
   references: { movieTitle: string; content: string }[],
+  rssText = "",
 ): PromptResult {
   return buildAnnouncementPrompt(
     draft.pdfText,
     draft.purpose || draft.body || draft.title || "로컬 소식 안내",
-    referenceText(references),
+    referenceText(references, rssText),
+    draft.brandColor || "#1a2e4a",
   );
 }

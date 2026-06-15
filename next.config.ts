@@ -6,6 +6,12 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "image.tmdb.org" },
     ],
   },
+  serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
+  experimental: {
+    staleTimes: {
+      dynamic: 0,
+    },
+  },
 };
 
 export default nextConfig;
