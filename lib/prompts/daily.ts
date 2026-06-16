@@ -97,76 +97,84 @@ export function buildPdfSummaryPrompt(
   return { system: SYSTEM, user };
 }
 
+function photoStructureGuide(photoCategory: string): string {
+  switch (photoCategory) {
+    case "일상기록":
+      return `[🔑 글 구조 — 일상·기록]
+1. 인트로: 오늘 한 일을 한두 문장으로 자연스럽게 시작. 인사말 금지.
+2. 사진 순서대로 에피소드 전개 — 각 사진의 메모를 바탕으로 그 순간의 상황·감정·생각을 짧게.
+3. 억지 교훈 없이 "오늘 느낀 것" 한두 줄로 마무리.
+4. 전체 톤: 일기장 쓰듯 편안하게. 정보 전달보다 감각·감정 중심.`;
+
+    case "여행나들이":
+      return `[🔑 글 구조 — 여행·나들이]
+1. 인트로: 어디 갔는지 + 가게 된 계기 한두 문장. 인사말 금지.
+2. 코스 순서대로 전개 — 사진 메모 순서 = 동선 순서로 이해하고 묘사.
+3. 교통·주차·소요시간 등 실용 팁을 💡 박스 1~2개로.
+4. 마무리: 또 갈 만한지, 누구랑 어울리는지 솔직하게.`;
+
+    case "전시문화":
+      return `[🔑 글 구조 — 전시·문화]
+1. 인트로: 어떤 전시/행사인지 한두 문장. 기대감 또는 방문 계기.
+2. 현장 분위기 묘사 → 작품/프로그램별 인상 → 사진 메모 순서대로.
+3. 실용 정보(관람 시간, 입장료, 위치) 💡 박스로.
+4. 마무리: 어떤 사람에게 추천할 만한지 솔직하게.`;
+
+    default: // 맛집카페
+      return `[🔑 글 구조 — 맛집·카페]
+1. 인트로: 발견 동기로 시작 ("SNS에서 봤던", "지나칠 때마다 궁금했던" 등). 인사말 금지.
+2. 가게/카페 소개 — PDF 자료 있으면 이 단락에 녹이기. 과장 금지('인생맛집', '핫플' 불가).
+3. 공간 묘사: 외관·인테리어·동선 간결하게.
+4. 메뉴·음식: 질감·온도·비주얼을 구체적 비유로. "맛있어요" 금지 → "이런 느낌이었다"로.
+5. 💡 팁 박스 1~2개 (웨이팅, 주차, 추천 메뉴 등).
+6. 마무리: 또 갈 만한지, 누구에게 어울리는지 솔직하게.`;
+  }
+}
+
 export function buildPhotoPostPrompt(
-  category: string,
-  vibe: string,
+  photoCategory: string,
   placeInfoText: string,
   photoContextsText: string,
   refText: string,
   pdfText = "",
+  userBody = "",
 ): PromptResult {
   const base = baseGuideline();
   const ref = referencePromptDaily(refText);
-  const pdfSection = pdfText.trim()
-    ? `
-[📄 사전 조사 자료]
-방문 전 직접 조사한 자료입니다. 브랜드 소개 단락과 자연스럽게 연결하되,
-조사 내용을 그대로 나열하지 말고 방문 경험의 흐름 속에 녹여내세요.
+  const structureGuide = photoStructureGuide(photoCategory);
+  const categoryLabel: Record<string, string> = {
+    맛집카페: "맛집·카페 방문 후기",
+    일상기록: "일상 기록",
+    여행나들이: "여행·나들이",
+    전시문화: "전시·문화 행사",
+  };
+  const label = categoryLabel[photoCategory] ?? "사진 포스팅";
 
-${pdfText}
-`
+  const pdfSection = pdfText.trim()
+    ? `\n[📄 사전 조사 자료]\n방문 전 조사한 자료입니다. 브랜드 소개 단락에 자연스럽게 녹여내세요.\n${pdfText}\n`
+    : "";
+
+  const bodySection = userBody.trim()
+    ? `\n[✏️ 포스팅 방향 지시]\n${userBody}\n`
     : "";
 
   const user = `
-아래 제공된 [사전 조사 자료], [장소 정보], [사진 메모], [실제 사진]을 바탕으로
-MK 특유의 문체와 구조로 포스팅을 완성하세요.
-
-[기록 기본 설정]
-- 포스팅 주제: ${category}
-- 전반적인 분위기: ${vibe}
+포스팅 카테고리: ${label}
 
 ${placeInfoText}
-
 ${pdfSection}
-
-[📸 사진 메모 (순서 그대로)]
+${bodySection}
+[📸 사진 메모 (순서 = 포스팅 순서)]
 ${photoContextsText}
 
 ======================================
-[🔑 MK 문체 핵심 규칙 — 절대 준수]
+${structureGuide}
 
-1. 인트로: 발견 스토리로 시작
-   - "SNS에서 한번씩 봤던", "지나칠 때마다 궁금했던", "집 근처에 생겼다고 해서" 같은
-     자연스러운 발견 동기 + 이번에 드디어 가게 된 계기로 시작하세요.
-   - 인사말("안녕하세요", "MK입니다") 절대 금지. 바로 본론.
-
-2. 브랜드/장소 소개 단락
-   - PDF 조사 자료가 있으면 이 단락에 녹이세요.
-   - 💡 콜아웃 박스와 불릿 리스트로 핵심 정보를 정리하세요.
-   - 과장 금지: '최고', '강추', '인생맛집', '핫플' 사용 불가.
-
-3. 방문 묘사: 공간의 첫인상
-   - 외관, 인테리어, 동선을 간결하게 묘사.
-   - 주소/위치는 자연스럽게 본문에 녹이세요.
-
-4. 메뉴/경험: 감각 묘사 중심
-   - 가격 언급 자연스럽게 포함.
-   - SNS에서 봤던 것 vs 실제 눈앞에 있는 것의 비교.
-   - 질감, 온도, 냄새, 시각적 특징을 구체적 비유로 표현.
-   - "맛있어요"가 아니라 "이런 느낌이었다"로 쓰세요.
-   - 사진 흐름에 맞춰 문단 전개.
-
-5. 실용 팁
-   - 자연스러운 흐름 중에 💡 팁 박스 1~2개 삽입.
-
-6. 마무리
-   - 억지 추천 없이 "또 가겠냐"에 대한 솔직한 결론.
-   - 누구에게 어울릴지 구체적으로.
-
-7. 문장 리듬
-   - "~하는데요", "~했어요", "~이긴 했어요", "~싶었어요" 섞어 쓰기.
-   - 두세 문장마다 단락 전환. AI 특유의 긴 문단 금지.
-   - AI 금지어: "결론적으로", "요약하자면", "의 향연", "과언이 아닙니다", "흥미로운".
+[공통 문체 규칙]
+- "~하는데요", "~했어요", "~이긴 했어요", "~싶었어요" 자연스럽게 섞기.
+- 두세 문장마다 단락 전환. AI 특유의 긴 문단 금지.
+- AI 금지어: "결론적으로", "요약하자면", "의 향연", "과언이 아닙니다", "흥미로운".
+- 어려운 전문용어 금지 — 처음 듣는 사람도 이해할 수 있는 표현으로.
 
 ${base}
 ======================================
@@ -174,25 +182,24 @@ ${base}
 [🎨 HTML 출력 가이드]
 1. 전체: \`<div style="font-family: 'Nanum Gothic', '나눔고딕', sans-serif; color: #333; line-height: 1.8;">\` 로 감싸기.
 
-2. 소제목: 아래 타이틀 박스 사용
+2. 소제목:
    <table width="100%" border="0" cellpadding="15" bgcolor="#2e7d32"><tr><td><b style="color:#ffffff; font-size:18px;">[소제목]</b></td></tr></table>
 
-3. 콜아웃 박스 (브랜드 정보, 실용 팁):
+3. 콜아웃 박스:
    <div style="background-color:#f8f9fa; border-radius:10px; padding:20px; border:1px solid #eee; margin:20px 0;">💡 [제목]<br><span style="color:#666; font-size:14px;">[내용]</span></div>
 
-4. 이미지 삽입 (절대 준수):
-   - 사진 순서 그대로 해당 문단 사이에 삽입:
+4. 이미지 삽입 (사진 순서 그대로):
    <div style="text-align:center; margin:25px 0;"><img src="[PHOTO_번호]" alt="[설명]" style="max-width:100%; height:auto; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1);"></div>
 
-5. 구분선 (단락 전환 시 1~2회):
+5. 구분선:
    <div style="height:2px; background:linear-gradient(to right,#ffffff,#a5d6a7,#ffffff); margin:50px 0;"></div>
 
 ${ref}
 
-출력 형식: 오직 완성된 HTML 본문 코드만 출력. (\`\`\`html 마크다운 기호 제외)
-맨 마지막 줄에 네이버 SEO 최적화 제목 5개:
+출력 형식: 순수 HTML 본문만. (\`\`\`html 마크다운 기호 제외)
+맨 마지막 줄:
 <!-- TITLES: 제목1||제목2||제목3||제목4||제목5 -->
-(핵심 키워드 앞에 배치, 30자 이내, 클릭 유도)
+(핵심 키워드 앞 배치, 30자 이내, 클릭 유도)
 `;
   return { system: SYSTEM, user };
 }
@@ -207,15 +214,20 @@ export function buildDailyPrompt(
   if (draft.postType === "photo") {
     const placeInfo = draft.placeName ? `[장소 정보]\n- ${draft.placeName}` : "";
     const photoMemos = draft.imageNames.length
-      ? draft.imageNames.map((n, i) => `${i + 1}. ${n}`).join("\n")
-      : "(사진 메모 없음)";
+      ? draft.imageNames
+          .map((n, i) => {
+            const caption = draft.imageCaptions?.[i]?.trim();
+            return caption ? `${i + 1}. ${n} — ${caption}` : `${i + 1}. ${n}`;
+          })
+          .join("\n")
+      : "(사진 없음)";
     return buildPhotoPostPrompt(
-      draft.category || draft.title || "방문 기록",
-      draft.purpose || draft.body || "담백한 기록",
+      draft.photoCategory || "맛집카페",
       placeInfo,
       photoMemos,
       refText,
       draft.pdfText,
+      draft.body,
     );
   }
   // pdf 요약

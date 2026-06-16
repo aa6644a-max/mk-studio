@@ -11,13 +11,13 @@ import { buildPreviewDoc } from "@/lib/html-formatter";
 type StepDef = { id: string; label: string };
 
 const TYPE_STEPS: Record<PostType, StepDef[]> = {
-  review:   [{ id: "movie",   label: "영화 검색" }, { id: "comment", label: "감상평"    }, { id: "final", label: "생성" }],
-  preview:  [{ id: "movie",   label: "영화 검색" }, { id: "expect",  label: "기대 포인트" }, { id: "final", label: "생성" }],
-  curation: [{ id: "theme",   label: "테마"      }, { id: "items",   label: "작품 추가"  }, { id: "final", label: "생성" }],
-  binge:    [{ id: "theme",   label: "테마"      }, { id: "items",   label: "작품 추가"  }, { id: "final", label: "생성" }],
-  photo:    [{ id: "upload",  label: "사진 업로드" }, { id: "body",   label: "내용 지시"  }, { id: "final", label: "생성" }],
-  pdf:      [{ id: "upload",  label: "PDF 업로드" }, { id: "body",   label: "생성 지시"  }, { id: "final", label: "생성" }],
-  local:    [{ id: "upload",  label: "PDF 업로드" }, { id: "body",   label: "생성 지시"  }, { id: "final", label: "생성" }],
+  review:   [{ id: "movie",    label: "영화 검색" }, { id: "comment",  label: "감상평"    }, { id: "final", label: "생성" }],
+  preview:  [{ id: "movie",    label: "영화 검색" }, { id: "expect",   label: "기대 포인트" }, { id: "final", label: "생성" }],
+  curation: [{ id: "theme",    label: "테마"      }, { id: "items",    label: "작품 추가"  }, { id: "final", label: "생성" }],
+  binge:    [{ id: "theme",    label: "테마"      }, { id: "items",    label: "작품 추가"  }, { id: "final", label: "생성" }],
+  photo:    [{ id: "category", label: "카테고리"  }, { id: "upload",   label: "사진 업로드" }, { id: "body",  label: "내용 지시" }, { id: "final", label: "생성" }],
+  pdf:      [{ id: "upload",   label: "PDF 업로드" }, { id: "body",    label: "생성 지시"  }, { id: "final", label: "생성" }],
+  local:    [{ id: "upload",   label: "PDF 업로드" }, { id: "body",    label: "생성 지시"  }, { id: "final", label: "생성" }],
 };
 
 const TYPE_CARDS = [
@@ -339,14 +339,15 @@ function StepContent({
   if (isFinal) return <FinalStep draft={draft} onChange={onChange} onGenerate={onGenerate} busy={busy} />;
 
   switch (stepId) {
-    case "movie":   return <MovieStep   draft={draft} onChange={onChange} onNext={onNext} />;
-    case "theme":   return <ThemeStep   draft={draft} onChange={onChange} onNext={onNext} />;
-    case "items":   return <ItemsStep   draft={draft} onChange={onChange} onNext={onNext} />;
-    case "comment": return <CommentStep draft={draft} onChange={onChange} onNext={onNext} />;
-    case "expect":  return <ExpectStep  draft={draft} onChange={onChange} onNext={onNext} />;
-    case "body":    return <BodyStep    draft={draft} onChange={onChange} onNext={onNext} />;
-    case "upload":  return <UploadStep  draft={draft} onChange={onChange} onNext={onNext} />;
-    default:        return null;
+    case "movie":    return <MovieStep        draft={draft} onChange={onChange} onNext={onNext} />;
+    case "theme":    return <ThemeStep        draft={draft} onChange={onChange} onNext={onNext} />;
+    case "items":    return <ItemsStep        draft={draft} onChange={onChange} onNext={onNext} />;
+    case "comment":  return <CommentStep      draft={draft} onChange={onChange} onNext={onNext} />;
+    case "expect":   return <ExpectStep       draft={draft} onChange={onChange} onNext={onNext} />;
+    case "body":     return <BodyStep         draft={draft} onChange={onChange} onNext={onNext} />;
+    case "upload":   return <UploadStep       draft={draft} onChange={onChange} onNext={onNext} />;
+    case "category": return <PhotoCategoryStep draft={draft} onChange={onChange} onNext={onNext} />;
+    default:         return null;
   }
 }
 
@@ -652,11 +653,20 @@ function BodyStep({ draft, onChange, onNext }: { draft: PostDraft; onChange: (p:
     >
       {isPhoto && (
         <div className="mb-4">
-          <label className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">장소명</label>
+          <label className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
+            {draft.photoCategory === "일상기록" ? "오늘 있었던 곳 (선택)" :
+             draft.photoCategory === "여행나들이" ? "방문 장소 (선택)" :
+             draft.photoCategory === "전시문화" ? "전시 장소 (선택)" :
+             "장소명 (선택)"}
+          </label>
           <input
             value={draft.placeName}
             onChange={(e) => onChange({ placeName: e.target.value })}
-            placeholder="촬영/방문 장소"
+            placeholder={
+              draft.photoCategory === "일상기록"
+                ? "특정 장소 없으면 비워두세요"
+                : "촬영/방문 장소"
+            }
             className="w-full rounded-xl border border-[var(--panel-border)] bg-white px-4 py-2 text-sm outline-none focus:border-[var(--accent)]"
           />
         </div>
@@ -697,6 +707,42 @@ function BodyStep({ draft, onChange, onNext }: { draft: PostDraft; onChange: (p:
         placeholder="Claude에게 포스팅 방향이나 강조할 내용을 알려주세요"
         className="w-full resize-none rounded-xl border border-[var(--panel-border)] bg-white p-4 text-sm leading-relaxed outline-none focus:border-[var(--accent)]"
       />
+    </StepLayout>
+  );
+}
+
+// ── 사진 카테고리 선택 스텝 ────────────────────────────────────────────────
+const PHOTO_CATEGORIES = [
+  { value: "맛집카페",  icon: "🍽️", label: "맛집·카페",  desc: "방문 후기, 메뉴 소개" },
+  { value: "일상기록",  icon: "📖", label: "일상·기록",  desc: "오늘 하루, 에피소드" },
+  { value: "여행나들이", icon: "🗺️", label: "여행·나들이", desc: "코스, 팁 포함" },
+  { value: "전시문화",  icon: "🎨", label: "전시·문화",  desc: "전시·행사 현장 후기" },
+];
+
+function PhotoCategoryStep({ draft, onChange, onNext }: { draft: PostDraft; onChange: (p: Partial<PostDraft>) => void; onNext: () => void }) {
+  function select(value: string) {
+    onChange({ photoCategory: value });
+    setTimeout(onNext, 300);
+  }
+  return (
+    <StepLayout title="어떤 포스팅인가요?" subtitle="카테고리를 선택하면 그에 맞는 구조로 작성됩니다">
+      <div className="grid grid-cols-2 gap-3">
+        {PHOTO_CATEGORIES.map(({ value, icon, label, desc }) => (
+          <button
+            key={value}
+            onClick={() => select(value)}
+            className={`flex flex-col items-center rounded-2xl border-2 p-5 text-center transition-all hover:border-[var(--accent)] hover:shadow-md ${
+              draft.photoCategory === value
+                ? "border-[var(--accent)] bg-[var(--accent)]/5"
+                : "border-[var(--panel-border)] bg-white"
+            }`}
+          >
+            <span className="mb-2 text-3xl">{icon}</span>
+            <span className="text-sm font-bold text-[var(--text-primary)]">{label}</span>
+            <span className="mt-1 text-xs text-[var(--text-secondary)]">{desc}</span>
+          </button>
+        ))}
+      </div>
     </StepLayout>
   );
 }
@@ -752,19 +798,60 @@ function UploadStep({ draft, onChange, onNext }: { draft: PostDraft; onChange: (
           <FileUpload
             accept="image/png,image/jpeg,image/webp"
             label="이미지 드래그 또는 클릭"
-            onFiles={(files) =>
-              onChange({ imageNames: [...draft.imageNames, ...files.map((f) => f.name)] })
-            }
+            onFiles={(files) => {
+              const newNames = files.map((f) => f.name);
+              const newCaptions = files.map(() => "");
+              const newUrls = files.map((f) => URL.createObjectURL(f));
+              onChange({
+                imageNames: [...draft.imageNames, ...newNames],
+                imageCaptions: [...(draft.imageCaptions ?? []), ...newCaptions],
+                imagePreviewUrls: [...(draft.imagePreviewUrls ?? []), ...newUrls],
+              });
+            }}
           />
           {draft.imageNames.length > 0 && (
-            <ul className="mt-3 space-y-1">
+            <ul className="mt-3 space-y-2">
               {draft.imageNames.map((n, i) => (
-                <li key={i} className="flex items-center justify-between rounded-lg bg-[var(--page-bg)] px-3 py-1.5 text-sm">
-                  <span className="truncate">🖼 {n}</span>
-                  <button
-                    onClick={() => onChange({ imageNames: draft.imageNames.filter((_, j) => j !== i) })}
-                    className="ml-2 text-[var(--text-secondary)] hover:text-red-500"
-                  >×</button>
+                <li key={i} className="rounded-xl border border-[var(--panel-border)] bg-white p-3">
+                  <div className="flex items-start gap-3">
+                    {draft.imagePreviewUrls?.[i] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={draft.imagePreviewUrls[i]}
+                        alt={n}
+                        className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-[var(--page-bg)] text-xl">🖼</div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <span className="truncate text-xs font-semibold text-[var(--text-secondary)]">{i + 1}. {n}</span>
+                        <button
+                          onClick={() => {
+                            const removedUrl = draft.imagePreviewUrls?.[i];
+                            if (removedUrl) URL.revokeObjectURL(removedUrl);
+                            onChange({
+                              imageNames: draft.imageNames.filter((_, j) => j !== i),
+                              imageCaptions: (draft.imageCaptions ?? []).filter((_, j) => j !== i),
+                              imagePreviewUrls: (draft.imagePreviewUrls ?? []).filter((_, j) => j !== i),
+                            });
+                          }}
+                          className="ml-2 shrink-0 text-[var(--text-secondary)] hover:text-red-500"
+                        >×</button>
+                      </div>
+                      <input
+                        value={draft.imageCaptions?.[i] ?? ""}
+                        onChange={(e) => {
+                          const next = [...(draft.imageCaptions ?? [])];
+                          next[i] = e.target.value;
+                          onChange({ imageCaptions: next });
+                        }}
+                        placeholder="이 사진 설명 (예: 입구 외관, 간판이 나무 소재)"
+                        className="w-full rounded-lg border border-[var(--panel-border)] bg-[var(--page-bg)] px-3 py-1.5 text-xs outline-none focus:border-[var(--accent)]"
+                      />
+                    </div>
+                  </div>
                 </li>
               ))}
             </ul>

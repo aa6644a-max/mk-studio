@@ -94,9 +94,12 @@ export type PostDraft = {
   // 큐레이션·정주행: 테마 + 다중 작품 목록
   theme: string; // 포스팅 메인 테마 (예: "스티븐 스필버그의 필모그래피")
   items: CurationItem[];
-  // 사진 포스팅: 장소명 / 업로드 이미지 이름
+  // 사진 포스팅: 카테고리 / 장소명 / 업로드 이미지 이름 + 캡션
+  photoCategory: string; // 맛집카페 | 일상기록 | 여행나들이 | 전시문화
   placeName: string;
   imageNames: string[];
+  imageCaptions: string[]; // imageNames와 1:1 대응
+  imagePreviewUrls: string[]; // blob: URL (미리보기 전용, API 전송 안 함)
   // PDF 요약: 카테고리, 공고문: 소개 목적 / 추출 텍스트
   category: string;
   purpose: string;
@@ -126,8 +129,11 @@ export function emptyDraft(postType: PostType = "review"): PostDraft {
     expectPoints: "",
     theme: "",
     items: [],
+    photoCategory: "",
     placeName: "",
     imageNames: [],
+    imageCaptions: [],
+    imagePreviewUrls: [],
     category: "",
     purpose: "",
     pdfText: "",
