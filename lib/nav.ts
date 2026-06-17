@@ -9,4 +9,5 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/write", label: "리뷰 작성", icon: "✏️" },
   { href: "/images", label: "이미지 작업실", icon: "🖼️" },
   { href: "/marketing", label: "마케팅 전략", icon: "📣" },
+  { href: "/partnerships/class101", label: "클래스101 파트너스", icon: "📦" },
 ];
