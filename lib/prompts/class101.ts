@@ -1,5 +1,8 @@
 const REFERRAL_LINK = "https://abr.ge/abkqd0";
 
+const DISCLOSURE =
+  '<p style="background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 12px 16px; font-size: 12px; color: #888; margin: 20px 0;">📢 이 게시물은 클래스101 파트너스 활동의 일환으로, 이에 따른 일정액을 대가로 제공받을 수 있습니다.</p>';
+
 const HASHTAGS =
   "#클래스101 #클래스101구독 #클래스101후기 #클래스101가격 #클래스101연간구독 #클래스101+ #클래스101구독료 #AI #업무자동화 #강의";
 
@@ -48,7 +51,9 @@ export function buildClass101Prompt(
 3. 레퍼럴 링크 ${REFERRAL_LINK} 2회 삽입:
    - 1회: 도입부 바로 뒤 (첫 소제목 전)
    - 2회: 본문 마무리 직전
-4. 마지막 줄: 해시태그 블록
+4. 필수 표기 문구: 본문 맨 마지막에 아래 HTML 그대로 삽입
+   ${DISCLOSURE}
+5. 마지막 줄: 해시태그 블록
 
 ## 링크 버튼 HTML (그대로 사용)
 ${LINK_BTN}
