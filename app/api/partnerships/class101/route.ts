@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { buildClass101Prompt, type Class101Angle } from "@/lib/prompts/class101";
+import { getRssLatestText } from "@/lib/rss-client";
 
 export const maxDuration = 300;
 
@@ -8,10 +9,19 @@ export async function POST(req: Request) {
     return new Response("ANTHROPIC_API_KEY 미설정", { status: 500 });
   }
 
-  const { angle = 1, category = "AI·업무자동화", courseName = "", userNotes = "" } = await req.json().catch(() => ({}));
-  const { system, user } = buildClass101Prompt(angle as Class101Angle, category, courseName, userNotes);
-  const client = new Anthropic();
+  const { angle = 1, category = "AI·업무자동화", courseName = "", userNotes = "" } =
+    await req.json().catch(() => ({}));
 
+  const rssText = await getRssLatestText("shock552", 5).catch(() => "");
+  const { system, user } = buildClass101Prompt(
+    angle as Class101Angle,
+    category,
+    courseName,
+    userNotes,
+    rssText,
+  );
+
+  const client = new Anthropic();
   const stream = client.messages.stream({
     model: "claude-sonnet-4-6",
     max_tokens: 8192,

@@ -6,12 +6,20 @@ import { ANGLE_LABELS, type Class101Angle } from "@/lib/prompts/class101";
 type Status = "idle" | "loading" | "streaming" | "done" | "error";
 type ViewMode = "preview" | "html";
 
+function stripFence(s: string): string {
+  return s
+    .replace(/^```html?\s*\n?/i, "")
+    .replace(/\n?```\s*$/i, "")
+    .trim();
+}
+
 function extractTitle(raw: string): { title: string; body: string } {
-  const m = raw.match(/<!--\s*TITLE:\s*([^\-\->]+?)\s*-->/i);
-  if (!m) return { title: "", body: raw };
+  const cleaned = stripFence(raw);
+  const m = cleaned.match(/<!--\s*TITLE:\s*([^\-\->]+?)\s*-->/i);
+  if (!m) return { title: "", body: cleaned };
   return {
     title: m[1].trim(),
-    body: raw.replace(m[0], "").trim(),
+    body: cleaned.replace(m[0], "").trim(),
   };
 }
 
