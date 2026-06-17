@@ -8,8 +8,8 @@ export async function POST(req: Request) {
     return new Response("ANTHROPIC_API_KEY 미설정", { status: 500 });
   }
 
-  const { angle = 1, userNotes = "" } = await req.json().catch(() => ({}));
-  const { system, user } = buildClass101Prompt(angle as Class101Angle, userNotes);
+  const { angle = 1, category = "AI·업무자동화", courseName = "", userNotes = "" } = await req.json().catch(() => ({}));
+  const { system, user } = buildClass101Prompt(angle as Class101Angle, category, courseName, userNotes);
   const client = new Anthropic();
 
   const stream = client.messages.stream({

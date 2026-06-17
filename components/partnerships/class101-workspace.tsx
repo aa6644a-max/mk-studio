@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { ANGLE_META, type Class101Angle } from "@/lib/prompts/class101";
+import { ANGLE_LABELS, type Class101Angle } from "@/lib/prompts/class101";
 
 type Status = "idle" | "loading" | "streaming" | "done" | "error";
 type ViewMode = "preview" | "html";
@@ -17,6 +17,8 @@ function extractTitle(raw: string): { title: string; body: string } {
 
 export default function Class101Workspace() {
   const [angle, setAngle] = useState<Class101Angle>(1);
+  const [category, setCategory] = useState("AI·업무자동화");
+  const [courseName, setCourseName] = useState("");
   const [notes, setNotes] = useState("");
   const [output, setOutput] = useState("");
   const [status, setStatus] = useState<Status>("idle");
@@ -36,7 +38,7 @@ export default function Class101Workspace() {
       const res = await fetch("/api/partnerships/class101", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ angle, userNotes: notes }),
+        body: JSON.stringify({ angle, category, courseName, userNotes: notes }),
         signal: abortRef.current.signal,
       });
       if (!res.ok) throw new Error((await res.text()) || `오류 ${res.status}`);
@@ -95,6 +97,32 @@ export default function Class101Workspace() {
             <p>블로그 업로드: 2026-07-01까지</p>
           </div>
 
+          {/* 카테고리 */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">
+              카테고리
+            </label>
+            <input
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="예: AI·업무자동화, 드로잉, 영상편집, 재테크"
+              className="w-full rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+            />
+          </div>
+
+          {/* 수강 강의명 */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">
+              수강 강의명 <span className="normal-case font-normal">(선택)</span>
+            </label>
+            <input
+              value={courseName}
+              onChange={(e) => setCourseName(e.target.value)}
+              placeholder="예: ChatGPT 업무 자동화 완성 클래스"
+              className="w-full rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+            />
+          </div>
+
           {/* 앵글 선택 */}
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">
@@ -110,7 +138,7 @@ export default function Class101Workspace() {
                     : "border-[var(--panel-border)] text-[var(--text-secondary)] hover:border-[var(--accent)]/50"
                 }`}
               >
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2">
                   <span
                     className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                       angle === a
@@ -121,12 +149,9 @@ export default function Class101Workspace() {
                     {a}편
                   </span>
                   <span className="text-xs font-semibold">
-                    {ANGLE_META[a].label}
+                    {ANGLE_LABELS[a]}
                   </span>
                 </div>
-                <p className="text-[11px] leading-relaxed">
-                  {ANGLE_META[a].desc}
-                </p>
               </button>
             ))}
           </div>
