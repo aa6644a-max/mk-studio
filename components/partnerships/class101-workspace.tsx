@@ -68,7 +68,7 @@ export default function Class101Workspace() {
       setError((e as Error).message);
       setStatus("error");
     }
-  }, [angle, notes, status]);
+  }, [angle, category, courseName, notes, status]);
 
   const stop = useCallback(() => abortRef.current?.abort(), []);
 
