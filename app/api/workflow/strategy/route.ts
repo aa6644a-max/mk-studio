@@ -9,6 +9,10 @@ const STRATEGY_TOOL: Anthropic.Tool = {
   input_schema: {
     type: "object" as const,
     properties: {
+      topic: {
+        type: "string",
+        description: "포스팅 주제 (PDF/이미지에서 자동 추출하거나 사용자 입력 그대로)",
+      },
       postType: {
         type: "string",
         enum: ["review", "preview", "curation", "binge", "photo", "local", "pdf"],
@@ -33,28 +37,52 @@ const STRATEGY_TOOL: Anthropic.Tool = {
         description: "검색형/공유형 판단",
       },
     },
-    required: ["postType", "keywords", "target", "angle", "contentType"],
+    required: ["topic", "postType", "keywords", "target", "angle", "contentType"],
   },
 };
 
 const STRATEGY_SYSTEM = `당신은 한국 블로그 포스팅 전략가입니다.
-주어진 포스팅 주제를 분석해 create_strategy 함수를 호출하세요.
+주어진 정보를 분석해 create_strategy 함수를 호출하세요.
 
-postType 판단:
-- 주제에 "공고/지원사업/모집/행사/소식/공모" → local
-- 주제에 "정주행/몰아보기" + 시리즈명 → binge
-- 주제에 "추천목록/큐레이션/모음" → curation
-- 주제에 "개봉/기대" + 영화명 → preview
-- 주제에 "PDF/요약" → pdf
-- 주제에 장소/맛집/카페/여행 → photo
+postType 판단 (selectedType이 제공된 경우 그것을 사용):
+- "공고/지원사업/모집/행사/소식/공모" 관련 → local
+- "정주행/몰아보기" + 시리즈명 → binge
+- "추천목록/큐레이션/모음" → curation
+- "개봉/기대" + 영화명 → preview
+- "PDF/요약" → pdf
+- 장소/맛집/카페/여행/사진 → photo
 - 영화·드라마 제목 + 리뷰/후기/감상 → review
 - 기본값 → review
+
+topic 추출:
+- PDF 텍스트가 제공된 경우: 텍스트에서 핵심 주제를 2~3줄로 요약해 topic 설정
+- 이미지 정보가 제공된 경우: 파일명과 캡션에서 장소/주제를 추론해 topic 설정
+- 일반 텍스트 주제: 그대로 사용
 
 keywords: 주제에서 고유명사(영화제목, 지역명, 행사명)를 그대로 추출해 검색 키워드 2~3개 생성`;
 
 export async function POST(req: Request) {
   try {
-    const { topic } = (await req.json()) as { topic: string };
+    const {
+      topic,
+      selectedType,
+      pdfText,
+      imageInfo,
+    } = (await req.json()) as {
+      topic?: string;
+      selectedType?: string;
+      pdfText?: string;
+      imageInfo?: string;
+    };
+
+    let userContent = "";
+    if (pdfText) {
+      userContent = `사용자가 선택한 포스팅 타입: ${selectedType ?? "local"}\n\nPDF 내용 (주제 자동 추출 필요):\n${pdfText.slice(0, 3000)}`;
+    } else if (imageInfo) {
+      userContent = `사용자가 선택한 포스팅 타입: ${selectedType ?? "photo"}\n\n업로드된 사진 정보 (장소/주제 추론 필요):\n${imageInfo}`;
+    } else {
+      userContent = `사용자가 선택한 포스팅 타입: ${selectedType ?? "review"}\n포스팅 주제: "${topic}"`;
+    }
 
     const client = new Anthropic();
     const res = await client.messages.create({
@@ -63,7 +91,7 @@ export async function POST(req: Request) {
       system: STRATEGY_SYSTEM,
       tools: [STRATEGY_TOOL],
       tool_choice: { type: "tool", name: "create_strategy" },
-      messages: [{ role: "user", content: `포스팅 주제: "${topic}"` }],
+      messages: [{ role: "user", content: userContent }],
     });
 
     const toolUse = res.content.find((b) => b.type === "tool_use");
@@ -71,7 +99,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "tool_use not found" }, { status: 500 });
     }
 
-    return NextResponse.json(toolUse.input);
+    // selectedType이 명시된 경우 그것을 우선 적용
+    const input = toolUse.input as Record<string, unknown>;
+    if (selectedType) {
+      input.postType = selectedType;
+    }
+
+    return NextResponse.json(input);
   } catch (e) {
     console.error("[/api/workflow/strategy]", e);
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

@@ -24,6 +24,9 @@ export default function ChatInterview() {
     topic,
     strategy,
     postType,
+    fileContent,
+    imageNames,
+    imageCaptions,
     setStage,
     addMessage,
     appendToLastMessage,
@@ -31,6 +34,10 @@ export default function ChatInterview() {
     setError,
     addGeneratingChars,
   } = useWorkflowStore();
+
+  const imageInfo = imageNames.length > 0
+    ? imageNames.map((name, i) => `파일명: ${name}${imageCaptions[i] ? ` — 캡션: ${imageCaptions[i]}` : ""}`).join("\n")
+    : "";
 
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -79,6 +86,8 @@ export default function ChatInterview() {
           messages: currentMessages,
           strategy: { ...strategy, postType },
           topic,
+          fileContent: fileContent || undefined,
+          imageInfo: imageInfo || undefined,
         }),
       });
 
@@ -106,6 +115,8 @@ export default function ChatInterview() {
           ),
           strategy: { ...strategy, postType },
           topic,
+          fileContent: fileContent || undefined,
+          imageInfo: imageInfo || undefined,
         }),
       });
 

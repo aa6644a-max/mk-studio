@@ -15,10 +15,12 @@ const TV_TYPES = ["binge"];
 
 export async function POST(req: Request) {
   try {
-    const { messages, strategy, topic } = (await req.json()) as {
+    const { messages, strategy, topic, fileContent, imageInfo } = (await req.json()) as {
       messages: ChatMessage[];
       strategy: StrategyCard;
       topic: string;
+      fileContent?: string;
+      imageInfo?: string;
     };
 
     // 외부 데이터 병렬 로드
@@ -36,6 +38,8 @@ export async function POST(req: Request) {
       references,
       rssText,
       extraData,
+      fileContent,
+      imageInfo,
     );
 
     const client = new Anthropic();

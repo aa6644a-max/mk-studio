@@ -9,11 +9,13 @@ export const maxDuration = 120;
 
 export async function POST(req: Request) {
   try {
-    const { messages, strategy, topic, customSystem } = (await req.json()) as {
+    const { messages, strategy, topic, customSystem, fileContent, imageInfo } = (await req.json()) as {
       messages: ChatMessage[];
       strategy: StrategyCard;
       topic: string;
       customSystem?: string;
+      fileContent?: string;
+      imageInfo?: string;
     };
 
     let system: string;
@@ -25,16 +27,23 @@ export async function POST(req: Request) {
         getPostsByType(strategy.postType, 2).catch(() => []),
       ]);
       const refText = referenceText(references, "");
-      system = buildInterviewSystem(strategy, rssText, refText);
+      system = buildInterviewSystem(strategy, rssText, refText, fileContent, imageInfo);
     }
 
     const client = new Anthropic();
     const encoder = new TextEncoder();
 
-    // Build message history for Claude (first turn injects the topic)
+    // 첫 턴: topic + 파일 내용 주입
+    let firstUserContent = `포스팅 주제: "${topic}"`;
+    if (fileContent) {
+      firstUserContent += `\n\n[업로드된 PDF 내용]\n${fileContent.slice(0, 4000)}`;
+    } else if (imageInfo) {
+      firstUserContent += `\n\n[업로드된 사진 정보]\n${imageInfo}`;
+    }
+
     const claudeMessages: { role: "user" | "assistant"; content: string }[] =
       messages.length === 0
-        ? [{ role: "user", content: `포스팅 주제: "${topic}"` }]
+        ? [{ role: "user", content: firstUserContent }]
         : messages.map((m) => ({ role: m.role, content: m.content }));
 
     const stream = new ReadableStream({

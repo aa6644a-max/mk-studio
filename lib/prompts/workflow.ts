@@ -47,6 +47,8 @@ export function buildInterviewSystem(
   strategy: StrategyCard,
   rssText: string,
   refText: string,
+  fileContent?: string,
+  imageInfo?: string,
 ): string {
   const typeLabel: Record<PostType, string> = {
     review: "영화 리뷰",
@@ -64,13 +66,16 @@ export function buildInterviewSystem(
     curation: "테마 키워드, 추천 작품 3개 이상(제목+추천이유)",
     binge: "시리즈 정확한 제목, 회차 구성, 정주행 포인트, 추천 대상",
     photo: "장소명, 카테고리(맛집/일상/여행/전시), 분위기와 특징, 방문 계기",
-    local: "공고/행사 핵심 정보 (PDF 업로드 필요)",
-    pdf: "PDF 핵심 내용, 카테고리, 독자에게 전달할 핵심 메시지",
+    local: "공고/행사 배경, 특히 강조하고 싶은 혜택이나 자격 요건, 타겟 독자에게 전달할 핵심 메시지",
+    pdf: "PDF 내용 중 가장 중요한 포인트, 독자에게 전달할 핵심 메시지, 강조하고 싶은 부분",
   };
 
-  const autoTerminate = strategy.postType === "local" || strategy.postType === "pdf";
+  const hasFileContent = !!(fileContent || imageInfo);
+  const autoTerminate = false; // 파일 업로드 타입도 인터뷰 진행
 
   return `당신은 MK 블로그 포스팅 인터뷰어입니다.
+${hasFileContent && fileContent ? `\n## 업로드된 파일 정보 (이미 파악됨)\n${fileContent.slice(0, 2000)}\n파일 내용을 기반으로 구체적인 질문을 하세요.` : ""}
+${hasFileContent && imageInfo ? `\n## 업로드된 사진 정보 (이미 파악됨)\n${imageInfo}\n사진 정보를 기반으로 장소/분위기/경험에 대해 질문하세요.` : ""}
 
 ## 포스팅 정보
 - 타입: ${typeLabel[strategy.postType]}
@@ -111,6 +116,8 @@ export function buildWorkflowGenerateUser(
   references: { movieTitle: string; content: string }[],
   rssText: string,
   extraData: string,
+  fileContent?: string,
+  imageInfo?: string,
 ): string {
   const { year, month, season } = nowParts();
   const refText = referenceText(references, rssText);
@@ -140,6 +147,10 @@ export function buildWorkflowGenerateUser(
 ${conversation}
 
 ${extraData ? `━━━━━━━━━━━━━━━━━━━━━━━━━\n[외부 데이터 (TMDB/KOBIS)]\n━━━━━━━━━━━━━━━━━━━━━━━━━\n${extraData}` : ""}
+
+${fileContent ? `━━━━━━━━━━━━━━━━━━━━━━━━━\n[업로드된 PDF 원문 — 이 내용을 포스팅에 반영]\n━━━━━━━━━━━━━━━━━━━━━━━━━\n${fileContent.slice(0, 4000)}` : ""}
+
+${imageInfo ? `━━━━━━━━━━━━━━━━━━━━━━━━━\n[업로드된 사진 목록 — 포스팅에 플레이스홀더로 삽입]\n━━━━━━━━━━━━━━━━━━━━━━━━━\n${imageInfo}\n사진은 HTML에 <p style="text-align:center;color:#aaa;font-size:13px;">[사진: 파일명]</p> 형태로 적재적소에 삽입하세요.` : ""}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 [디자인 시스템 — 반드시 준수]

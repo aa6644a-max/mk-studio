@@ -21,18 +21,24 @@ type State = {
   topic: string;
   strategy: StrategyCard | null;
   postType: PostType;
+  selectedType: PostType | null;
   messages: ChatMessage[];
   generatedHtml: string;
   seoTitles: string[];
   isStreaming: boolean;
   error: string;
   generatingChars: number;
+  fileContent: string;
+  imageNames: string[];
+  imageCaptions: string[];
+  imagePreviewUrls: string[];
 };
 
 type Actions = {
   setTopic: (t: string) => void;
   setStrategy: (s: StrategyCard) => void;
   setPostType: (t: PostType) => void;
+  setSelectedType: (t: PostType | null) => void;
   setStage: (s: WorkflowStage) => void;
   addMessage: (m: ChatMessage) => void;
   appendToLastMessage: (chunk: string) => void;
@@ -41,6 +47,8 @@ type Actions = {
   setStreaming: (b: boolean) => void;
   setError: (e: string) => void;
   addGeneratingChars: (n: number) => void;
+  setFileContent: (text: string) => void;
+  setImageData: (names: string[], captions: string[], urls: string[]) => void;
   reset: () => void;
 };
 
@@ -49,12 +57,17 @@ const INIT: State = {
   topic: "",
   strategy: null,
   postType: "review",
+  selectedType: null,
   messages: [],
   generatedHtml: "",
   seoTitles: [],
   isStreaming: false,
   error: "",
   generatingChars: 0,
+  fileContent: "",
+  imageNames: [],
+  imageCaptions: [],
+  imagePreviewUrls: [],
 };
 
 export const useWorkflowStore = create<State & Actions>((set) => ({
@@ -62,6 +75,7 @@ export const useWorkflowStore = create<State & Actions>((set) => ({
   setTopic: (topic) => set({ topic }),
   setStrategy: (strategy) => set({ strategy, postType: strategy.postType }),
   setPostType: (postType) => set({ postType }),
+  setSelectedType: (selectedType) => set({ selectedType }),
   setStage: (stage) => set({ stage }),
   addMessage: (m) => set((s) => ({ messages: [...s.messages, m] })),
   appendToLastMessage: (chunk) =>
@@ -77,5 +91,8 @@ export const useWorkflowStore = create<State & Actions>((set) => ({
   setStreaming: (isStreaming) => set({ isStreaming }),
   setError: (error) => set({ error }),
   addGeneratingChars: (n) => set((s) => ({ generatingChars: s.generatingChars + n })),
+  setFileContent: (fileContent) => set({ fileContent }),
+  setImageData: (imageNames, imageCaptions, imagePreviewUrls) =>
+    set({ imageNames, imageCaptions, imagePreviewUrls }),
   reset: () => set(INIT),
 }));
