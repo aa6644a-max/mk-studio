@@ -9,12 +9,16 @@ export type WorkflowStage =
   | "generating"
   | "result";
 
+export type PhotoCategory = "맛집카페" | "일상기록" | "여행나들이" | "전시문화";
+
 export type StrategyCard = {
   postType: PostType;
   keywords: string[];
   target: string;
   angle: string;
   contentType: "searchable" | "shareable" | "both";
+  /** photo 타입일 때만 의미 있음 — 글 구조 분기용 */
+  photoCategory?: PhotoCategory;
 };
 
 export type ChatMessage = {

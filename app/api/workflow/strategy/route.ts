@@ -36,6 +36,11 @@ const STRATEGY_TOOL: Anthropic.Tool = {
         enum: ["searchable", "shareable", "both"],
         description: "검색형/공유형 판단",
       },
+      photoCategory: {
+        type: "string",
+        enum: ["맛집카페", "일상기록", "여행나들이", "전시문화"],
+        description: "postType이 photo일 때만 설정. 사진 정보·주제로 카테고리 분류. 음식/카페/식당→맛집카페, 일기/소소한기록→일상기록, 여행/나들이/명소→여행나들이, 전시/공연/축제/박물관→전시문화. photo가 아니면 생략",
+      },
     },
     required: ["topic", "postType", "keywords", "target", "angle", "contentType"],
   },
@@ -59,7 +64,9 @@ topic 추출:
 - 이미지 정보가 제공된 경우: 파일명과 캡션에서 장소/주제를 추론해 topic 설정
 - 일반 텍스트 주제: 그대로 사용
 
-keywords: 주제에서 고유명사(영화제목, 지역명, 행사명)를 그대로 추출해 검색 키워드 2~3개 생성`;
+keywords: 주제에서 고유명사(영화제목, 지역명, 행사명)를 그대로 추출해 검색 키워드 2~3개 생성
+
+photoCategory: postType이 photo일 때만 반드시 설정. 사진 정보·캡션·주제를 보고 4개 중 하나로 분류. (음식/카페/식당→맛집카페, 개인 일상/소소한 기록→일상기록, 여행/나들이/명소 방문→여행나들이, 전시/공연/축제/박물관/문화행사→전시문화)`;
 
 export async function POST(req: Request) {
   try {

@@ -14,6 +14,8 @@ import {
   formatCurationItems,
   formatBingeItems,
 } from "@/lib/prompts/movie";
+import { buildAnnouncementPrompt } from "@/lib/prompts/local";
+import { buildPdfSummaryPrompt, buildPhotoPostPrompt } from "@/lib/prompts/daily";
 import { referenceText } from "@/lib/prompts/base";
 import type { StrategyCard, ChatMessage, TmdbSelection } from "@/lib/workflow-store";
 import type { MovieDetails, TvDetails, CurationItem } from "@/lib/types";
@@ -108,8 +110,45 @@ export async function POST(req: Request) {
         systemPrompt = system;
         userPrompt = user;
       }
+    } else if (strategy.postType === "local") {
+      // V3 로컬소식/공고문 프롬프트
+      const refText = referenceText(references, rssText);
+      const userContext = joinContext(topic, messages);
+      const { system, user } = buildAnnouncementPrompt(
+        fileContent ?? "",
+        userContext,
+        refText,
+        "#1a2e4a",
+      );
+      systemPrompt = system;
+      userPrompt = user;
+    } else if (strategy.postType === "pdf") {
+      // V3 PDF 요약 프롬프트
+      const refText = referenceText(references, rssText);
+      const userContext = joinContext(topic, messages);
+      const { system, user } = buildPdfSummaryPrompt(fileContent ?? "", userContext, refText);
+      systemPrompt = system;
+      userPrompt = user;
+    } else if (strategy.postType === "photo") {
+      // V3 사진 포스팅 프롬프트 (이미지 플레이스홀더 모드)
+      const refText = referenceText(references, rssText);
+      const category = strategy.photoCategory ?? "맛집카페";
+      const placeInfo = `[장소/주제 정보]\n- ${topic}`;
+      const photoMemos = formatPhotoMemos(imageInfo);
+      const userBody = formatConversation(messages);
+      const { system, user } = buildPhotoPostPrompt(
+        category,
+        placeInfo,
+        photoMemos,
+        refText,
+        "",
+        userBody,
+        "placeholder",
+      );
+      systemPrompt = system;
+      userPrompt = user;
     } else {
-      // 비영화 타입 또는 TMDB 미선택 → V4 워크플로우 프롬프트
+      // 폴백 → V4 워크플로우 프롬프트
       const extraData = MOVIE_TYPES.includes(strategy.postType)
         ? await fetchExtraData(topic, strategy.postType).catch(() => "")
         : "";
@@ -192,6 +231,23 @@ function formatConversation(messages: ChatMessage[]): string {
   if (!messages.length) return "";
   return messages
     .map((m) => `${m.role === "user" ? "MK" : "AI"}: ${m.content}`)
+    .join("\n");
+}
+
+/** topic + 인터뷰 대화를 V3 프롬프트의 userContext 슬롯용으로 결합. */
+function joinContext(topic: string, messages: ChatMessage[]): string {
+  const conv = formatConversation(messages);
+  return conv ? `${topic}\n\n[인터뷰에서 수집한 내용]\n${conv}` : topic;
+}
+
+/** chat-interview의 imageInfo("파일명: X — 캡션: Y" 줄) → V3 사진 메모(번호 매김) 형식. */
+function formatPhotoMemos(imageInfo?: string): string {
+  if (!imageInfo?.trim()) return "(사진 없음)";
+  return imageInfo
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, i) => `${i + 1}. ${line.replace(/^파일명:\s*/, "").replace(/\s*—\s*캡션:\s*/, " — ")}`)
     .join("\n");
 }
 

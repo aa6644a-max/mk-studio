@@ -138,6 +138,7 @@ export function buildPhotoPostPrompt(
   refText: string,
   pdfText = "",
   userBody = "",
+  imageMode: "url" | "placeholder" = "url",
 ): PromptResult {
   const base = baseGuideline();
   const ref = referencePromptDaily(refText);
@@ -189,7 +190,13 @@ ${base}
    <div style="background-color:#f8f9fa; border-radius:10px; padding:20px; border:1px solid #eee; margin:20px 0;">💡 [제목]<br><span style="color:#666; font-size:14px;">[내용]</span></div>
 
 4. 이미지 삽입 (사진 순서 그대로):
-   <div style="text-align:center; margin:25px 0;"><img src="[PHOTO_번호]" alt="[설명]" style="max-width:100%; height:auto; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1);"></div>
+${imageMode === "placeholder"
+  ? `   🚨 [사진 플레이스홀더 — 절대 준수]: 실제 이미지 URL이 없으므로 <img> 태그를 만들지 마세요.
+   대신 위 [📸 사진 메모]에 나온 사진을 순서대로, 글 흐름의 알맞은 위치에 아래 회색 박스로 삽입하세요.
+   <p style="text-align:center; color:#888; font-size:14px; background:#eee; padding:10px;">{{사진: 파일명 — 캡션}}</p>
+   - 파일명·캡션은 [📸 사진 메모]에 적힌 그대로 채우세요. 사진 1장당 박스 1개, 누락·중복 금지.
+   - 박스 바로 아래에 그 사진 장면을 설명하는 1~2문장 캡션을 <p style="text-align:center; color:#666; font-size:14px; font-style:italic;"> 태그로 덧붙이세요.`
+  : `   <div style="text-align:center; margin:25px 0;"><img src="[PHOTO_번호]" alt="[설명]" style="max-width:100%; height:auto; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1);"></div>`}
 
 5. 구분선:
    <div style="height:2px; background:linear-gradient(to right,#ffffff,#a5d6a7,#ffffff); margin:50px 0;"></div>
