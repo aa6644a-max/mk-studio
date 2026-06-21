@@ -470,7 +470,7 @@ function posterHtmlFor(item: { title: string; posterUrl: string | null }): strin
     : "(포스터 없음)";
 }
 
-function formatCurationItems(items: CurationItem[]): string {
+export function formatCurationItems(items: CurationItem[]): string {
   if (!items.length) return "(영화 목록 미지정)";
   return items.map((m, i) => `
 [영화 ${i + 1}]
@@ -486,7 +486,7 @@ function formatCurationItems(items: CurationItem[]): string {
 `.trim()).join("\n\n");
 }
 
-function formatBingeItems(items: CurationItem[]): string {
+export function formatBingeItems(items: CurationItem[]): string {
   if (!items.length) return "(시리즈 목록 미지정)";
   return items.map((m, i) => `
 [작품 ${i + 1}]

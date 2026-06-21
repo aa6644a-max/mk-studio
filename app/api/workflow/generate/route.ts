@@ -6,7 +6,17 @@ import {
   buildWorkflowGenerateSystem,
   buildWorkflowGenerateUser,
 } from "@/lib/prompts/workflow";
+import {
+  buildReviewPrompt,
+  buildPreviewPrompt,
+  buildCurationPrompt,
+  buildBingePrompt,
+  formatCurationItems,
+  formatBingeItems,
+} from "@/lib/prompts/movie";
+import { referenceText } from "@/lib/prompts/base";
 import type { StrategyCard, ChatMessage, TmdbSelection } from "@/lib/workflow-store";
+import type { MovieDetails, TvDetails, CurationItem } from "@/lib/types";
 
 export const maxDuration = 300;
 
@@ -24,26 +34,88 @@ export async function POST(req: Request) {
       tmdbSelections?: TmdbSelection[];
     };
 
-    // 외부 데이터 병렬 로드
-    const [rssText, references, extraData] = await Promise.all([
+    const [rssText, references] = await Promise.all([
       getRssLatestText("shock552", 5).catch(() => ""),
       getPostsByType(strategy.postType, 3).catch(() => []),
-      tmdbSelections?.length
-        ? fetchExtraDataByIds(tmdbSelections, strategy.postType).catch(() => "")
-        : fetchExtraData(topic, strategy.postType).catch(() => ""),
     ]);
 
-    const system = buildWorkflowGenerateSystem();
-    const user = buildWorkflowGenerateUser(
-      topic,
-      messages,
-      strategy,
-      references,
-      rssText,
-      extraData,
-      fileContent,
-      imageInfo,
-    );
+    let systemPrompt: string;
+    let userPrompt: string;
+
+    if (MOVIE_TYPES.includes(strategy.postType) && tmdbSelections?.length) {
+      // V3 상세 프롬프트 사용 (소제목 4-5개, 이미지 배치, 문체 규칙 등)
+      const refText = referenceText(references, rssText);
+      const conversationText = formatConversation(messages);
+
+      if (strategy.postType === "review") {
+        const details = await fetchMovieDetailsList(tmdbSelections);
+        if (details.length > 0) {
+          const { system, user } = buildReviewPrompt(details[0], conversationText, topic, refText);
+          systemPrompt = system;
+          userPrompt = user;
+        } else {
+          ({ systemPrompt, userPrompt } = await fallbackWorkflowPrompt(topic, messages, strategy, references, rssText, fileContent, imageInfo));
+        }
+      } else if (strategy.postType === "preview") {
+        const details = await fetchMovieDetailsList(tmdbSelections);
+        if (details.length > 0) {
+          const { system, user } = buildPreviewPrompt(details[0], conversationText, topic, refText);
+          systemPrompt = system;
+          userPrompt = user;
+        } else {
+          ({ systemPrompt, userPrompt } = await fallbackWorkflowPrompt(topic, messages, strategy, references, rssText, fileContent, imageInfo));
+        }
+      } else if (strategy.postType === "binge") {
+        const tvDetails = await fetchTvDetailsList(tmdbSelections);
+        const themeWithContext = conversationText
+          ? `${topic}\n\n[인터뷰 내용]\n${conversationText}`
+          : topic;
+        const items: CurationItem[] = tvDetails.map((d) => ({
+          title: d.title,
+          originalTitle: d.originalTitle,
+          posterUrl: d.posterUrl ?? null,
+          cast: d.cast,
+          genres: d.genres,
+          numberOfEpisodes: d.numberOfEpisodes,
+          numberOfSeasons: d.numberOfSeasons,
+          episodeRuntime: d.episodeRuntime,
+          totalWatchTime: d.totalWatchTime,
+          overview: d.overview,
+          reason: "",
+        }));
+        const { system, user } = buildBingePrompt(themeWithContext, formatBingeItems(items), refText);
+        systemPrompt = system;
+        userPrompt = user;
+      } else {
+        // curation
+        const details = await fetchMovieDetailsList(tmdbSelections);
+        const themeWithContext = conversationText
+          ? `${topic}\n\n[인터뷰 내용]\n${conversationText}`
+          : topic;
+        const items: CurationItem[] = details.map((d) => ({
+          title: d.title,
+          originalTitle: d.originalTitle,
+          posterUrl: d.posterUrl ?? null,
+          country: d.country,
+          releaseDate: d.releaseDate,
+          director: d.director,
+          actors: d.actors,
+          genres: d.genres,
+          overview: d.overview,
+          reason: "",
+        }));
+        const { system, user } = buildCurationPrompt(themeWithContext, formatCurationItems(items), refText);
+        systemPrompt = system;
+        userPrompt = user;
+      }
+    } else {
+      // 비영화 타입 또는 TMDB 미선택 → V4 워크플로우 프롬프트
+      const extraData = MOVIE_TYPES.includes(strategy.postType)
+        ? await fetchExtraData(topic, strategy.postType).catch(() => "")
+        : "";
+      systemPrompt = buildWorkflowGenerateSystem();
+      userPrompt = buildWorkflowGenerateUser(topic, messages, strategy, references, rssText, extraData, fileContent, imageInfo);
+    }
 
     const client = new Anthropic();
     const encoder = new TextEncoder();
@@ -56,8 +128,8 @@ export async function POST(req: Request) {
           const anthropicStream = client.messages.stream({
             model: "claude-sonnet-4-6",
             max_tokens: 6000,
-            system,
-            messages: [{ role: "user", content: user }],
+            system: systemPrompt,
+            messages: [{ role: "user", content: userPrompt }],
           });
 
           for await (const event of anthropicStream) {
@@ -75,7 +147,6 @@ export async function POST(req: Request) {
             }
           }
 
-          // TITLES만 추출해서 done 이벤트로 전송 (HTML은 클라이언트가 누적)
           const titleMatch = fullText.match(/<!--\s*TITLES:\s*([\s\S]*?)-->/i);
           const titles = titleMatch
             ? titleMatch[1]
@@ -117,6 +188,47 @@ export async function POST(req: Request) {
   }
 }
 
+function formatConversation(messages: ChatMessage[]): string {
+  if (!messages.length) return "";
+  return messages
+    .map((m) => `${m.role === "user" ? "MK" : "AI"}: ${m.content}`)
+    .join("\n");
+}
+
+async function fallbackWorkflowPrompt(
+  topic: string,
+  messages: ChatMessage[],
+  strategy: StrategyCard,
+  references: { movieTitle: string; content: string }[],
+  rssText: string,
+  fileContent?: string,
+  imageInfo?: string,
+) {
+  const extraData = await fetchExtraData(topic, strategy.postType).catch(() => "");
+  return {
+    systemPrompt: buildWorkflowGenerateSystem(),
+    userPrompt: buildWorkflowGenerateUser(topic, messages, strategy, references, rssText, extraData, fileContent, imageInfo),
+  };
+}
+
+async function fetchMovieDetailsList(selections: TmdbSelection[]): Promise<MovieDetails[]> {
+  const results = await Promise.all(
+    selections.map((sel) =>
+      sel.mediaType !== "tv" ? getMovieDetails(sel.id).catch(() => null) : Promise.resolve(null),
+    ),
+  );
+  return results.filter((d): d is MovieDetails => d !== null);
+}
+
+async function fetchTvDetailsList(selections: TmdbSelection[]): Promise<TvDetails[]> {
+  const results = await Promise.all(
+    selections.map((sel) =>
+      sel.mediaType === "tv" ? getTvDetails(sel.id).catch(() => null) : Promise.resolve(null),
+    ),
+  );
+  return results.filter((d): d is TvDetails => d !== null);
+}
+
 async function fetchExtraData(topic: string, postType: string): Promise<string> {
   if (!MOVIE_TYPES.includes(postType)) return "";
 
@@ -138,13 +250,12 @@ async function fetchExtraData(topic: string, postType: string): Promise<string> 
   return formatMovieData(detail);
 }
 
-function formatMovieData(d: Awaited<ReturnType<typeof getMovieDetails>>): string {
-  if (!d) return "";
+function formatMovieData(d: MovieDetails): string {
   const stills = (d.backdropUrls ?? [])
     .slice(0, 3)
     .map((url, i) => `스틸컷${i + 1}: ${url}`)
     .join("\n");
-  return `제목: ${d.title} (${d.originalTitle})
+  return `제목: ${d.title} (${d.originalTitle ?? ""})
 감독: ${d.director ?? "정보없음"}
 배우: ${d.actors ?? "정보없음"}
 장르: ${d.genres ?? "정보없음"}
@@ -155,40 +266,12 @@ function formatMovieData(d: Awaited<ReturnType<typeof getMovieDetails>>): string
 ${stills}`;
 }
 
-function formatTvData(d: Awaited<ReturnType<typeof getTvDetails>>): string {
-  if (!d) return "";
-  return `제목: ${d.title} (${d.originalTitle})
+function formatTvData(d: TvDetails): string {
+  return `제목: ${d.title} (${d.originalTitle ?? ""})
 장르: ${d.genres ?? "정보없음"}
 첫 방영: ${d.firstAirDate ?? "정보없음"}
 총 에피소드: ${d.numberOfEpisodes ?? "정보없음"}
 시즌: ${d.numberOfSeasons ?? "정보없음"}
 출연: ${d.cast ?? "정보없음"}
 포스터: ${d.posterUrl ?? ""}`;
-}
-
-async function fetchExtraDataByIds(
-  selections: TmdbSelection[],
-  postType: string,
-): Promise<string> {
-  const parts: string[] = [];
-
-  for (const sel of selections) {
-    if (sel.mediaType === "tv") {
-      const detail = await getTvDetails(sel.id).catch(() => null);
-      if (detail) {
-        parts.push(
-          selections.length > 1 ? `[작품: ${sel.title}]\n${formatTvData(detail)}` : formatTvData(detail),
-        );
-      }
-    } else {
-      const detail = await getMovieDetails(sel.id).catch(() => null);
-      if (detail) {
-        parts.push(
-          selections.length > 1 ? `[작품: ${sel.title}]\n${formatMovieData(detail)}` : formatMovieData(detail),
-        );
-      }
-    }
-  }
-
-  return parts.join("\n\n---\n\n");
 }
