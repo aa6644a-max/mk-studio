@@ -17,9 +17,9 @@ export default function GeneratingScreen() {
   const timeStr = mins > 0 ? `${mins}분 ${secs}초` : `${secs}초`;
 
   const steps = [
-    { label: "레퍼런스 수집", done: elapsed >= 3 },
-    { label: "HTML 작성 중", done: generatingChars > 100 },
-    { label: "마무리 정리", done: generatingChars > 3000 },
+    { label: "레퍼런스 수집", done: elapsed >= 5 },
+    { label: "HTML 작성 중", done: generatingChars > 500 },
+    { label: "마무리 정리", done: generatingChars > 8000 },
   ];
 
   return (
