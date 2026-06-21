@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useWorkflowStore } from "@/lib/workflow-store";
+import { wrapHtml } from "@/lib/html-formatter";
 import ChatBubble from "./chat-bubble";
+
+const MK_LINK_SIGNATURE = `<table width="100%" border="0" cellpadding="20" cellspacing="0" bgcolor="#f4f6f8" style="border-left:4px solid #26C6A4; margin-top:40px;"><tr><td><p style="margin:0 0 6px 0; font-size:14px; color:#333; font-weight:bold;"><b>🔗 MK LINK</b></p><p style="margin:0; font-size:13px; color:#555; line-height:1.8;">대구 로컬 소식·행사·공고를 전합니다.<br>공유할 소식 있으면 댓글로 알려주세요, MK LINK가 함께 전해드립니다.</p></td></tr></table>`;
 
 const DONE_PHRASES = [
   "포스팅 생성 시작할게요",
@@ -110,24 +113,45 @@ export default function ChatInterview() {
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
+      let sseBuffer = "";
+      let accumulated = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const text = decoder.decode(value);
-        for (const line of text.split("\n\n")) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6).trim();
-          if (data === "[DONE]") break;
+        // 버퍼에 누적 후 완전한 SSE 이벤트만 파싱 (패킷 분할 대응)
+        sseBuffer += decoder.decode(value, { stream: true });
+        const events = sseBuffer.split("\n\n");
+        sseBuffer = events.pop() ?? "";
+
+        for (const event of events) {
+          if (!event.startsWith("data: ")) continue;
+          const data = event.slice(6).trim();
+          if (data === "[DONE]") continue;
 
           try {
             const parsed = JSON.parse(data);
             if (parsed.text) {
+              accumulated += parsed.text;
               addGeneratingChars(parsed.text.length);
             }
-            if (parsed.done && parsed.html) {
-              useWorkflowStore.getState().setGeneratedHtml(parsed.html);
+            if (parsed.done) {
+              // 클라이언트에서 HTML 후처리 (done 이벤트에 HTML 없음 → 파싱 오류 방지)
+              const cleaned = accumulated
+                .replace(/^```html?\s*\n?/i, "")
+                .replace(/\n?```\s*$/i, "")
+                .trim();
+              const rawHtml = cleaned
+                .replace(/<!--\s*TITLES:[\s\S]*?-->/i, "")
+                .trim();
+              const postType = parsed.postType as string;
+              const withSig =
+                postType === "local" && !rawHtml.includes("MK LINK")
+                  ? rawHtml + "\n" + MK_LINK_SIGNATURE
+                  : rawHtml;
+              const finalHtml = wrapHtml(withSig, topic, postType);
+              useWorkflowStore.getState().setGeneratedHtml(finalHtml);
               useWorkflowStore.getState().setSeoTitles(parsed.titles ?? []);
               useWorkflowStore.getState().setStage("result");
             }

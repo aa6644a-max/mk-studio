@@ -6,7 +6,6 @@ import {
   buildWorkflowGenerateSystem,
   buildWorkflowGenerateUser,
 } from "@/lib/prompts/workflow";
-import { wrapHtml } from "@/lib/html-formatter";
 import type { StrategyCard, ChatMessage } from "@/lib/workflow-store";
 
 export const maxDuration = 300;
@@ -69,30 +68,18 @@ export async function POST(req: Request) {
             }
           }
 
-          // 코드펜스 제거 + TITLES 추출
-          const cleaned = fullText
-            .replace(/^```html?\s*\n?/i, "")
-            .replace(/\n?```\s*$/i, "")
-            .trim();
-
-          const titleMatch = cleaned.match(/<!--\s*TITLES:\s*([\s\S]*?)-->/i);
+          // TITLES만 추출해서 done 이벤트로 전송 (HTML은 클라이언트가 누적)
+          const titleMatch = fullText.match(/<!--\s*TITLES:\s*([\s\S]*?)-->/i);
           const titles = titleMatch
             ? titleMatch[1]
                 .split("||")
                 .map((t) => t.trim())
                 .filter(Boolean)
             : [];
-          const rawHtml = cleaned
-            .replace(/<!--\s*TITLES:[\s\S]*?-->/i, "")
-            .trim();
-
-          // local 타입 MK LINK 시그니처 보장
-          const ensuredHtml = ensureLocalSignature(rawHtml, strategy.postType);
-          const wrappedHtml = wrapHtml(ensuredHtml, topic, strategy.postType);
 
           controller.enqueue(
             encoder.encode(
-              `data: ${JSON.stringify({ done: true, html: wrappedHtml, titles })}\n\n`,
+              `data: ${JSON.stringify({ done: true, titles, postType: strategy.postType })}\n\n`,
             ),
           );
         } catch (e) {
@@ -172,10 +159,3 @@ function formatTvData(d: Awaited<ReturnType<typeof getTvDetails>>): string {
 포스터: ${d.posterUrl ?? ""}`;
 }
 
-const MK_LINK_SIGNATURE = `<table width="100%" border="0" cellpadding="20" cellspacing="0" bgcolor="#f4f6f8" style="border-left:4px solid #26C6A4; margin-top:40px;"><tr><td><p style="margin:0 0 6px 0; font-size:14px; color:#333; font-weight:bold;"><b>🔗 MK LINK</b></p><p style="margin:0; font-size:13px; color:#555; line-height:1.8;">대구 로컬 소식·행사·공고를 전합니다.<br>공유할 소식 있으면 댓글로 알려주세요, MK LINK가 함께 전해드립니다.</p></td></tr></table>`;
-
-function ensureLocalSignature(html: string, postType: string): string {
-  if (postType !== "local") return html;
-  if (html.includes("MK LINK")) return html;
-  return html + "\n" + MK_LINK_SIGNATURE;
-}
