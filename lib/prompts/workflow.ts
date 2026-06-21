@@ -17,46 +17,27 @@ import {
 // 1. 전략 카드
 // ──────────────────────────────────────────────
 
-const STRATEGY_SYSTEM = `당신은 MK LINK 전담 콘텐츠 전략가입니다.
-사용자가 블로그 포스팅 주제를 던지면, 아래 마케팅 프레임워크를 적용해 전략 카드 JSON을 반환하세요.
+const STRATEGY_SYSTEM = `You are a Korean blog content strategist. Analyze the given topic and return ONLY a JSON object with no additional text.
 
-## 포스팅 타입 판단 기준
-- 영화·드라마 제목 + 리뷰/후기/감상 → "review"
-- 영화·드라마 개봉 예정 + 기대/소개 → "preview"
-- 여러 작품 묶음 추천 → "curation"
-- 드라마·애니 정주행 추천 → "binge"
-- 장소·맛집·사진·일상 → "photo"
-- 공고문·행사·로컬소식·지원사업 → "local"
-- PDF 문서 요약 → "pdf"
+postType selection:
+- "공고/지원사업/모집/행사/소식/공모" in topic → "local"
+- "정주행/몰아보기" + series title in topic → "binge"
+- "큐레이션/추천목록/모음" in topic → "curation"
+- "개봉/기대예정" + movie in topic → "preview"
+- "PDF/요약" in topic → "pdf"
+- place/food/cafe/travel in topic → "photo"
+- movie/drama + "리뷰/후기/감상" in topic → "review"
+- default → "review"
 
-## Searchable vs Shareable 판단
-- Searchable: 검색 수요 있음 (영화명+리뷰, 지역+행사 등)
-- Shareable: 인사이트·감정·스토리 중심 (큐레이션, 에세이형)
-- both: 둘 다 해당
+keywords: Extract the EXACT proper nouns from the topic (movie title, place name, event name) and use them as the base for 2-3 Naver search keywords. NEVER use generic words unrelated to the topic.`;
 
-## 네이버 SEO 키워드 원칙
-- 실제 네이버에서 검색될 만한 한국어 키워드 2~4개
-- 영화면 "영화제목 리뷰", "영화제목 줄거리 결말" 등
-- 로컬소식이면 "지역명 행사명", "지원사업명" 등
+export function buildStrategyUser(topic: string, _trendText: string): string {
+  return `Topic: "${topic}"
 
-## 응답 형식 (JSON만, 설명 없음)
-{
-  "postType": "review",
-  "keywords": ["키워드1", "키워드2", "키워드3"],
-  "target": "구체적인 타겟 독자 (나이대, 관심사, 상황)",
-  "angle": "콘텐츠 각도 및 구조 제안 (1~2문장)",
-  "contentType": "searchable"
-}`;
-
-export function buildStrategyUser(topic: string, trendText: string): string {
-  return `포스팅 주제: "${topic}"
-
-${trendText ? `[네이버 트렌드 참고]\n${trendText}` : ""}
-
-위 주제로 최적의 블로그 포스팅 전략을 JSON으로 반환하세요.`;
+Return ONLY this JSON (no explanation):
+{"postType":"<type>","keywords":["<keyword using exact words from topic>","<keyword2>"],"target":"<specific audience in Korean>","angle":"<content angle in Korean, 1 sentence>","contentType":"<searchable|shareable|both>"}`;
 }
 
-export { STRATEGY_SYSTEM };
 
 // ──────────────────────────────────────────────
 // 2. 인터뷰
