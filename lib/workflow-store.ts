@@ -26,6 +26,7 @@ type State = {
   seoTitles: string[];
   isStreaming: boolean;
   error: string;
+  generatingChars: number;
 };
 
 type Actions = {
@@ -39,6 +40,7 @@ type Actions = {
   setSeoTitles: (titles: string[]) => void;
   setStreaming: (b: boolean) => void;
   setError: (e: string) => void;
+  addGeneratingChars: (n: number) => void;
   reset: () => void;
 };
 
@@ -52,6 +54,7 @@ const INIT: State = {
   seoTitles: [],
   isStreaming: false,
   error: "",
+  generatingChars: 0,
 };
 
 export const useWorkflowStore = create<State & Actions>((set) => ({
@@ -73,5 +76,6 @@ export const useWorkflowStore = create<State & Actions>((set) => ({
   setSeoTitles: (seoTitles) => set({ seoTitles }),
   setStreaming: (isStreaming) => set({ isStreaming }),
   setError: (error) => set({ error }),
+  addGeneratingChars: (n) => set((s) => ({ generatingChars: s.generatingChars + n })),
   reset: () => set(INIT),
 }));

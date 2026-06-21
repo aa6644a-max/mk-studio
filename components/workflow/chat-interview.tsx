@@ -6,8 +6,7 @@ import ChatBubble from "./chat-bubble";
 
 const DONE_PHRASES = [
   "포스팅 생성 시작할게요",
-  "생성할게요",
-  "충분해요",
+  "생성 시작할게요",
   "✍️",
 ];
 
@@ -27,6 +26,7 @@ export default function ChatInterview() {
     appendToLastMessage,
     setStreaming,
     setError,
+    addGeneratingChars,
   } = useWorkflowStore();
 
   const [input, setInput] = useState("");
@@ -123,6 +123,9 @@ export default function ChatInterview() {
 
           try {
             const parsed = JSON.parse(data);
+            if (parsed.text) {
+              addGeneratingChars(parsed.text.length);
+            }
             if (parsed.done && parsed.html) {
               useWorkflowStore.getState().setGeneratedHtml(parsed.html);
               useWorkflowStore.getState().setSeoTitles(parsed.titles ?? []);
