@@ -4,6 +4,7 @@ import { useWorkflowStore } from "@/lib/workflow-store";
 import Header from "@/components/header";
 import TopicInput from "./topic-input";
 import StrategyCardView from "./strategy-card";
+import TmdbSearchView from "./tmdb-search";
 import ChatInterview from "./chat-interview";
 import GeneratingScreen from "./generating-screen";
 import ResultPanel from "./result-panel";
@@ -11,6 +12,7 @@ import ResultPanel from "./result-panel";
 const STAGE_LABEL: Record<string, string> = {
   input: "새 포스팅",
   strategy: "전략 수립",
+  "tmdb-search": "작품 검색",
   interview: "인터뷰",
   generating: "생성 중",
   result: "결과",
@@ -54,6 +56,7 @@ export default function WorkflowShell() {
       <div style={{ flex: 1, overflow: "hidden", background: "#F7F7F8" }}>
         {stage === "input" && <TopicInput />}
         {stage === "strategy" && <StrategyCardView />}
+        {stage === "tmdb-search" && <TmdbSearchView />}
         {stage === "interview" && <ChatInterview />}
         {stage === "generating" && <GeneratingScreen />}
         {stage === "result" && <ResultPanel />}
@@ -64,8 +67,8 @@ export default function WorkflowShell() {
 
 function StageIndicator() {
   const { stage } = useWorkflowStore();
-  const stages = ["strategy", "interview", "result"] as const;
-  const stageLabels = { strategy: "전략", interview: "인터뷰", result: "결과" };
+  const stages = ["strategy", "tmdb-search", "interview", "result"] as const;
+  const stageLabels = { strategy: "전략", "tmdb-search": "작품", interview: "인터뷰", result: "결과" };
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>

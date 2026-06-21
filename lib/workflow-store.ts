@@ -1,7 +1,13 @@
 import { create } from "zustand";
 import type { PostType } from "./types";
 
-export type WorkflowStage = "input" | "strategy" | "interview" | "generating" | "result";
+export type WorkflowStage =
+  | "input"
+  | "strategy"
+  | "tmdb-search"
+  | "interview"
+  | "generating"
+  | "result";
 
 export type StrategyCard = {
   postType: PostType;
@@ -14,6 +20,14 @@ export type StrategyCard = {
 export type ChatMessage = {
   role: "assistant" | "user";
   content: string;
+};
+
+export type TmdbSelection = {
+  id: number;
+  title: string;
+  year: string;
+  posterUrl: string | null;
+  mediaType: "movie" | "tv";
 };
 
 type State = {
@@ -32,6 +46,7 @@ type State = {
   imageNames: string[];
   imageCaptions: string[];
   imagePreviewUrls: string[];
+  tmdbSelections: TmdbSelection[];
 };
 
 type Actions = {
@@ -49,6 +64,7 @@ type Actions = {
   addGeneratingChars: (n: number) => void;
   setFileContent: (text: string) => void;
   setImageData: (names: string[], captions: string[], urls: string[]) => void;
+  setTmdbSelections: (items: TmdbSelection[]) => void;
   reset: () => void;
 };
 
@@ -68,6 +84,7 @@ const INIT: State = {
   imageNames: [],
   imageCaptions: [],
   imagePreviewUrls: [],
+  tmdbSelections: [],
 };
 
 export const useWorkflowStore = create<State & Actions>((set) => ({
@@ -94,5 +111,6 @@ export const useWorkflowStore = create<State & Actions>((set) => ({
   setFileContent: (fileContent) => set({ fileContent }),
   setImageData: (imageNames, imageCaptions, imagePreviewUrls) =>
     set({ imageNames, imageCaptions, imagePreviewUrls }),
+  setTmdbSelections: (tmdbSelections) => set({ tmdbSelections }),
   reset: () => set(INIT),
 }));

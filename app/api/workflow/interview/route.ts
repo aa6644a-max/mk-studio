@@ -9,13 +9,14 @@ export const maxDuration = 120;
 
 export async function POST(req: Request) {
   try {
-    const { messages, strategy, topic, customSystem, fileContent, imageInfo } = (await req.json()) as {
+    const { messages, strategy, topic, customSystem, fileContent, imageInfo, tmdbTitles } = (await req.json()) as {
       messages: ChatMessage[];
       strategy: StrategyCard;
       topic: string;
       customSystem?: string;
       fileContent?: string;
       imageInfo?: string;
+      tmdbTitles?: string;
     };
 
     let system: string;
@@ -33,8 +34,11 @@ export async function POST(req: Request) {
     const client = new Anthropic();
     const encoder = new TextEncoder();
 
-    // 첫 턴: topic + 파일 내용 주입
+    // 첫 턴: topic + 파일/TMDB 내용 주입
     let firstUserContent = `포스팅 주제: "${topic}"`;
+    if (tmdbTitles) {
+      firstUserContent += `\n\n[선택된 작품: ${tmdbTitles}]`;
+    }
     if (fileContent) {
       firstUserContent += `\n\n[업로드된 PDF 내용]\n${fileContent.slice(0, 4000)}`;
     } else if (imageInfo) {

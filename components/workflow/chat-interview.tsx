@@ -27,6 +27,7 @@ export default function ChatInterview() {
     fileContent,
     imageNames,
     imageCaptions,
+    tmdbSelections,
     setStage,
     addMessage,
     appendToLastMessage,
@@ -117,6 +118,7 @@ export default function ChatInterview() {
           topic,
           fileContent: fileContent || undefined,
           imageInfo: imageInfo || undefined,
+          tmdbSelections: tmdbSelections.length > 0 ? tmdbSelections : undefined,
         }),
       });
 

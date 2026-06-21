@@ -17,8 +17,18 @@ export default function StrategyCardView() {
 
   if (!strategy) return null;
 
+  const MOVIE_TYPES = ["review", "preview", "curation", "binge"];
+  const needsTmdb = MOVIE_TYPES.includes(postType);
+
   async function handleStart() {
     if (!strategy) return;
+
+    // 영화 타입 → TMDB 작품 선택 단계로
+    if (needsTmdb) {
+      setStage("tmdb-search");
+      return;
+    }
+
     setStarting(true);
 
     // 인터뷰 시작 — AI 첫 질문 스트리밍
@@ -285,7 +295,7 @@ export default function StrategyCardView() {
               gap: "6px",
             }}
           >
-            {starting ? "인터뷰 시작 중…" : "이 전략으로 시작 →"}
+            {starting ? "인터뷰 시작 중…" : needsTmdb ? "작품 검색 →" : "이 전략으로 시작 →"}
           </button>
         </div>
       </div>

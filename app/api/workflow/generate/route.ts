@@ -6,7 +6,7 @@ import {
   buildWorkflowGenerateSystem,
   buildWorkflowGenerateUser,
 } from "@/lib/prompts/workflow";
-import type { StrategyCard, ChatMessage } from "@/lib/workflow-store";
+import type { StrategyCard, ChatMessage, TmdbSelection } from "@/lib/workflow-store";
 
 export const maxDuration = 300;
 
@@ -15,19 +15,22 @@ const TV_TYPES = ["binge"];
 
 export async function POST(req: Request) {
   try {
-    const { messages, strategy, topic, fileContent, imageInfo } = (await req.json()) as {
+    const { messages, strategy, topic, fileContent, imageInfo, tmdbSelections } = (await req.json()) as {
       messages: ChatMessage[];
       strategy: StrategyCard;
       topic: string;
       fileContent?: string;
       imageInfo?: string;
+      tmdbSelections?: TmdbSelection[];
     };
 
     // 외부 데이터 병렬 로드
     const [rssText, references, extraData] = await Promise.all([
       getRssLatestText("shock552", 5).catch(() => ""),
       getPostsByType(strategy.postType, 3).catch(() => []),
-      fetchExtraData(topic, strategy.postType).catch(() => ""),
+      tmdbSelections?.length
+        ? fetchExtraDataByIds(tmdbSelections, strategy.postType).catch(() => "")
+        : fetchExtraData(topic, strategy.postType).catch(() => ""),
     ]);
 
     const system = buildWorkflowGenerateSystem();
@@ -163,3 +166,29 @@ function formatTvData(d: Awaited<ReturnType<typeof getTvDetails>>): string {
 포스터: ${d.posterUrl ?? ""}`;
 }
 
+async function fetchExtraDataByIds(
+  selections: TmdbSelection[],
+  postType: string,
+): Promise<string> {
+  const parts: string[] = [];
+
+  for (const sel of selections) {
+    if (sel.mediaType === "tv") {
+      const detail = await getTvDetails(sel.id).catch(() => null);
+      if (detail) {
+        parts.push(
+          selections.length > 1 ? `[작품: ${sel.title}]\n${formatTvData(detail)}` : formatTvData(detail),
+        );
+      }
+    } else {
+      const detail = await getMovieDetails(sel.id).catch(() => null);
+      if (detail) {
+        parts.push(
+          selections.length > 1 ? `[작품: ${sel.title}]\n${formatMovieData(detail)}` : formatMovieData(detail),
+        );
+      }
+    }
+  }
+
+  return parts.join("\n\n---\n\n");
+}
