@@ -1,5 +1,5 @@
-import WriteWorkspace from "@/components/write/write-workspace";
+import WorkflowShell from "@/components/workflow/workflow-shell";
 
 export default function WritePage() {
-  return <WriteWorkspace />;
+  return <WorkflowShell />;
 }
