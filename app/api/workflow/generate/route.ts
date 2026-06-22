@@ -17,6 +17,8 @@ import {
 import { buildAnnouncementPrompt } from "@/lib/prompts/local";
 import { buildPdfSummaryPrompt, buildPhotoPostPrompt } from "@/lib/prompts/daily";
 import { referenceText } from "@/lib/prompts/base";
+import { getProfile } from "@/lib/google-sheets";
+import { groupOf, buildProfileInjection } from "@/lib/prompts/profile";
 import type { StrategyCard, ChatMessage, TmdbSelection } from "@/lib/workflow-store";
 import type { MovieDetails, TvDetails, CurationItem } from "@/lib/types";
 
@@ -157,6 +159,10 @@ export async function POST(req: Request) {
       systemPrompt = buildWorkflowGenerateSystem();
       userPrompt = buildWorkflowGenerateUser(topic, messages, strategy, references, rssText, extraData, fileContent, imageInfo);
     }
+
+    // MK 프로필 주입 (과거 인터뷰 누적 → 문체·취향·관점 반영)
+    const profile = await getProfile(groupOf(strategy.postType)).catch(() => null);
+    userPrompt += buildProfileInjection(profile);
 
     const client = new Anthropic();
     const encoder = new TextEncoder();

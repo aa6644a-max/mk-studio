@@ -3,6 +3,8 @@ import { getRssLatestText } from "@/lib/rss-client";
 import { getPostsByType } from "@/lib/google-sheets";
 import { referenceText } from "@/lib/prompts/base";
 import { buildInterviewSystem } from "@/lib/prompts/workflow";
+import { getProfile } from "@/lib/google-sheets";
+import { groupOf, buildProfileInjection } from "@/lib/prompts/profile";
 import type { StrategyCard, ChatMessage } from "@/lib/workflow-store";
 
 export const maxDuration = 120;
@@ -29,6 +31,9 @@ export async function POST(req: Request) {
       ]);
       const refText = referenceText(references, "");
       system = buildInterviewSystem(strategy, rssText, refText, fileContent, imageInfo);
+      // MK 프로필 주입 — 아는 취향 재질문 회피 + MK 스타일 질문
+      const profile = await getProfile(groupOf(strategy.postType)).catch(() => null);
+      system += buildProfileInjection(profile);
     }
 
     const client = new Anthropic();

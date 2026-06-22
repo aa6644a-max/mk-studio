@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useWorkflowStore } from "@/lib/workflow-store";
 
 export default function ResultPanel() {
-  const { generatedHtml, seoTitles, topic, postType, reset } =
+  const { generatedHtml, seoTitles, topic, postType, messages, reset } =
     useWorkflowStore();
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -34,6 +34,13 @@ export default function ResultPanel() {
       });
       if (!res.ok) throw new Error("저장 실패");
       setSavedMsg("Google Sheets 저장 완료 ✓");
+
+      // MK 프로필 누적 갱신 (저장 시 자동 머지) — 실패해도 저장은 성공 처리
+      fetch("/api/workflow/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postType, messages, topic }),
+      }).catch(() => {});
     } catch (e) {
       setSavedMsg((e as Error).message);
     } finally {

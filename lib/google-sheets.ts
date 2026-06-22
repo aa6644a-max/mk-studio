@@ -213,6 +213,113 @@ export async function appendBlogPost(
   });
 }
 
+// ── MK 프로필 (인터뷰 누적 개인화) ──────────────────────
+// 별도 탭 MK_PROFILE 에 그룹당 1행: A group | B profile_text | C quotes(JSON) | D updated_at
+const PROFILE_TAB = "MK_PROFILE";
+export const PROFILE_GROUPS = ["movie", "photo", "info"] as const;
+export type ProfileGroup = (typeof PROFILE_GROUPS)[number];
+export type MkProfile = {
+  group: ProfileGroup;
+  profileText: string;
+  quotes: string[];
+  updatedAt: string;
+};
+
+const MOCK_PROFILES = new Map<ProfileGroup, MkProfile>();
+
+function parseQuotes(raw: string | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** 그룹 프로필 조회. 없으면 null. */
+export async function getProfile(group: ProfileGroup): Promise<MkProfile | null> {
+  const auth = await getAuth();
+  if (!auth) return MOCK_PROFILES.get(group) ?? null;
+  try {
+    const spreadsheetId = await getSpreadsheetId(auth);
+    const sheets = google.sheets({ version: "v4", auth });
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${PROFILE_TAB}!A:D`,
+    });
+    const row = (res.data.values ?? []).find((r) => r[0] === group);
+    if (!row) return null;
+    return {
+      group,
+      profileText: row[1] ?? "",
+      quotes: parseQuotes(row[2]),
+      updatedAt: row[3] ?? "",
+    };
+  } catch {
+    return null; // 탭 미존재 등
+  }
+}
+
+async function ensureProfileTab(
+  sheets: ReturnType<typeof google.sheets>,
+  spreadsheetId: string,
+): Promise<void> {
+  try {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: { requests: [{ addSheet: { properties: { title: PROFILE_TAB } } }] },
+    });
+  } catch {
+    // 이미 존재 → 무시
+  }
+}
+
+/** 그룹 프로필 upsert. 3개 그룹 고정 순서로 A1:D3 전체 덮어쓰기 (stale 방지). */
+export async function upsertProfile(
+  group: ProfileGroup,
+  profileText: string,
+  quotes: string[],
+): Promise<void> {
+  const updatedAt = formatTimestamp(new Date());
+  const auth = await getAuth();
+  if (!auth) {
+    MOCK_PROFILES.set(group, { group, profileText, quotes, updatedAt });
+    return;
+  }
+  const spreadsheetId = await getSpreadsheetId(auth);
+  const sheets = google.sheets({ version: "v4", auth });
+  await ensureProfileTab(sheets, spreadsheetId);
+
+  const existing = new Map<ProfileGroup, MkProfile>();
+  try {
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${PROFILE_TAB}!A:D`,
+    });
+    for (const r of res.data.values ?? []) {
+      const g = r[0] as ProfileGroup;
+      if (PROFILE_GROUPS.includes(g)) {
+        existing.set(g, { group: g, profileText: r[1] ?? "", quotes: parseQuotes(r[2]), updatedAt: r[3] ?? "" });
+      }
+    }
+  } catch {
+    // 첫 쓰기
+  }
+  existing.set(group, { group, profileText, quotes, updatedAt });
+
+  const values = PROFILE_GROUPS.map((g) => {
+    const p = existing.get(g);
+    return p ? [g, p.profileText, JSON.stringify(p.quotes), p.updatedAt] : [g, "", "[]", ""];
+  });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `${PROFILE_TAB}!A1:D3`,
+    valueInputOption: "RAW",
+    requestBody: { values },
+  });
+}
+
 /** 블로그 원본 글 제목 목록 (중복 체크용). */
 export async function getBlogPostTitles(): Promise<Set<string>> {
   const auth = await getAuth();

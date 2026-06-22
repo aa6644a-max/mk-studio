@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { getMovieDetails, getTvDetails } from "@/lib/tmdb";
+import { getProfile } from "@/lib/google-sheets";
+import { groupOf, buildProfileInjection } from "@/lib/prompts/profile";
 
 export const maxDuration = 60;
 
@@ -136,6 +138,10 @@ export async function POST(req: Request) {
     } else {
       userContent = `사용자가 선택한 포스팅 타입: ${selectedType ?? "review"}\n포스팅 주제: "${topic}"`;
     }
+
+    // MK 프로필 주입 — 누적 취향이 keywords/target/angle/hook에 반영되도록
+    const profile = await getProfile(groupOf(selectedType ?? "review")).catch(() => null);
+    userContent += buildProfileInjection(profile);
 
     const client = new Anthropic();
     const res = await client.messages.create({
