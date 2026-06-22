@@ -1,5 +1,6 @@
 import Header from "@/components/header";
 import BlogSyncPanel from "@/components/settings/blog-sync-panel";
+import MkProfilePanel from "@/components/settings/mk-profile-panel";
 import { isSheetsConfigured } from "@/lib/google-sheets";
 import { isClaudeConfigured } from "@/lib/claude";
 
@@ -31,6 +32,9 @@ export default async function SettingsPage() {
               />
             </div>
           </section>
+
+          {/* MK 프로필 (인터뷰 누적 개인화) */}
+          <MkProfilePanel sheetsOk={sheetsOk} />
 
           {/* 블로그 동기화 */}
           <BlogSyncPanel sheetsOk={sheetsOk} />

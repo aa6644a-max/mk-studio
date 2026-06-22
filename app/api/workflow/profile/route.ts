@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { getProfile, upsertProfile } from "@/lib/google-sheets";
+import { getProfile, upsertProfile, PROFILE_GROUPS } from "@/lib/google-sheets";
+import type { ProfileGroup } from "@/lib/google-sheets";
 import {
   groupOf,
   buildProfileMergeSystem,
@@ -50,17 +51,35 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { postType, messages, topic, clear } = (await req.json()) as {
-      postType: string;
-      messages: ChatMessage[];
-      topic: string;
+    const body = (await req.json()) as {
+      postType?: string;
+      group?: ProfileGroup;
+      messages?: ChatMessage[];
+      topic?: string;
       clear?: boolean;
+      set?: boolean;
+      profileText?: string;
+      quotes?: string[];
     };
+    const { postType, messages, topic, clear, set } = body;
+
+    // group 직접 지정 우선, 없으면 postType에서 도출
+    const resolveGroup = (): ProfileGroup =>
+      body.group && PROFILE_GROUPS.includes(body.group) ? body.group : groupOf(postType ?? "review");
+
+    // 프로필 직접 저장 (편집)
+    if (set) {
+      const g = resolveGroup();
+      const quotes = Array.isArray(body.quotes) ? body.quotes.map(String).slice(0, PROFILE_MAX_QUOTES) : [];
+      await upsertProfile(g, (body.profileText ?? "").slice(0, 800), quotes);
+      return NextResponse.json({ ok: true, set: g });
+    }
 
     // 프로필 초기화
     if (clear) {
-      await upsertProfile(groupOf(postType), "", []);
-      return NextResponse.json({ ok: true, cleared: groupOf(postType) });
+      const g = resolveGroup();
+      await upsertProfile(g, "", []);
+      return NextResponse.json({ ok: true, cleared: g });
     }
 
     // 사용자 답변이 없으면 누적할 게 없음
@@ -69,7 +88,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ skipped: true, reason: "no user interview content" });
     }
 
-    const group = groupOf(postType);
+    const group = groupOf(postType ?? "review");
     const existing = await getProfile(group).catch(() => null);
 
     const client = new Anthropic();
@@ -79,7 +98,7 @@ export async function POST(req: Request) {
       system: buildProfileMergeSystem(group),
       tools: [MERGE_TOOL],
       tool_choice: { type: "tool", name: "update_profile" },
-      messages: [{ role: "user", content: buildProfileMergeUser(existing, messages, topic ?? "") }],
+      messages: [{ role: "user", content: buildProfileMergeUser(existing, messages ?? [], topic ?? "") }],
     });
 
     const toolUse = res.content.find((b) => b.type === "tool_use");
