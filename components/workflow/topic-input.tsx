@@ -15,6 +15,7 @@ const TYPE_CHIPS: { type: PostType; label: string; icon: string; placeholder: st
 ];
 
 const FILE_TYPES: PostType[] = ["local", "pdf"];
+const MOVIE_TYPES: PostType[] = ["review", "preview", "curation", "binge"];
 
 export default function TopicInput() {
   const [selectedType, setSelectedTypeLocal] = useState<PostType>("review");
@@ -36,7 +37,7 @@ export default function TopicInput() {
 
   const {
     setTopic, setStrategy, setStage, setError,
-    setSelectedType, setFileContent, setImageData,
+    setSelectedType, setPostType, setFileContent, setImageData,
   } = useWorkflowStore();
 
   const isFileType = FILE_TYPES.includes(selectedType);
@@ -111,6 +112,16 @@ export default function TopicInput() {
 
   async function handleSubmit() {
     if (!canSubmit()) return;
+
+    // 영화 타입: 전략 수립 전에 TMDB 작품 검색부터 (검색→전략 순서)
+    if (MOVIE_TYPES.includes(selectedType)) {
+      setTopic(input.trim());
+      setPostType(selectedType); // tmdb-search가 postType으로 단일/다중·movie/tv 분기
+      setError("");
+      setStage("tmdb-search");
+      return;
+    }
+
     setLoading(true);
     setError("");
 

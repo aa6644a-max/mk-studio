@@ -82,6 +82,10 @@ ${hasFileContent && imageInfo ? `\n## 업로드된 사진 정보 (이미 파악�
 - SEO 키워드: ${strategy.keywords.join(", ")}
 - 타겟 독자: ${strategy.target}
 - 콘텐츠 각도: ${strategy.angle}
+${strategy.hook ? `- 후킹 포인트: ${strategy.hook}` : ""}
+${strategy.watchPoints?.length ? `- 관전 포인트: ${strategy.watchPoints.join(" / ")}` : ""}
+${strategy.differentiator ? `- 차별화 각도: ${strategy.differentiator}` : ""}
+${strategy.hook || strategy.watchPoints?.length || strategy.differentiator ? "\n위 후킹·관전·차별화 각도는 이미 작품 데이터로 수립된 전략입니다. 인터뷰 질문은 이 각도를 사용자의 실제 경험·감상으로 채우는 방향으로 하세요 (예: 관전 포인트에 대한 사용자의 실제 반응, 차별화 각도에 맞는 개인적 일화)." : ""}
 
 ## 수집해야 할 정보
 ${requiredInfo[strategy.postType]}

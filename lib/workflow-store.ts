@@ -19,6 +19,10 @@ export type StrategyCard = {
   contentType: "searchable" | "shareable" | "both";
   /** photo 타입일 때만 의미 있음 — 글 구조 분기용 */
   photoCategory?: PhotoCategory;
+  /** 영화 타입(review/preview/curation/binge) 전용 — TMDB 작품 데이터 기반 차별화 전략 */
+  hook?: string; // 이 포스팅만의 후킹 한 줄 (단일=작품 끌림 / 다중=리스트 묶는 매력)
+  watchPoints?: string[]; // 관전 포인트 후보 2~3개 (단일=작품 주목점 / 다중=묶음 관점)
+  differentiator?: string; // 차별화 각도 (단일=일반 리뷰 대비 / 다중=이 큐레이션만의 관점)
 };
 
 export type ChatMessage = {

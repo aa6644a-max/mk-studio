@@ -65,15 +65,21 @@ export default function WorkflowShell() {
   );
 }
 
+const MOVIE_TYPES = ["review", "preview", "curation", "binge"];
+
 function StageIndicator() {
-  const { stage } = useWorkflowStore();
-  const stages = ["strategy", "tmdb-search", "interview", "result"] as const;
-  const stageLabels = { strategy: "전략", "tmdb-search": "작품", interview: "인터뷰", result: "결과" };
+  const { stage, postType } = useWorkflowStore();
+  const isMovie = MOVIE_TYPES.includes(postType);
+  // 영화: 작품 검색 → 전략, 비영화: 전략부터
+  const stages = (isMovie
+    ? ["tmdb-search", "strategy", "interview", "result"]
+    : ["strategy", "interview", "result"]) as readonly string[];
+  const stageLabels: Record<string, string> = { strategy: "전략", "tmdb-search": "작품", interview: "인터뷰", result: "결과" };
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
       {stages.map((s, i) => {
-        const stageIndex = stages.indexOf(stage as typeof stages[number]);
+        const stageIndex = stages.indexOf(stage);
         const isDone = stageIndex > i;
         const isActive = stage === s || (stage === "generating" && s === "result");
 

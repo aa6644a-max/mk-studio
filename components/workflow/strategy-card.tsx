@@ -18,20 +18,26 @@ export default function StrategyCardView() {
   if (!strategy) return null;
 
   const MOVIE_TYPES = ["review", "preview", "curation", "binge"];
-  const needsTmdb = MOVIE_TYPES.includes(postType);
+  const isMovie = MOVIE_TYPES.includes(postType);
 
   async function handleStart() {
     if (!strategy) return;
 
-    // 영화 타입 → TMDB 작품 선택 단계로
-    if (needsTmdb) {
-      setStage("tmdb-search");
-      return;
-    }
-
     setStarting(true);
 
-    // 인터뷰 시작 — AI 첫 질문 스트리밍
+    // 인터뷰 시작 — AI 첫 질문 스트리밍 (TMDB 선택·전략 수립은 이미 완료)
+    const { tmdbSelections, fileContent, imageNames, imageCaptions } =
+      useWorkflowStore.getState();
+    const tmdbTitles = tmdbSelections.length
+      ? tmdbSelections.map((s) => `${s.title} (${s.year})`).join(", ")
+      : undefined;
+    const imageInfo =
+      imageNames.length > 0
+        ? imageNames
+            .map((name, i) => `파일명: ${name}${imageCaptions[i] ? ` — 캡션: ${imageCaptions[i]}` : ""}`)
+            .join("\n")
+        : "";
+
     setStage("interview");
     setStreaming(true);
     addMessage({ role: "assistant", content: "" });
@@ -44,6 +50,9 @@ export default function StrategyCardView() {
           messages: [],
           strategy: { ...strategy, postType },
           topic,
+          tmdbTitles,
+          fileContent: fileContent || undefined,
+          imageInfo: imageInfo || undefined,
         }),
       });
 
@@ -233,7 +242,7 @@ export default function StrategyCardView() {
           </div>
 
           {/* 콘텐츠 각도 */}
-          <div style={{ padding: "16px 20px" }}>
+          <div style={{ padding: "16px 20px", borderBottom: isMovie && (strategy.hook || strategy.watchPoints?.length || strategy.differentiator) ? "1px solid rgba(112,115,124,0.1)" : "none" }}>
             <div
               style={{
                 fontSize: "11px",
@@ -249,6 +258,40 @@ export default function StrategyCardView() {
               {strategy.angle}
             </div>
           </div>
+
+          {/* 영화 전용 — 작품 특화 차별화 전략 */}
+          {isMovie && (strategy.hook || strategy.watchPoints?.length || strategy.differentiator) && (
+            <div style={{ padding: "16px 20px", background: "#FBFAFF", display: "flex", flexDirection: "column", gap: "14px" }}>
+              {strategy.hook && (
+                <div>
+                  <div style={{ fontSize: "11px", color: "#7c3aed", marginBottom: "4px", fontWeight: 700, letterSpacing: "0.5px" }}>
+                    🎯 후킹 포인트
+                  </div>
+                  <div style={{ fontSize: "14px", color: "#171719", lineHeight: 1.6 }}>{strategy.hook}</div>
+                </div>
+              )}
+              {!!strategy.watchPoints?.length && (
+                <div>
+                  <div style={{ fontSize: "11px", color: "#7c3aed", marginBottom: "6px", fontWeight: 700, letterSpacing: "0.5px" }}>
+                    🔎 관전 포인트
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: "18px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                    {strategy.watchPoints.map((wp, i) => (
+                      <li key={i} style={{ fontSize: "14px", color: "#171719", lineHeight: 1.5 }}>{wp}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {strategy.differentiator && (
+                <div>
+                  <div style={{ fontSize: "11px", color: "#7c3aed", marginBottom: "4px", fontWeight: 700, letterSpacing: "0.5px" }}>
+                    ✨ 차별화 각도
+                  </div>
+                  <div style={{ fontSize: "14px", color: "#171719", lineHeight: 1.6 }}>{strategy.differentiator}</div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 액션 버튼 */}
@@ -295,7 +338,7 @@ export default function StrategyCardView() {
               gap: "6px",
             }}
           >
-            {starting ? "인터뷰 시작 중…" : needsTmdb ? "작품 검색 →" : "이 전략으로 시작 →"}
+            {starting ? "인터뷰 시작 중…" : "이 전략으로 시작 →"}
           </button>
         </div>
       </div>

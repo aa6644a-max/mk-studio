@@ -110,6 +110,8 @@ export async function POST(req: Request) {
         systemPrompt = system;
         userPrompt = user;
       }
+      // 전략 단계서 수립한 작품 특화 각도를 생성 프롬프트에 주입
+      userPrompt += strategyAngleBlock(strategy);
     } else if (strategy.postType === "local") {
       // V3 로컬소식/공고문 프롬프트
       const refText = referenceText(references, rssText);
@@ -166,7 +168,7 @@ export async function POST(req: Request) {
         try {
           const anthropicStream = client.messages.stream({
             model: "claude-sonnet-4-6",
-            max_tokens: 6000,
+            max_tokens: 8192,
             system: systemPrompt,
             messages: [{ role: "user", content: userPrompt }],
           });
@@ -232,6 +234,16 @@ function formatConversation(messages: ChatMessage[]): string {
   return messages
     .map((m) => `${m.role === "user" ? "MK" : "AI"}: ${m.content}`)
     .join("\n");
+}
+
+/** 전략 단계서 수립한 작품 특화 각도(hook/watchPoints/differentiator)를 생성 프롬프트 말미에 주입. */
+function strategyAngleBlock(strategy: StrategyCard): string {
+  const lines: string[] = [];
+  if (strategy.hook) lines.push(`- 후킹 포인트: ${strategy.hook}`);
+  if (strategy.watchPoints?.length) lines.push(`- 관전 포인트: ${strategy.watchPoints.join(" / ")}`);
+  if (strategy.differentiator) lines.push(`- 차별화 각도: ${strategy.differentiator}`);
+  if (!lines.length) return "";
+  return `\n\n[🎯 이번 포스팅 전략 각도 — 반드시 본문에 녹여낼 것]\n${lines.join("\n")}\n이 각도는 작품 데이터 기반으로 수립된 이 글만의 방향입니다. 일반적인 리뷰로 흐르지 말고 위 각도를 본문 전개의 축으로 삼으세요.`;
 }
 
 /** topic + 인터뷰 대화를 V3 프롬프트의 userContext 슬롯용으로 결합. */

@@ -8,13 +8,13 @@ const SINGLE_TYPES = ["review", "binge"];
 const TV_TYPES = ["binge"];
 
 export default function TmdbSearchView() {
-  const { strategy, postType, topic, setStage, setTmdbSelections, addMessage, setStreaming, setError } =
+  const { postType, topic, setStage, setTmdbSelections, setStrategy, setError } =
     useWorkflowStore();
 
   const isMulti = !SINGLE_TYPES.includes(postType);
   const isTv = TV_TYPES.includes(postType);
 
-  const [query, setQuery] = useState(strategy?.keywords[0] ?? topic ?? "");
+  const [query, setQuery] = useState(topic ?? "");
   const [results, setResults] = useState<MovieResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<TmdbSelection[]>([]);
@@ -70,49 +70,38 @@ export default function TmdbSearchView() {
     return selected.some((s) => s.id === id);
   }
 
-  async function handleStartInterview() {
+  async function handleProceedToStrategy() {
     if (!selected.length || starting) return;
     setStarting(true);
+    setError("");
 
     const finalSelected = selected;
     setTmdbSelections(finalSelected);
 
-    const { strategy: strat, postType: pt, topic: t, fileContent, imageNames, imageCaptions } =
-      useWorkflowStore.getState();
-
-    const imageInfo =
-      imageNames.length > 0
-        ? imageNames
-            .map((name, i) => `파일명: ${name}${imageCaptions[i] ? ` — 캡션: ${imageCaptions[i]}` : ""}`)
-            .join("\n")
-        : "";
-
-    const selectedTitles = finalSelected.map((s) => `${s.title} (${s.year})`).join(", ");
-
-    setStage("interview");
-    setStreaming(true);
-    addMessage({ role: "assistant", content: "" });
+    const { postType: pt, topic: t } = useWorkflowStore.getState();
 
     try {
-      const res = await fetch("/api/workflow/interview", {
+      // 선택된 작품 데이터로 전략 수립 (검색→전략 순서)
+      const res = await fetch("/api/workflow/strategy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [],
-          strategy: { ...strat, postType: pt },
           topic: t,
-          fileContent: fileContent || undefined,
-          imageInfo: imageInfo || undefined,
-          tmdbTitles: selectedTitles,
+          selectedType: pt,
+          tmdbSelections: finalSelected.map((s) => ({
+            id: s.id,
+            title: s.title,
+            mediaType: s.mediaType,
+          })),
         }),
       });
-
-      if (!res.body) throw new Error("스트림 없음");
-      await consumeStream(res.body);
+      if (!res.ok) throw new Error("전략 분석 실패");
+      const strategy = await res.json();
+      setStrategy(strategy);
+      setStage("strategy");
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      useWorkflowStore.getState().setStreaming(false);
       setStarting(false);
     }
   }
@@ -341,9 +330,9 @@ export default function TmdbSearchView() {
           </div>
         )}
 
-        {/* 인터뷰 시작 버튼 */}
+        {/* 전략 수립 버튼 */}
         <button
-          onClick={handleStartInterview}
+          onClick={handleProceedToStrategy}
           disabled={!canStart || starting}
           style={{
             width: "100%",
@@ -359,32 +348,11 @@ export default function TmdbSearchView() {
             transition: "background 0.15s",
           }}
         >
-          {starting ? "인터뷰 시작 중…" : canStart ? `인터뷰 시작 → (${selected.map((s) => s.title).join(", ")})` : "작품을 선택하세요"}
+          {starting ? "전략 수립 중…" : canStart ? `전략 수립 → (${selected.map((s) => s.title).join(", ")})` : "작품을 선택하세요"}
         </button>
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
-}
-
-async function consumeStream(body: ReadableStream) {
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  const store = useWorkflowStore.getState();
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    const text = decoder.decode(value);
-    for (const line of text.split("\n\n")) {
-      if (!line.startsWith("data: ")) continue;
-      const data = line.slice(6).trim();
-      if (data === "[DONE]") return;
-      try {
-        const parsed = JSON.parse(data);
-        if (parsed.text) store.appendToLastMessage(parsed.text);
-      } catch {}
-    }
-  }
 }
