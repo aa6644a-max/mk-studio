@@ -80,6 +80,14 @@ export default function TmdbSearchView() {
 
     const { postType: pt, topic: t } = useWorkflowStore.getState();
 
+    // review: 전략 수립 전에 감상평부터 받음 (감상평 → 전략 → 인터뷰)
+    if (pt === "review") {
+      useWorkflowStore.getState().setSeed("");
+      setStage("seed");
+      setStarting(false);
+      return;
+    }
+
     try {
       // 선택된 작품 데이터로 전략 수립 (검색→전략 순서)
       const res = await fetch("/api/workflow/strategy", {
@@ -348,7 +356,7 @@ export default function TmdbSearchView() {
             transition: "background 0.15s",
           }}
         >
-          {starting ? "전략 수립 중…" : canStart ? `전략 수립 → (${selected.map((s) => s.title).join(", ")})` : "작품을 선택하세요"}
+          {starting ? "처리 중…" : canStart ? `${postType === "review" ? "감상평 쓰기" : "전략 수립"} → (${selected.map((s) => s.title).join(", ")})` : "작품을 선택하세요"}
         </button>
       </div>
 

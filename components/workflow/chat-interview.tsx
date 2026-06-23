@@ -28,6 +28,7 @@ export default function ChatInterview() {
     imageNames,
     imageCaptions,
     tmdbSelections,
+    seed,
     setStage,
     addMessage,
     appendToLastMessage,
@@ -87,6 +88,10 @@ export default function ChatInterview() {
           messages: currentMessages,
           strategy: { ...strategy, postType },
           topic,
+          tmdbSelections: tmdbSelections.length
+            ? tmdbSelections.map((s) => ({ id: s.id, title: s.title, mediaType: s.mediaType }))
+            : undefined,
+          seed: seed || undefined,
           fileContent: fileContent || undefined,
           imageInfo: imageInfo || undefined,
         }),
@@ -119,6 +124,7 @@ export default function ChatInterview() {
           fileContent: fileContent || undefined,
           imageInfo: imageInfo || undefined,
           tmdbSelections: tmdbSelections.length > 0 ? tmdbSelections : undefined,
+          seed: seed || undefined,
         }),
       });
 

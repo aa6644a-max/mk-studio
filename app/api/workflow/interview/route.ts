@@ -5,13 +5,14 @@ import { referenceText } from "@/lib/prompts/base";
 import { buildInterviewSystem } from "@/lib/prompts/workflow";
 import { getProfile } from "@/lib/google-sheets";
 import { groupOf, buildProfileInjection } from "@/lib/prompts/profile";
+import { formatTmdbDetailsText, type TmdbSelectionRef } from "@/lib/tmdb";
 import type { StrategyCard, ChatMessage } from "@/lib/workflow-store";
 
 export const maxDuration = 120;
 
 export async function POST(req: Request) {
   try {
-    const { messages, strategy, topic, customSystem, fileContent, imageInfo, tmdbTitles } = (await req.json()) as {
+    const { messages, strategy, topic, customSystem, fileContent, imageInfo, tmdbTitles, tmdbSelections, seed } = (await req.json()) as {
       messages: ChatMessage[];
       strategy: StrategyCard;
       topic: string;
@@ -19,7 +20,14 @@ export async function POST(req: Request) {
       fileContent?: string;
       imageInfo?: string;
       tmdbTitles?: string;
+      tmdbSelections?: TmdbSelectionRef[]; // 작품 상세(줄거리·감독·출연) 조회용 — 감상 × 조사 교차 질문
+      seed?: string; // 사용자가 쓴 감상평 — 인터뷰 시드(콜드스타트 제거)
     };
+
+    const seedText = seed?.trim() ?? "";
+    const tmdbDetail = tmdbSelections?.length
+      ? await formatTmdbDetailsText(tmdbSelections).catch(() => "")
+      : "";
 
     let system: string;
     if (customSystem) {
@@ -30,7 +38,7 @@ export async function POST(req: Request) {
         getPostsByType(strategy.postType, 2).catch(() => []),
       ]);
       const refText = referenceText(references, "");
-      system = buildInterviewSystem(strategy, rssText, refText, fileContent, imageInfo);
+      system = buildInterviewSystem(strategy, rssText, refText, fileContent, imageInfo, seedText, tmdbDetail);
       // MK 프로필 주입 — 아는 취향 재질문 회피 + MK 스타일 질문
       const profile = await getProfile(groupOf(strategy.postType)).catch(() => null);
       system += buildProfileInjection(profile);
@@ -39,10 +47,13 @@ export async function POST(req: Request) {
     const client = new Anthropic();
     const encoder = new TextEncoder();
 
-    // 첫 턴: topic + 파일/TMDB 내용 주입
+    // 첫 턴: topic + 파일/TMDB 내용 + 감상평 시드 주입
     let firstUserContent = `포스팅 주제: "${topic}"`;
     if (tmdbTitles) {
       firstUserContent += `\n\n[선택된 작품: ${tmdbTitles}]`;
+    }
+    if (seedText) {
+      firstUserContent += `\n\n[내가 쓴 감상평]\n${seedText.slice(0, 3000)}`;
     }
     if (fileContent) {
       firstUserContent += `\n\n[업로드된 PDF 내용]\n${fileContent.slice(0, 4000)}`;

@@ -268,10 +268,29 @@ export function buildReviewPrompt(
   comment: string,
   reason: string,
   refText: string,
+  seed?: string,
 ): PromptResult {
   const base = getBaseGuideline("review");
   const ref = referencePromptMovie(refText);
   const { posterHtml, stillsPromptText, ticketHtml } = generateMediaPrompts(d, false);
+
+  const seedText = seed?.trim() ?? "";
+  // 감상평이 있으면 = 사용자가 직접 쓴 리뷰 문장. 골격으로 보존하고 AI는 살만 붙임.
+  const seedBlock = seedText
+    ? `        [🚨 내가 직접 쓴 감상평 — 이 글의 골격, 최대한 보존]
+        ${seedText}
+
+        [인터뷰로 보강한 디테일 — 위 감상평 사이사이에 자연스럽게 녹일 재료]
+        ${comment || "(없음)"}
+`
+    : `        [나의 주관적 감상평]
+        ${comment}
+`;
+  const seedDirective = seedText
+    ? `        - 🚨 위 [내가 직접 쓴 감상평]은 글쓴이 본인의 실제 문장입니다. 그 표현·감정·판단을 통째로 다시 쓰지 말고 **핵심 문장과 어휘를 최대한 살려** 본문 골격으로 삼으세요. AI는 도입·전환·작품 정보·디자인과 인터뷰에서 보강한 디테일만 채워 살을 붙입니다.
+        - 감상평이 짧거나 거칠면 그 톤을 유지한 채 인터뷰 디테일로 자연스럽게 확장하세요. 매끄럽게 다듬는다고 글쓴이 목소리를 지우지 마세요.`
+    : `        - 감상평에 담긴 저의 솔직한 감정을 본문에 자연스럽게 녹여내 주세요.`;
+
   const user = `
         영화를 직접 관람한 후 작성하는 상세 리뷰 원고를 작성하세요.
 
@@ -281,9 +300,7 @@ ${detailsBlock(d)}
         [포스팅 계기/관람 이유]
         - ${reason}
 
-        [나의 주관적 감상평]
-        ${comment}
-
+${seedBlock}
         ${ref}
 
         [제공되는 실제 이미지 HTML 코드]
@@ -292,7 +309,7 @@ ${detailsBlock(d)}
 ${stillsPromptText}
 
         [특이사항]
-        - 감상평에 담긴 저의 솔직한 감정을 본문에 자연스럽게 녹여내 주세요.
+${seedDirective}
 
         ${base}
         `;

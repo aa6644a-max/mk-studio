@@ -29,13 +29,14 @@ const TV_TYPES = ["binge"];
 
 export async function POST(req: Request) {
   try {
-    const { messages, strategy, topic, fileContent, imageInfo, tmdbSelections } = (await req.json()) as {
+    const { messages, strategy, topic, fileContent, imageInfo, tmdbSelections, seed } = (await req.json()) as {
       messages: ChatMessage[];
       strategy: StrategyCard;
       topic: string;
       fileContent?: string;
       imageInfo?: string;
       tmdbSelections?: TmdbSelection[];
+      seed?: string; // 사용자 감상평 — review 생성 시 문장 골격 보존
     };
 
     const [rssText, references] = await Promise.all([
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
       if (strategy.postType === "review") {
         const details = await fetchMovieDetailsList(tmdbSelections);
         if (details.length > 0) {
-          const { system, user } = buildReviewPrompt(details[0], conversationText, topic, refText);
+          const { system, user } = buildReviewPrompt(details[0], conversationText, topic, refText, seed);
           systemPrompt = system;
           userPrompt = user;
         } else {

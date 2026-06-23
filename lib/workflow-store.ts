@@ -5,6 +5,7 @@ export type WorkflowStage =
   | "input"
   | "strategy"
   | "tmdb-search"
+  | "seed"
   | "interview"
   | "generating"
   | "result";
@@ -55,6 +56,8 @@ type State = {
   imageCaptions: string[];
   imagePreviewUrls: string[];
   tmdbSelections: TmdbSelection[];
+  /** 사용자가 작품 선택 후 직접 쓴 감상평 — 전략·인터뷰·생성의 시드 (review 등 영화 타입) */
+  seed: string;
 };
 
 type Actions = {
@@ -73,6 +76,7 @@ type Actions = {
   setFileContent: (text: string) => void;
   setImageData: (names: string[], captions: string[], urls: string[]) => void;
   setTmdbSelections: (items: TmdbSelection[]) => void;
+  setSeed: (seed: string) => void;
   reset: () => void;
 };
 
@@ -93,6 +97,7 @@ const INIT: State = {
   imageCaptions: [],
   imagePreviewUrls: [],
   tmdbSelections: [],
+  seed: "",
 };
 
 export const useWorkflowStore = create<State & Actions>((set) => ({
@@ -120,5 +125,6 @@ export const useWorkflowStore = create<State & Actions>((set) => ({
   setImageData: (imageNames, imageCaptions, imagePreviewUrls) =>
     set({ imageNames, imageCaptions, imagePreviewUrls }),
   setTmdbSelections: (tmdbSelections) => set({ tmdbSelections }),
+  setSeed: (seed) => set({ seed }),
   reset: () => set(INIT),
 }));

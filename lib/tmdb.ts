@@ -290,3 +290,25 @@ export async function getTvDetails(id: number): Promise<TvDetails | null> {
     backdropUrls,
   };
 }
+
+export type TmdbSelectionRef = { id: number; title: string; mediaType: "movie" | "tv" };
+
+/**
+ * 선택된 작품들의 TMDB 상세(줄거리·감독·출연·장르)를 프롬프트용 텍스트로 포맷.
+ * 전략 수립·인터뷰 양쪽이 공유 — "내 감상 × AI 조사 교차"의 조사 재료.
+ */
+export async function formatTmdbDetailsText(selections: TmdbSelectionRef[]): Promise<string> {
+  const parts = await Promise.all(
+    selections.map(async (sel) => {
+      if (sel.mediaType === "tv") {
+        const d = await getTvDetails(sel.id).catch(() => null);
+        if (!d) return `- ${sel.title} (상세 조회 실패)`;
+        return `[작품: ${d.title} (${d.originalTitle ?? ""})]\n장르: ${d.genres ?? "?"}\n출연: ${d.cast ?? "?"}\n시즌/화수: ${d.numberOfSeasons ?? "?"}시즌 ${d.numberOfEpisodes ?? "?"}화\n줄거리: ${d.overview ?? ""}`;
+      }
+      const d = await getMovieDetails(sel.id).catch(() => null);
+      if (!d) return `- ${sel.title} (상세 조회 실패)`;
+      return `[작품: ${d.title} (${d.originalTitle ?? ""})]\n장르: ${d.genres ?? "?"}\n감독: ${d.director ?? "?"}\n출연: ${d.actors ?? "?"}\n개봉: ${d.releaseDate ?? "?"}\n줄거리: ${d.overview ?? ""}`;
+    }),
+  );
+  return parts.join("\n\n");
+}

@@ -26,7 +26,7 @@ export default function StrategyCardView() {
     setStarting(true);
 
     // 인터뷰 시작 — AI 첫 질문 스트리밍 (TMDB 선택·전략 수립은 이미 완료)
-    const { tmdbSelections, fileContent, imageNames, imageCaptions } =
+    const { tmdbSelections, fileContent, imageNames, imageCaptions, seed } =
       useWorkflowStore.getState();
     const tmdbTitles = tmdbSelections.length
       ? tmdbSelections.map((s) => `${s.title} (${s.year})`).join(", ")
@@ -51,6 +51,10 @@ export default function StrategyCardView() {
           strategy: { ...strategy, postType },
           topic,
           tmdbTitles,
+          tmdbSelections: tmdbSelections.length
+            ? tmdbSelections.map((s) => ({ id: s.id, title: s.title, mediaType: s.mediaType }))
+            : undefined,
+          seed: seed || undefined,
           fileContent: fileContent || undefined,
           imageInfo: imageInfo || undefined,
         }),

@@ -1,29 +1,12 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { getMovieDetails, getTvDetails } from "@/lib/tmdb";
+import { formatTmdbDetailsText, type TmdbSelectionRef } from "@/lib/tmdb";
 import { getProfile } from "@/lib/google-sheets";
 import { groupOf, buildProfileInjection } from "@/lib/prompts/profile";
 
 export const maxDuration = 60;
 
-type TmdbSel = { id: number; title: string; mediaType: "movie" | "tv" };
-
-/** 선택된 작품들의 TMDB 상세를 조회해 전략 프롬프트용 텍스트로 포맷. */
-async function buildTmdbData(selections: TmdbSel[]): Promise<string> {
-  const parts = await Promise.all(
-    selections.map(async (sel) => {
-      if (sel.mediaType === "tv") {
-        const d = await getTvDetails(sel.id).catch(() => null);
-        if (!d) return `- ${sel.title} (상세 조회 실패)`;
-        return `[작품: ${d.title} (${d.originalTitle ?? ""})]\n장르: ${d.genres ?? "?"}\n출연: ${d.cast ?? "?"}\n시즌/화수: ${d.numberOfSeasons ?? "?"}시즌 ${d.numberOfEpisodes ?? "?"}화\n줄거리: ${d.overview ?? ""}`;
-      }
-      const d = await getMovieDetails(sel.id).catch(() => null);
-      if (!d) return `- ${sel.title} (상세 조회 실패)`;
-      return `[작품: ${d.title} (${d.originalTitle ?? ""})]\n장르: ${d.genres ?? "?"}\n감독: ${d.director ?? "?"}\n출연: ${d.actors ?? "?"}\n개봉: ${d.releaseDate ?? "?"}\n줄거리: ${d.overview ?? ""}`;
-    }),
-  );
-  return parts.join("\n\n");
-}
+type TmdbSel = TmdbSelectionRef;
 
 const STRATEGY_TOOL: Anthropic.Tool = {
   name: "create_strategy",
@@ -118,19 +101,25 @@ export async function POST(req: Request) {
       pdfText,
       imageInfo,
       tmdbSelections,
+      seed,
     } = (await req.json()) as {
       topic?: string;
       selectedType?: string;
       pdfText?: string;
       imageInfo?: string;
       tmdbSelections?: TmdbSel[]; // 영화 타입: 선택된 작품 (서버에서 TMDB 상세 조회)
+      seed?: string; // 사용자가 직접 쓴 감상평 — hook/watchPoints/differentiator 추출 근거
     };
 
-    const tmdbData = tmdbSelections?.length ? await buildTmdbData(tmdbSelections).catch(() => "") : "";
+    const tmdbData = tmdbSelections?.length ? await formatTmdbDetailsText(tmdbSelections).catch(() => "") : "";
+    const seedText = seed?.trim() ?? "";
 
     let userContent = "";
     if (tmdbData) {
-      userContent = `사용자가 선택한 포스팅 타입: ${selectedType ?? "review"}\n포스팅 주제/테마: "${topic ?? ""}"\n\n[작품 데이터]\n${tmdbData.slice(0, 4000)}\n\n🚨 필수: 이것은 영화 타입이므로 create_strategy 호출 시 hook, watchPoints(2~3개 배열), differentiator 세 필드를 반드시 모두 포함하라. 위 [작품 데이터]의 실제 줄거리·장르·인물에서만 도출되는 구체적 내용으로 채우고, 어떤 영화에나 해당될 일반론(예: "감동적 스토리", "뛰어난 연출")은 절대 금지.`;
+      const seedBlock = seedText
+        ? `\n\n[사용자의 실제 감상평 — 전략의 핵심 근거]\n${seedText.slice(0, 3000)}\n\n🎯 감상평이 제공되었다. hook·watchPoints·differentiator는 AI 상상이 아니라 위 [사용자의 실제 감상평]에서 직접 도출하라. 감상평이 짚은 지점·감정·관점을 전략 각도로 승격시키고, 감상평에 없는 일반론으로 채우지 마라. keywords·target만 [작품 데이터]에서 뽑는다.`
+        : "";
+      userContent = `사용자가 선택한 포스팅 타입: ${selectedType ?? "review"}\n포스팅 주제/테마: "${topic ?? ""}"\n\n[작품 데이터]\n${tmdbData.slice(0, 4000)}${seedBlock}\n\n🚨 필수: 이것은 영화 타입이므로 create_strategy 호출 시 hook, watchPoints(2~3개 배열), differentiator 세 필드를 반드시 모두 포함하라. ${seedText ? "감상평 기반으로" : "위 [작품 데이터]의 실제 줄거리·장르·인물에서만"} 도출되는 구체적 내용으로 채우고, 어떤 영화에나 해당될 일반론(예: "감동적 스토리", "뛰어난 연출")은 절대 금지.`;
     } else if (pdfText) {
       userContent = `사용자가 선택한 포스팅 타입: ${selectedType ?? "local"}\n\nPDF 내용 (주제 자동 추출 필요):\n${pdfText.slice(0, 3000)}`;
     } else if (imageInfo) {
