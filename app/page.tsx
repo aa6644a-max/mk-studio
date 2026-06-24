@@ -1,91 +1,74 @@
 import Link from "next/link";
 import Header from "@/components/header";
-import StatCard from "@/components/dashboard/stat-card";
 import { getRssLatestPosts, type BlogPost } from "@/lib/rss-client";
 import { getBoxOffice } from "@/lib/kobis";
 import { posterColor } from "@/lib/colors";
 
 export const dynamic = "force-dynamic";
 
+const QUICK_LINKS = [
+  { href: "/write", label: "리뷰·포스팅 작성", desc: "영화·로컬·PDF 글쓰기", icon: "✏️" },
+  { href: "/images", label: "이미지 작업실", desc: "썸네일·갤러리", icon: "🖼️" },
+  { href: "/marketing", label: "마케팅 전략", desc: "키워드·트렌드 분석", icon: "📣" },
+  { href: "/partnerships/class101", label: "클래스101 파트너스", desc: "제휴 콘텐츠", icon: "📦" },
+];
+
 export default async function HomePage() {
   const [rssPosts, boxoffice] = await Promise.all([
-    getRssLatestPosts("shock552", 5).catch(() => [] as BlogPost[]),
+    getRssLatestPosts("shock552", 6).catch(() => [] as BlogPost[]),
     getBoxOffice(5).catch(() => []),
   ]);
 
-  const today = new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    weekday: "long",
-  }).format(new Date());
-
-  const ym = new Date().toISOString().slice(0, 7);
-  const thisMonthCount = rssPosts.filter((p) => p.pubDate.startsWith(ym)).length;
-
   return (
     <>
-      <Header
-        title="홈"
-        actions={
-          <Link
-            href="/write"
-            className="rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-semibold text-white hover:opacity-90"
-          >
-            새 포스팅
-          </Link>
-        }
-      />
-      <div className="space-y-6 p-6">
-        {/* 인사 */}
-        <div>
-          <h2 className="text-2xl font-extrabold text-[var(--text-primary)]">
-            안녕하세요, 평론가 MK 님
-          </h2>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">{today}</p>
-        </div>
+      <Header title="홈" />
 
-        {/* 통계 */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <StatCard label="RSS 최신 글" value={rssPosts.length} suffix="편" />
-          <StatCard label="이번 달 포스팅" value={thisMonthCount} suffix="편" />
+      {/* 히어로 */}
+      <div className="border-b border-[var(--panel-border)] bg-gradient-to-br from-[var(--accent)]/10 to-transparent px-6 py-12">
+        <div className="mx-auto max-w-3xl text-center">
+          <div className="text-xs font-bold tracking-[0.3em] text-[var(--accent)]">
+            MK STUDIO
+          </div>
+          <h1 className="mt-3 text-3xl font-extrabold text-[var(--text-primary)] sm:text-4xl">
+            AI 블로그 포스팅 스튜디오
+          </h1>
+          <p className="mt-3 text-sm text-[var(--text-secondary)] sm:text-base">
+            주제만 던지면 전략 수립 → 인터뷰 → 완성된 포스팅까지. MK의 문체 그대로.
+          </p>
+          <div className="mt-7 flex justify-center">
+            <Link
+              href="/write"
+              className="rounded-xl bg-[var(--accent)] px-7 py-3.5 text-base font-bold text-white shadow-lg shadow-[var(--accent)]/20 transition hover:opacity-90"
+            >
+              새 포스팅 쓰기 →
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-8 p-6">
+        {/* 빠른 이동 */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {QUICK_LINKS.map((q) => (
+            <Link
+              key={q.href}
+              href={q.href}
+              className="panel flex flex-col gap-1 p-4 transition-colors hover:border-[var(--accent)]"
+            >
+              <span className="text-2xl">{q.icon}</span>
+              <span className="mt-1 text-sm font-bold text-[var(--text-primary)]">
+                {q.label}
+              </span>
+              <span className="text-xs text-[var(--text-secondary)]">{q.desc}</span>
+            </Link>
+          ))}
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* 박스오피스 */}
-          <section className="panel p-5">
-            <h3 className="mb-3 font-bold text-[var(--text-primary)]">
-              박스오피스 TOP 5{" "}
-              <span className="text-xs font-normal text-[var(--text-secondary)]">
-                (전일 기준)
-              </span>
-            </h3>
-            <ol className="space-y-2">
-              {boxoffice.length === 0 && (
-                <li className="text-sm text-[var(--text-secondary)]">
-                  데이터 없음
-                </li>
-              )}
-              {boxoffice.map((m) => (
-                <li key={m.rank} className="flex items-center gap-3 text-sm">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[var(--accent)] text-xs font-bold text-white">
-                    {m.rank}
-                  </span>
-                  <span className="flex-1 truncate font-medium">
-                    {m.movieNm}
-                  </span>
-                  <span className="text-xs text-[var(--text-secondary)]">
-                    누적 {Number(m.audiAcc).toLocaleString()}명
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </section>
-
           {/* 최근 블로그 포스팅 (RSS) */}
           <section>
             <h3 className="mb-3 font-bold text-[var(--text-primary)]">
-              내 블로그 최근 포스팅
+              내 블로그 최근 글
               <span className="ml-2 text-xs font-normal text-[var(--text-secondary)]">
                 Naver 기준
               </span>
@@ -102,7 +85,7 @@ export default async function HomePage() {
                       href={p.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="panel flex items-center gap-3 p-3 hover:border-[var(--accent)] transition-colors"
+                      className="panel flex items-center gap-3 p-3 transition-colors hover:border-[var(--accent)]"
                     >
                       {p.thumbnail ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -135,6 +118,38 @@ export default async function HomePage() {
                 ))}
               </ul>
             )}
+          </section>
+
+          {/* 박스오피스 */}
+          <section>
+            <h3 className="mb-3 font-bold text-[var(--text-primary)]">
+              박스오피스 TOP 5{" "}
+              <span className="text-xs font-normal text-[var(--text-secondary)]">
+                (전일 기준)
+              </span>
+            </h3>
+            <div className="panel p-5">
+              <ol className="space-y-2">
+                {boxoffice.length === 0 && (
+                  <li className="text-sm text-[var(--text-secondary)]">
+                    데이터 없음
+                  </li>
+                )}
+                {boxoffice.map((m) => (
+                  <li key={m.rank} className="flex items-center gap-3 text-sm">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[var(--accent)] text-xs font-bold text-white">
+                      {m.rank}
+                    </span>
+                    <span className="flex-1 truncate font-medium">
+                      {m.movieNm}
+                    </span>
+                    <span className="text-xs text-[var(--text-secondary)]">
+                      누적 {Number(m.audiAcc).toLocaleString()}명
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
           </section>
         </div>
       </div>

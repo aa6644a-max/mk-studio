@@ -47,6 +47,19 @@ export function getCommonConstraints(season: string): string {
         `;
 }
 
+/**
+ * [공통 해시태그 규칙] — 모든 포스팅 동일 형식 강제.
+ * 본문 중간 # 금지, 맨 마지막 줄에만 #키워드 형태로 5~10개.
+ */
+export function getHashtagRule(): string {
+  return `
+        [🏷️ 해시태그 — 모든 포스팅 동일 형식 절대 준수]
+        - 본문 중간에는 절대 해시태그(#)를 넣지 마세요.
+        - 글 맨 마지막(SEO 제목 주석 바로 위)에 <p> 태그 하나로 묶어 해시태그를 5~10개 삽입하세요.
+        - 🚨 반드시 각 단어 앞에 #을 붙이고 공백으로 구분하세요. 예: <p>#키워드1 #키워드2 #키워드3</p>
+        - 쉼표 나열(키워드1, 키워드2)은 금지. 반드시 # 형식으로만 작성하세요.`;
+}
+
 export type PromptResult = { system: string; user: string };
 
 function stripHtml(html: string): string {

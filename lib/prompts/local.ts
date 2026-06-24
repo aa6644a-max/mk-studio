@@ -3,7 +3,7 @@
  * 교육/채용/공모전/지원사업 공고문 기반. 감상 도입 없이 직접 선언 구조.
  */
 import type { PostDraft } from "@/lib/types";
-import { nowParts, referenceText, type PromptResult } from "./base";
+import { getHashtagRule, nowParts, referenceText, type PromptResult } from "./base";
 
 const SYSTEM = "당신은 네이버 인플루언서 'MK'입니다. 아래 공고 데이터와 디자인 시스템을 100% 준수하여 대구 로컬 소식 포스팅 HTML을 작성하세요.";
 
@@ -88,13 +88,7 @@ function designSystem(brandColor: string): string {
   </td></tr>
 </table>
 
-━━ 9. MK LINK 시그니처 (항상 마지막에) ━━
-<table width="100%" border="0" cellpadding="20" cellspacing="0" bgcolor="#f4f6f8" style="border-left:4px solid #26C6A4; margin-top:40px;">
-  <tr><td>
-    <p style="margin:0 0 6px 0; font-size:14px; color:#333; font-weight:bold;"><b>🔗 MK LINK</b></p>
-    <p style="margin:0; font-size:13px; color:#555; line-height:1.8;">대구 로컬 소식·행사·공고를 전합니다.<br>공유할 소식 있으면 댓글로 알려주세요, MK LINK가 함께 전해드립니다.</p>
-  </td></tr>
-</table>
+(※ MK LINK 협업 시그니처는 시스템이 글 하단에 자동 삽입하므로 직접 작성하지 마세요.)
 `;
 }
 
@@ -163,7 +157,7 @@ PDF 내용을 분석해 아래 순서로 구성하세요.
   8. 📌 시험/결과 안내 박스 (해당 시)
   9. 📮 신청 방법 (섹션 헤더 + 1→2→3 플로우 + 링크)
   10. 문의 정보 박스
-  11. MK LINK 시그니처
+  (※ MK LINK 협업 시그니처는 시스템이 자동 삽입 — 직접 작성 금지)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [원본 공고 데이터 (PDF)]
@@ -177,6 +171,7 @@ ${userContext}
 
 ${designSystem(brandColor)}
 ${constraints()}
+${getHashtagRule()}
 ${refSection}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

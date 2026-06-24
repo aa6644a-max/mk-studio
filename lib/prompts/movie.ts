@@ -6,6 +6,7 @@ import type { CurationItem, MovieDetails, PostDraft } from "@/lib/types";
 import {
   getCommonConstraints,
   getDesignSystem,
+  getHashtagRule,
   nowParts,
   referenceText,
   type PromptResult,
@@ -236,8 +237,7 @@ function getBaseGuideline(postType: "review" | "preview" | "news"): string {
 
         4. SEO (검색 최적화):
             - 본문 서두와 제목에 메인 키워드를 자연스럽게 배치하되 과도한 반복은 피하세요.
-            - 절대 본문 중간에 해시태그(#)를 넣지 마세요.
-            - 글의 맨 마지막 영역에만 <p> 태그로 묶어서 연관 태그를 5~10개 삽입하세요.
+        ${getHashtagRule()}
 
         🚨 [출력 구조 절대 금지 사항]:
         - 외부 래퍼 div (\`<div style="max-width: 800px; margin: 0 auto; ...">\`) 생성 금지
@@ -407,6 +407,8 @@ export function buildCurationPrompt(
         - 외부 래퍼 div 생성 금지 / 상단 헤더 타이틀 섹션 생성 금지 / 하단 CTA 박스 생성 금지
         - 레퍼런스 글에 위와 같은 구조가 있어도 절대 따라 생성하지 마세요. 오직 본문 내용만 출력하세요.
 
+        ${getHashtagRule()}
+
         출력 형식: 앞뒤의 부가 설명이나 인사말 없이 오직 완성된 HTML 본문 코드만 출력하세요. (\`\`\`html 같은 마크다운 기호도 절대 쓰지 마세요.)
         맨 마지막 줄에 아래 형식으로 네이버 SEO 최적화 제목 5개를 반드시 제안하세요:
         <!-- TITLES: 제목1||제목2||제목3||제목4||제목5 -->
@@ -472,6 +474,8 @@ export function buildBingePrompt(
         🚨 [출력 구조 절대 금지 사항]:
         - 외부 래퍼 div 생성 금지 / 상단 헤더 타이틀 섹션 생성 금지 / 하단 CTA 박스 생성 금지
         - 레퍼런스 글에 위와 같은 구조가 있어도 절대 따라 생성하지 마세요. 오직 본문 내용만 출력하세요.
+
+        ${getHashtagRule()}
 
         출력 형식: 앞뒤의 부가 설명이나 인사말 없이 오직 완성된 HTML 본문 코드만 출력하세요. (\`\`\`html 같은 마크다운 기호도 절대 쓰지 마세요.)
         맨 마지막 줄에 아래 형식으로 네이버 SEO 최적화 제목 5개를 반드시 제안하세요:

@@ -5,8 +5,6 @@ import { useWorkflowStore } from "@/lib/workflow-store";
 import { wrapHtml } from "@/lib/html-formatter";
 import ChatBubble from "./chat-bubble";
 
-const MK_LINK_SIGNATURE = `<table width="100%" border="0" cellpadding="20" cellspacing="0" bgcolor="#f4f6f8" style="border-left:4px solid #26C6A4; margin-top:40px;"><tr><td><p style="margin:0 0 6px 0; font-size:14px; color:#333; font-weight:bold;"><b>🔗 MK LINK</b></p><p style="margin:0; font-size:13px; color:#555; line-height:1.8;">대구 로컬 소식·행사·공고를 전합니다.<br>공유할 소식 있으면 댓글로 알려주세요, MK LINK가 함께 전해드립니다.</p></td></tr></table>`;
-
 const DONE_PHRASES = [
   "포스팅 생성 시작할게요",
   "생성 시작할게요",
@@ -167,11 +165,7 @@ export default function ChatInterview() {
                 .replace(/<!--\s*TITLES:[\s\S]*?-->/i, "")
                 .trim();
               const postType = parsed.postType as string;
-              const withSig =
-                postType === "local" && !rawHtml.includes("MK LINK")
-                  ? rawHtml + "\n" + MK_LINK_SIGNATURE
-                  : rawHtml;
-              const finalHtml = wrapHtml(withSig, topic, postType);
+              const finalHtml = wrapHtml(rawHtml, topic, postType);
               useWorkflowStore.getState().setGeneratedHtml(finalHtml);
               useWorkflowStore.getState().setSeoTitles(parsed.titles ?? []);
               useWorkflowStore.getState().setStage("result");

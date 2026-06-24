@@ -6,6 +6,7 @@ import type { PostDraft } from "@/lib/types";
 import {
   getCommonConstraints,
   getDesignSystem,
+  getHashtagRule,
   nowParts,
   referenceText,
   type PromptResult,
@@ -37,8 +38,7 @@ function baseGuideline(): string {
 
         3. SEO (검색 최적화):
             - 본문 서두와 제목에 메인 키워드를 자연스럽게 배치하세요.
-            - 절대 본문 중간에 해시태그(#)를 넣지 마세요.
-            - 글의 맨 마지막 영역에만 <p> 태그로 묶어서 연관 태그(장소, 주제, 관련 키워드 등)를 5~10개 삽입하세요.
+        ${getHashtagRule()}
         `;
 }
 
@@ -78,7 +78,7 @@ function pdfGuideline(brandColor = "#1f3a5f"): string {
 
         3. SEO:
             - 본문 서두와 제목에 메인 키워드를 자연스럽게 배치하세요.
-            - 본문 중간 해시태그(#) 금지. 맨 마지막에만 <p>로 묶어 연관 태그 5~10개.
+        ${getHashtagRule()}
         `;
 }
 

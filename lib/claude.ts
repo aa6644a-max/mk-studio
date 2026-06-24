@@ -60,18 +60,9 @@ export async function generatePost(draft: PostDraft): Promise<GenerateResult> {
 
   const { html: rawHtml, titles } = splitTitles(stripFence(text.trim()));
   const wrappedTitle = draft.title || draft.movieTitle || "포스팅";
-  const ensured = ensureLocalSignature(rawHtml, draft.postType);
-  const html = wrapHtml(ensured, wrappedTitle, draft.postType);
+  // MK LINK 협업 시그니처는 wrapHtml이 전 타입에 자동 삽입.
+  const html = wrapHtml(rawHtml, wrappedTitle, draft.postType);
   return { html, titles };
-}
-
-const MK_LINK_SIGNATURE = `<table width="100%" border="0" cellpadding="20" cellspacing="0" bgcolor="#f4f6f8" style="border-left:4px solid #26C6A4; margin-top:40px;"><tr><td><p style="margin:0 0 6px 0; font-size:14px; color:#333; font-weight:bold;"><b>🔗 MK LINK</b></p><p style="margin:0; font-size:13px; color:#555; line-height:1.8;">대구 로컬 소식·행사·공고를 전합니다.<br>공유할 소식 있으면 댓글로 알려주세요, MK LINK가 함께 전해드립니다.</p></td></tr></table>`;
-
-/** local 타입에서 AI가 시그니처를 빠뜨렸을 때 코드로 보장. */
-function ensureLocalSignature(html: string, postType: string): string {
-  if (postType !== "local") return html;
-  if (html.includes("MK LINK")) return html;
-  return html + "\n" + MK_LINK_SIGNATURE;
 }
 
 /** 코드펜스 제거. */

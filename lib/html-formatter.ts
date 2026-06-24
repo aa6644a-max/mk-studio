@@ -21,12 +21,15 @@ export function wrapHtml(content: string, title: string, postType: string): stri
         ${content}
     </div>
 
-    <div style="background-color: #f4f6f8; padding: 25px; border-radius: 12px; text-align: center; margin-top: 50px;">
-        <p style="margin: 0; font-size: 15px; color: #333; font-weight: bold;">🔗 MK LINK의 다른 이야기가 궁금하다면?</p>
-        <p style="margin: 10px 0 0 0; font-size: 13px; color: #0066cc; text-decoration: underline; cursor: pointer;">[이곳에 이전 포스팅 링크를 삽입하세요]</p>
-    </div>
+    ${MK_LINK_SIGNATURE}
 </div>`;
 }
+
+/** 모든 포스팅 하단에 들어가는 MK LINK 협업/협찬 시그니처. */
+export const MK_LINK_SIGNATURE = `<table width="100%" border="0" cellpadding="20" cellspacing="0" bgcolor="#f4f6f8" style="border-left:4px solid #26C6A4; margin-top:48px;"><tr><td style="text-align:left;">
+        <p style="margin:0 0 8px 0; font-size:15px; color:#222; font-weight:bold;"><b>🔗 MK LINK | 협업 문의</b></p>
+        <p style="margin:0; font-size:13px; color:#555; line-height:1.9;">브랜드 협업·제품 협찬·콘텐츠 제휴 환영합니다.<br>제안주실 내용이 있다면 댓글 또는 메일로 편하게 연락주세요.</p>
+    </td></tr></table>`;
 
 export function buildPreviewDoc(html: string): string {
   return `<!DOCTYPE html>

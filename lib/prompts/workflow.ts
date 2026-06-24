@@ -9,6 +9,7 @@ import type { PostType } from "@/lib/types";
 import {
   getDesignSystem,
   getCommonConstraints,
+  getHashtagRule,
   nowParts,
   referenceText,
 } from "./base";
@@ -211,6 +212,7 @@ ${refText ? `━━━━━━━━━━━━━━━━━━━━━━�
 - 전체를 <div style="font-family:'NanumSquare','나눔스퀘어',sans-serif; color:#333; line-height:1.8;"> 로 감싸기
 - 순수 HTML 본문 코드만 출력
 - 🚨 본문 텍스트 분량: 순수 읽기 텍스트 기준 2,500~3,000자 (HTML 태그 제외). 이 이상 쓰지 말 것.
+${getHashtagRule()}
 - 맨 마지막 줄:
 <!-- TITLES: 제목1||제목2||제목3||제목4||제목5 -->
 (SEO 키워드 "${strategy.keywords[0] ?? ""}" 포함, 30자 이내, 클릭 유도)`;
