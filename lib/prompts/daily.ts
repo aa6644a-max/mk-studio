@@ -10,6 +10,7 @@ import {
   referenceText,
   type PromptResult,
 } from "./base";
+import { getInfoBlocks } from "./info-blocks";
 
 const SYSTEM = "당신은 네이버 인플루언서 'MK'입니다. 아래 데이터와 지침을 100% 준수하여 네이버 블로그 HTML 본문을 작성하세요.";
 
@@ -55,15 +56,41 @@ function referencePromptDaily(refText: string): string {
         `;
 }
 
+/** PDF 요약(정보성) 전용 작성 지침 — 영화용 디자인 대신 범용 정보 블록 사용. */
+function pdfGuideline(brandColor = "#1f3a5f"): string {
+  const { year, month, season } = nowParts();
+  const common = getCommonConstraints(season);
+  return `
+        [작성 지침]
+        현재 시점은 ${year}년 ${month}월(${season})입니다.
+
+        ${getInfoBlocks(brandColor)}
+
+        ${common}
+
+        1. 어조 및 페르소나:
+            - 정중하고 친근한 경어체("~습니다", "~해요", "~죠")를 자연스럽게 섞어 쓰세요.
+            - 확정적 표현 대신 조심스러운 분석("~이지 않을까 싶어요", "~라고 생각됩니다")으로 공감을 유도하세요.
+            - 전문 용어는 정보 전달자로서 친절하게 풀어서 설명하세요.
+
+        2. 분량 및 가독성:
+            - 공백 제외 1,500 ~ 2,200자 내외. 줄글로 길게 늘어놓지 말고 정보 블록으로 끊어 밀도를 높이세요.
+
+        3. SEO:
+            - 본문 서두와 제목에 메인 키워드를 자연스럽게 배치하세요.
+            - 본문 중간 해시태그(#) 금지. 맨 마지막에만 <p>로 묶어 연관 태그 5~10개.
+        `;
+}
+
 export function buildPdfSummaryPrompt(
   pdfText: string,
   userContext: string,
   refText: string,
 ): PromptResult {
-  const base = baseGuideline();
+  const base = pdfGuideline();
   const ref = referencePromptDaily(refText);
   const user = `
-        아래 제공된 [원본 데이터(PDF)]를 바탕으로 포스팅을 작성하세요.
+        아래 제공된 [원본 데이터(PDF)]를 바탕으로 '정보성 요약 포스팅'을 작성하세요.
 
         [🚨 도입부 작성 공식: 무조건 준수]
         1. "최근 [주제/상황]이 제 호기심을 자극했습니다."로 시작하세요.
@@ -72,11 +99,23 @@ export function buildPdfSummaryPrompt(
         4. 절대 "안녕하세요", "반갑습니다", "MK입니다" 같은 상투적인 인사는 하지 마세요.
 
         [🚨 초강력 지침: 노트북LM 모드]
-        - 외부 검색을 차단하고 오직 아래 제공된 [원본 데이터(PDF)]의 내용만 사용하세요.
-        - 본론 구성: 소제목(H2, H3)은 딱 3개만 사용하세요.
+        - 외부 검색을 차단하고 오직 아래 제공된 [원본 데이터(PDF)]의 내용만 사용하세요. 없는 사실을 지어내지 마세요.
+
+        [🚨 본론 구성 — 정보 시각화가 핵심]
+        이 글은 정보 전달이 목적입니다. 줄글만 길게 쓰면 실패입니다. 아래 순서로 구성하세요.
+        1. PDF 내용을 2~4개의 의미 단위(주제)로 나누고, 각 단위를 [섹션 헤더(A)]로 엽니다. (개수는 내용량에 맞게 유연하게)
+        2. 각 섹션에서 정보 성격에 맞는 블록을 반드시 선택해 사용하세요:
+           - 수치·날짜·금액·조건·제원 등 항목형 정보 → [2열 정보 테이블(B)]로 정리 (절대 줄글로 나열 금지)
+           - 꼭 기억할 핵심 → [핵심 요약 콜아웃(C)]
+           - 놓치면 안 되는 조건·예외·주의 → [주의 박스(D)]
+           - 방법·절차·순서 → [단계 플로우(E)]
+           - 선택지·장단점 비교 → [비교 카드(F)]
+           - 핵심 정의·문장 강조 → [강조 인용(G)]
+        3. 블록 사이사이를 2~3문장의 짧은 설명 단락으로 연결하세요. (한 단락 4문장 이상 금지)
+        4. 최소 3종류 이상의 서로 다른 블록을 활용해 시각적 단조로움을 피하세요.
 
         [🖼️ 이미지 배치 가이드]
-        - 본문 흐름에 맞게 최소 5곳에 아래 코드를 삽입하세요:
+        - 텍스트만으로 단조로운 구간 2~3곳에 아래 코드를 삽입하세요 (표·박스가 시각 요소를 대신하므로 남발 금지):
           <p style="text-align: center; color: #888; font-size: 14px; background: #eee; padding: 10px;">{{사진: 해당 문맥에 어울리는 이미지 설명}}</p>
 
         [원본 데이터 (PDF 추출 텍스트)]
