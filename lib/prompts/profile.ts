@@ -61,32 +61,51 @@ export function buildProfileMergeUser(
   existing: MkProfile | null,
   messages: ChatMessage[],
   topic: string,
+  seed = "",
 ): string {
   const prev = existing?.profileText?.trim()
     ? `${existing.profileText}\n\n[기존 대표 표현]\n${(existing.quotes ?? []).join("\n")}`
     : "(기존 프로필 없음 — 이번 인터뷰로 처음 작성)";
+  const seedBlock = seed.trim()
+    ? `\n\n[이번에 직접 쓴 감상평 — MK의 날것 표현·취향이 가장 진하게 드러나는 1차 소스]\n${seed.trim()}`
+    : "";
   return `[기존 프로필]
 ${prev}
 
 [이번 포스팅 주제]
-${topic}
+${topic}${seedBlock}
 
 [이번 인터뷰 대화]
 ${transcribe(messages)}
 
-위를 종합해 update_profile 함수를 호출하세요.`;
+위를 종합해 update_profile 함수를 호출하세요. 감상평이 있으면 그 말투·취향을 우선 반영하세요.`;
 }
 
-/** 프로필을 프롬프트에 주입할 블록. 프로필 없으면 빈 문자열. */
-export function buildProfileInjection(profile: MkProfile | null): string {
+/**
+ * 프로필을 프롬프트에 주입할 블록. 프로필 없으면 빈 문자열.
+ * usage별로 프로필을 '어떻게 쓸지' 지시가 다름:
+ * - interview: 아는 취향은 재질문 금지, 전제로 더 깊은 질문
+ * - generate/strategy: 이 사람답게 문체·관점 반영
+ */
+export function buildProfileInjection(
+  profile: MkProfile | null,
+  usage: "interview" | "generate" | "strategy" = "generate",
+): string {
   if (!profile || !profile.profileText.trim()) return "";
   const quotes = (profile.quotes ?? []).length
     ? `\n[MK 말투 표본 — 문체 참고]\n${profile.quotes.map((q) => `"${q}"`).join("\n")}`
     : "";
+  const directive =
+    usage === "interview"
+      ? `\n\n[이 프로필을 질문 전략에 활용]
+- 위 프로필로 이미 아는 취향·평가 기준·관점은 다시 묻지 마세요 (재질문 금지).
+- 아는 것을 전제로 더 깊거나 새로운 지점을 물으세요. (예: 선호 감독을 알면 "이번엔 그 감독 전작과 비교해 어땠나요?")
+- 프로필과 이번 감상이 어긋나는 지점이 보이면 그것을 파고드세요.`
+      : "";
   return `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━
 [🧠 MK 프로필 — 과거 인터뷰 누적, 이 사람답게 반영]
 ━━━━━━━━━━━━━━━━━━━━━━━━━
-${profile.profileText}${quotes}`;
+${profile.profileText}${quotes}${directive}`;
 }
 
 export const PROFILE_MAX_QUOTES = MAX_QUOTES;

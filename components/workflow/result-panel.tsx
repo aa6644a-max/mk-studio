@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useWorkflowStore } from "@/lib/workflow-store";
 
 export default function ResultPanel() {
-  const { generatedHtml, seoTitles, topic, postType, messages, reset } =
+  const { generatedHtml, seoTitles, topic, postType, messages, seed, reset } =
     useWorkflowStore();
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -39,7 +39,7 @@ export default function ResultPanel() {
       fetch("/api/workflow/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ postType, messages, topic }),
+        body: JSON.stringify({ postType, messages, topic, seed: seed || undefined }),
       }).catch(() => {});
     } catch (e) {
       setSavedMsg((e as Error).message);

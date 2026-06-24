@@ -56,12 +56,13 @@ export async function POST(req: Request) {
       group?: ProfileGroup;
       messages?: ChatMessage[];
       topic?: string;
+      seed?: string;
       clear?: boolean;
       set?: boolean;
       profileText?: string;
       quotes?: string[];
     };
-    const { postType, messages, topic, clear, set } = body;
+    const { postType, messages, topic, seed, clear, set } = body;
 
     // group 직접 지정 우선, 없으면 postType에서 도출
     const resolveGroup = (): ProfileGroup =>
@@ -82,9 +83,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, cleared: g });
     }
 
-    // 사용자 답변이 없으면 누적할 게 없음
+    // 사용자 답변(인터뷰) 또는 감상평(seed)이 있어야 누적할 게 있음
+    const seedText = seed?.trim() ?? "";
     const hasUserTurn = (messages ?? []).some((m) => m.role === "user" && m.content?.trim());
-    if (!hasUserTurn) {
+    if (!hasUserTurn && !seedText) {
       return NextResponse.json({ skipped: true, reason: "no user interview content" });
     }
 
@@ -98,7 +100,7 @@ export async function POST(req: Request) {
       system: buildProfileMergeSystem(group),
       tools: [MERGE_TOOL],
       tool_choice: { type: "tool", name: "update_profile" },
-      messages: [{ role: "user", content: buildProfileMergeUser(existing, messages ?? [], topic ?? "") }],
+      messages: [{ role: "user", content: buildProfileMergeUser(existing, messages ?? [], topic ?? "", seedText) }],
     });
 
     const toolUse = res.content.find((b) => b.type === "tool_use");

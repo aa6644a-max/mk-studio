@@ -39,9 +39,9 @@ export async function POST(req: Request) {
       ]);
       const refText = referenceText(references, "");
       system = buildInterviewSystem(strategy, rssText, refText, fileContent, imageInfo, seedText, tmdbDetail);
-      // MK 프로필 주입 — 아는 취향 재질문 회피 + MK 스타일 질문
+      // MK 프로필 주입 — 아는 취향 재질문 회피 + 더 깊은 질문 (질문 전략에 활용)
       const profile = await getProfile(groupOf(strategy.postType)).catch(() => null);
-      system += buildProfileInjection(profile);
+      system += buildProfileInjection(profile, "interview");
     }
 
     const client = new Anthropic();
