@@ -76,8 +76,9 @@ export default function StrategyCardView() {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
+        justifyContent: "flex-start",
         height: "100%",
+        overflowY: "auto",
         padding: "24px",
       }}
     >

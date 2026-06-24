@@ -283,7 +283,11 @@ export default function ChatInterview() {
           <textarea
             ref={inputRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              e.target.style.height = "auto";
+              e.target.style.height = Math.min(e.target.scrollHeight, 180) + "px";
+            }}
             onKeyDown={handleKeyDown}
             placeholder="답변을 입력하세요… (Enter로 전송)"
             disabled={sending || isStreaming}
@@ -297,8 +301,7 @@ export default function ChatInterview() {
               fontFamily: "inherit",
               color: "#171719",
               resize: "none",
-              maxHeight: "120px",
-              overflowY: "auto",
+              overflowY: "hidden",
             }}
           />
           <button

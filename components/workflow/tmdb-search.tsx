@@ -14,16 +14,15 @@ export default function TmdbSearchView() {
   const isMulti = !SINGLE_TYPES.includes(postType);
   const isTv = TV_TYPES.includes(postType);
 
-  const [query, setQuery] = useState(topic ?? "");
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState<MovieResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<TmdbSelection[]>([]);
   const [starting, setStarting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // 첫 진입 시 자동 검색
   useEffect(() => {
-    if (query) doSearch(query);
+    inputRef.current?.focus();
   }, []);
 
   async function doSearch(q: string) {
