@@ -37,8 +37,11 @@ export default function TopicInput() {
 
   const {
     setTopic, setStrategy, setStage, setError,
-    setSelectedType, setPostType, setFileContent, setImageData,
+    setSelectedType, setPostType, setFileContent, setImageData, setPdfMode,
   } = useWorkflowStore();
+
+  // PDF 작성 방식 (pdf 타입 전용) — 서사형 줄글 / 정보형 표·박스
+  const [pdfModeLocal, setPdfModeLocal] = useState<"narrative" | "info">("narrative");
 
   const isFileType = FILE_TYPES.includes(selectedType);
   const isPhotoType = selectedType === "photo";
@@ -112,6 +115,9 @@ export default function TopicInput() {
 
   async function handleSubmit() {
     if (!canSubmit()) return;
+
+    // PDF 작성 방식 저장 (생성 단계에서 서사형/정보형 분기)
+    if (selectedType === "pdf") setPdfMode(pdfModeLocal);
 
     // 영화 타입: 전략 수립 전에 TMDB 작품 검색부터 (검색→전략 순서)
     if (MOVIE_TYPES.includes(selectedType)) {
@@ -216,6 +222,40 @@ export default function TopicInput() {
       </div>
 
       <div style={{ width: "100%", maxWidth: "600px", display: "flex", flexDirection: "column", gap: "12px" }}>
+
+        {/* PDF 작성 방식 토글 (pdf 타입 전용) */}
+        {selectedType === "pdf" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <span style={{ fontSize: "12px", color: "#5a5c63", fontWeight: 600 }}>작성 방식</span>
+            <div style={{ display: "flex", gap: "8px" }}>
+              {([
+                { mode: "narrative" as const, label: "📝 서사형", desc: "줄글 흐름 · 프리뷰·뉴스·해설" },
+                { mode: "info" as const, label: "📊 정보형", desc: "표·박스 · 공고·일정·제원" },
+              ]).map(({ mode, label, desc }) => {
+                const active = pdfModeLocal === mode;
+                return (
+                  <button
+                    key={mode}
+                    onClick={() => setPdfModeLocal(mode)}
+                    style={{
+                      flex: 1,
+                      padding: "10px 12px",
+                      borderRadius: "12px",
+                      border: active ? "2px solid #0066FF" : "1.5px solid rgba(112,115,124,0.2)",
+                      background: active ? "#EBF2FF" : "#fff",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    <div style={{ fontSize: "13px", fontWeight: 700, color: active ? "#0066FF" : "#171719" }}>{label}</div>
+                    <div style={{ fontSize: "11px", color: "#888", marginTop: "2px" }}>{desc}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* PDF / 로컬 업로드 */}
         {isFileType && (

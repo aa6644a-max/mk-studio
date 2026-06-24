@@ -58,6 +58,8 @@ type State = {
   tmdbSelections: TmdbSelection[];
   /** 사용자가 작품 선택 후 직접 쓴 감상평 — 전략·인터뷰·생성의 시드 (review 등 영화 타입) */
   seed: string;
+  /** PDF 작성 방식 — narrative(줄글 서사) / info(표·박스 정보 시각화) */
+  pdfMode: "narrative" | "info";
 };
 
 type Actions = {
@@ -77,6 +79,7 @@ type Actions = {
   setImageData: (names: string[], captions: string[], urls: string[]) => void;
   setTmdbSelections: (items: TmdbSelection[]) => void;
   setSeed: (seed: string) => void;
+  setPdfMode: (mode: "narrative" | "info") => void;
   reset: () => void;
 };
 
@@ -98,6 +101,7 @@ const INIT: State = {
   imagePreviewUrls: [],
   tmdbSelections: [],
   seed: "",
+  pdfMode: "narrative",
 };
 
 export const useWorkflowStore = create<State & Actions>((set) => ({
@@ -126,5 +130,6 @@ export const useWorkflowStore = create<State & Actions>((set) => ({
     set({ imageNames, imageCaptions, imagePreviewUrls }),
   setTmdbSelections: (tmdbSelections) => set({ tmdbSelections }),
   setSeed: (seed) => set({ seed }),
+  setPdfMode: (pdfMode) => set({ pdfMode }),
   reset: () => set(INIT),
 }));

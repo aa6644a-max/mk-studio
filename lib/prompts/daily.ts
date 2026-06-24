@@ -82,7 +82,72 @@ function pdfGuideline(brandColor = "#1f3a5f"): string {
         `;
 }
 
+export type PdfMode = "narrative" | "info";
+
+/**
+ * PDF 요약 프롬프트 — 작성 방식 분기.
+ * - narrative: 기존 줄글 서사 방식 (영화 프리뷰·뉴스·해설 등 흐름형)
+ * - info: 정보 시각화 방식 (표·박스·플로우 — 공고·일정·제원 등 항목형)
+ */
 export function buildPdfSummaryPrompt(
+  pdfText: string,
+  userContext: string,
+  refText: string,
+  mode: PdfMode = "info",
+): PromptResult {
+  return mode === "narrative"
+    ? buildPdfNarrativePrompt(pdfText, userContext, refText)
+    : buildPdfInfoPrompt(pdfText, userContext, refText);
+}
+
+/** 기존 줄글 서사 방식 — 흐름이 중요한 글(프리뷰·뉴스·해설·감상). */
+function buildPdfNarrativePrompt(
+  pdfText: string,
+  userContext: string,
+  refText: string,
+): PromptResult {
+  const base = baseGuideline();
+  const ref = referencePromptDaily(refText);
+  const user = `
+        아래 제공된 [원본 데이터(PDF)]를 바탕으로 포스팅을 작성하세요.
+
+        [🚨 도입부 작성 공식: 무조건 준수]
+        1. "최근 [주제/상황]이 제 호기심을 자극했습니다."로 시작하세요.
+        2. [나의 상황 및 기록 목적]을 녹여내어 이 자료를 들여다보게 된 동기를 밝히세요.
+        3. "그래서 오늘은 [PDF의 핵심 내용]에 대해서 한번 알아보도록 하겠습니다."로 본론을 시작하세요.
+        4. 절대 "안녕하세요", "반갑습니다", "MK입니다" 같은 상투적인 인사는 하지 마세요.
+
+        [🚨 상단 제목 규칙]
+        - 카테고리 라벨/제목 헤더를 둘 경우, 제목(h1)은 핵심 주제를 담은 2~6단어의 짧은 카테고리형 제목으로. (예: "범죄도시5 프리뷰") 요약 문장·SEO 제목을 h1에 넣지 마세요.
+
+        [🚨 초강력 지침: 노트북LM 모드]
+        - 외부 검색을 차단하고 오직 아래 제공된 [원본 데이터(PDF)]의 내용만 사용하세요.
+        - 본론은 줄글의 자연스러운 흐름으로 전개하세요. 소제목(H2)은 2~4개로 내용에 맞게 나누되, 한 단락은 2~3문장 호흡으로 끊으세요.
+
+        [🖼️ 이미지 배치 가이드]
+        - 본문 흐름에 맞게 최소 5곳에 아래 코드를 삽입하세요:
+          <p style="text-align: center; color: #888; font-size: 14px; background: #eee; padding: 10px;">{{사진: 해당 문맥에 어울리는 이미지 설명}}</p>
+
+        [원본 데이터 (PDF 추출 텍스트)]
+        ${pdfText}
+
+        [나의 상황 및 기록 목적]
+        ${userContext}
+
+        ${ref}
+
+        ${base}
+
+        출력 형식: \`\`\`html, \`\`\` 등 마크다운 코드블록 기호를 절대 포함하지 마세요. 오직 순수 HTML 본문 코드만 출력하세요.
+        맨 마지막 줄에 아래 형식으로 네이버 SEO 최적화 제목 5개를 반드시 제안하세요:
+        <!-- TITLES: 제목1||제목2||제목3||제목4||제목5 -->
+        (제목 조건: 검색 노출에 유리한 핵심 키워드를 앞에 배치, 30자 이내, 클릭을 유도하는 감성적 표현 포함)
+        `;
+  return { system: SYSTEM, user };
+}
+
+/** 정보 시각화 방식 — 표·박스·플로우로 항목형 정보 정리. */
+function buildPdfInfoPrompt(
   pdfText: string,
   userContext: string,
   refText: string,

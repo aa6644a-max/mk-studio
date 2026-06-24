@@ -29,6 +29,7 @@ export default function ChatInterview() {
     imageCaptions,
     tmdbSelections,
     seed,
+    pdfMode,
     setStage,
     addMessage,
     appendToLastMessage,
@@ -125,6 +126,7 @@ export default function ChatInterview() {
           imageInfo: imageInfo || undefined,
           tmdbSelections: tmdbSelections.length > 0 ? tmdbSelections : undefined,
           seed: seed || undefined,
+          pdfMode: postType === "pdf" ? pdfMode : undefined,
         }),
       });
 

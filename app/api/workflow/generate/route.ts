@@ -29,7 +29,7 @@ const TV_TYPES = ["binge"];
 
 export async function POST(req: Request) {
   try {
-    const { messages, strategy, topic, fileContent, imageInfo, tmdbSelections, seed } = (await req.json()) as {
+    const { messages, strategy, topic, fileContent, imageInfo, tmdbSelections, seed, pdfMode } = (await req.json()) as {
       messages: ChatMessage[];
       strategy: StrategyCard;
       topic: string;
@@ -37,6 +37,7 @@ export async function POST(req: Request) {
       imageInfo?: string;
       tmdbSelections?: TmdbSelection[];
       seed?: string; // 사용자 감상평 — review 생성 시 문장 골격 보존
+      pdfMode?: "narrative" | "info"; // PDF 작성 방식 — 서사형/정보형
     };
 
     const [rssText, references] = await Promise.all([
@@ -128,10 +129,10 @@ export async function POST(req: Request) {
       systemPrompt = system;
       userPrompt = user;
     } else if (strategy.postType === "pdf") {
-      // V3 PDF 요약 프롬프트
+      // PDF 요약 — 서사형/정보형 분기
       const refText = referenceText(references, rssText);
       const userContext = joinContext(topic, messages);
-      const { system, user } = buildPdfSummaryPrompt(fileContent ?? "", userContext, refText);
+      const { system, user } = buildPdfSummaryPrompt(fileContent ?? "", userContext, refText, pdfMode ?? "info");
       systemPrompt = system;
       userPrompt = user;
     } else if (strategy.postType === "photo") {
