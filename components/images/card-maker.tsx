@@ -34,7 +34,7 @@ function newLayer(text = "텍스트", y = 0.5): TextLayer {
   };
 }
 
-export default function CardMaker() {
+export default function CardMaker({ hideHeader = false }: { hideHeader?: boolean }) {
   const [stage, setStage] = useState<Stage>("edit");
   const [preset, setPreset] = useState(PRESETS[0]);
   const [bgColor, setBgColor] = useState("#171719");
@@ -140,7 +140,9 @@ export default function CardMaker() {
 
   return (
     <div className="flex h-full flex-col">
-      <Header title={stage === "edit" ? "카드 만들기 — 입력" : "카드 만들기 — 확인"} />
+      {!hideHeader && (
+        <Header title={stage === "edit" ? "카드 만들기 — 입력" : "카드 만들기 — 확인"} />
+      )}
 
       {/* 단계 표시 */}
       <div className="flex items-center justify-center gap-2 border-b border-[var(--panel-border)] py-2 text-xs">

@@ -1,5 +1,5 @@
-import CardMaker from "@/components/images/card-maker";
+import ImagesWorkspace from "@/components/images/images-workspace";
 
 export default function ImagesPage() {
-  return <CardMaker />;
+  return <ImagesWorkspace />;
 }
