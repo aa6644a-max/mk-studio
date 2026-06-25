@@ -34,7 +34,7 @@ function newLayer(text = "텍스트", y = 0.5): TextLayer {
   };
 }
 
-export default function CardMaker({ hideHeader = false }: { hideHeader?: boolean }) {
+export default function CardMaker({ hideHeader = false, onBack }: { hideHeader?: boolean; onBack?: () => void }) {
   const [stage, setStage] = useState<Stage>("edit");
   const [preset, setPreset] = useState(PRESETS[0]);
   const [bgColor, setBgColor] = useState("#171719");
@@ -145,13 +145,17 @@ export default function CardMaker({ hideHeader = false }: { hideHeader?: boolean
       )}
 
       {/* 단계 표시 */}
-      <div className="flex items-center justify-center gap-2 border-b border-[var(--panel-border)] py-2 text-xs">
-        <span className={stage === "edit" ? "font-bold text-[var(--accent)]" : "text-[var(--text-secondary)]"}>
-          ① 입력
-        </span>
-        <span className="text-[var(--text-secondary)]">→</span>
-        <span className={stage === "preview" ? "font-bold text-[var(--accent)]" : "text-[var(--text-secondary)]"}>
-          ② 확인·다운로드
+      <div className="flex items-center gap-2 border-b border-[var(--panel-border)] px-3 py-2 text-xs">
+        {onBack && (
+          <button onClick={onBack} className="mr-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+            ← 메이커
+          </button>
+        )}
+        <span className="font-bold text-[var(--text-primary)]">🪄 기본 카드</span>
+        <span className="ml-auto flex items-center gap-1">
+          <span className={stage === "edit" ? "font-bold text-[var(--accent)]" : "text-[var(--text-secondary)]"}>① 입력</span>
+          <span className="text-[var(--text-secondary)]">→</span>
+          <span className={stage === "preview" ? "font-bold text-[var(--accent)]" : "text-[var(--text-secondary)]"}>② 확인</span>
         </span>
       </div>
 
