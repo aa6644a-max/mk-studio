@@ -1,11 +1,25 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Sidebar from "@/components/sidebar";
 import MobileNav from "@/components/mobile-nav";
+import ServiceWorker from "@/components/service-worker";
 
 export const metadata: Metadata = {
   title: "MK Studio",
   description: "영화 평론가 MK의 개인 포스팅 작업실",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "MK Studio",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0066FF",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -31,6 +45,7 @@ export default function RootLayout({
           </div>
         </div>
         <MobileNav />
+        <ServiceWorker />
       </body>
     </html>
   );
