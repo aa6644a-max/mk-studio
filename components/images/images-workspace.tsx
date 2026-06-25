@@ -3,19 +3,35 @@
 import { useState } from "react";
 import CardMaker from "./card-maker";
 import NetflixThumbMaker from "./netflix-thumb-maker";
+import AdOverlayMaker from "./ad-overlay-maker";
 import ImagesView from "./images-view";
 
 type Mode = "maker" | "studio";
-type Maker = "basic" | "netflix";
+type Maker = "basic" | "netflix" | "ad";
 
-const MAKERS: { id: Maker; icon: string; label: string; desc: string }[] = [
+const MAKERS: { id: Maker; icon: string; label: string; desc: string; slides?: string[] }[] = [
   { id: "basic", icon: "🪄", label: "기본 카드", desc: "배경 + 텍스트로 빠르게" },
   { id: "netflix", icon: "🎬", label: "넷플릭스 썸네일", desc: "넷플릭스 스타일 1:1 썸네일" },
+  {
+    id: "ad",
+    icon: "📣",
+    label: "광고 오버레이",
+    desc: "이미지 위 강조 카피 카드",
+    slides: ["슬라이드 1 — 오버레이 카피", "슬라이드 2 — 리스트형 (준비 중)", "슬라이드 3 — 클로징 (준비 중)"],
+  },
 ];
 
 export default function ImagesWorkspace() {
   const [mode, setMode] = useState<Mode>("maker");
   const [maker, setMaker] = useState<Maker | null>(null);
+  const [slide, setSlide] = useState<number | null>(null);
+
+  function reset() {
+    setMaker(null);
+    setSlide(null);
+  }
+
+  const activeMaker = MAKERS.find((m) => m.id === maker);
 
   return (
     <div className="flex h-full flex-col">
@@ -45,13 +61,16 @@ export default function ImagesWorkspace() {
         {mode === "studio" ? (
           <ImagesView hideHeader />
         ) : maker === null ? (
-          // 메이커 선택
+          // 1단계: 메이커 종류 선택
           <div className="mx-auto max-w-md space-y-3 p-5">
             <p className="text-sm text-[var(--text-secondary)]">만들 종류를 골라주세요.</p>
             {MAKERS.map((m) => (
               <button
                 key={m.id}
-                onClick={() => setMaker(m.id)}
+                onClick={() => {
+                  setMaker(m.id);
+                  setSlide(null);
+                }}
                 className="flex w-full items-center gap-3 rounded-xl border border-[var(--panel-border)] p-4 text-left transition-colors hover:border-[var(--accent)]"
               >
                 <span className="text-2xl">{m.icon}</span>
@@ -63,10 +82,38 @@ export default function ImagesWorkspace() {
               </button>
             ))}
           </div>
+        ) : activeMaker?.slides && slide === null ? (
+          // 2단계: 슬라이드 선택 (슬라이드 있는 메이커만)
+          <div className="mx-auto max-w-md space-y-3 p-5">
+            <button onClick={reset} className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+              ← 메이커
+            </button>
+            <p className="text-sm text-[var(--text-secondary)]">{activeMaker.label} — 슬라이드를 골라주세요.</p>
+            {activeMaker.slides.map((label, i) => {
+              const ready = i === 0; // 현재 슬라이드1만 구현
+              return (
+                <button
+                  key={i}
+                  disabled={!ready}
+                  onClick={() => setSlide(i)}
+                  className={`flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-colors ${
+                    ready
+                      ? "border-[var(--panel-border)] hover:border-[var(--accent)]"
+                      : "cursor-not-allowed border-[var(--panel-border)] opacity-50"
+                  }`}
+                >
+                  <span className="text-sm font-bold text-[var(--text-primary)]">{label}</span>
+                  {ready && <span className="ml-auto text-[var(--text-secondary)]">→</span>}
+                </button>
+              );
+            })}
+          </div>
         ) : maker === "netflix" ? (
-          <NetflixThumbMaker onBack={() => setMaker(null)} />
+          <NetflixThumbMaker onBack={reset} />
+        ) : maker === "ad" ? (
+          <AdOverlayMaker onBack={() => setSlide(null)} />
         ) : (
-          <CardMaker hideHeader onBack={() => setMaker(null)} />
+          <CardMaker hideHeader onBack={reset} />
         )}
       </div>
     </div>

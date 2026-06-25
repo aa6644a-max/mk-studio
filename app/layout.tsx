@@ -15,6 +15,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700;900&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body>
         <div className="flex h-screen overflow-hidden">
           <Sidebar />
