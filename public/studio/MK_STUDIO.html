@@ -792,6 +792,40 @@ body {
 .t06-size-btn { flex: 1; padding: 8px 4px; border-radius: 6px; border: 1px solid var(--panel-border); background: transparent; color: var(--gray-400); font-size: 12px; font-family: 'DM Mono',monospace; cursor: pointer; transition: all .2s; }
 .t06-size-btn.active { border-color: var(--accent); color: var(--ui-text); background: rgba(0,102,255,0.06); }
 
+/* ════════════════════════════════════════════════════════
+   모바일 반응형 (≤768px) — 로직 무손상, 레이아웃만 재구성
+   workspace 가로→세로, 컨트롤 패널 상단 전폭, 카드 뷰포트 스케일
+   ════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  body { height: 100%; min-height: 100dvh; overflow: auto; }
+
+  .template-bar { padding: 0 12px; }
+
+  /* 워크스페이스: 가로 → 세로 스택 */
+  .workspace { flex-direction: column; overflow: visible; }
+
+  /* 컨트롤 패널: 360px 고정 → 전폭 상단, 자체 스크롤 */
+  .control-panel {
+    width: 100%;
+    height: auto;
+    max-height: 46vh;
+    border-right: none;
+    border-bottom: 1px solid var(--panel-border);
+    padding: 16px 14px;
+  }
+
+  /* 미리보기: 여백 축소 */
+  .preview-panel { padding: 18px 12px 14px; min-height: 50vh; }
+
+  /* 카드: 고정폭 → 뷰포트 비례 스케일 (내부 %·clamp 폰트라 같이 축소) */
+  .card-container.ratio-4-5  { width: min(384px, 70vw);  height: min(480px, 87.5vw); }
+  .card-container.ratio-1-1  { width: min(480px, 88vw);  height: min(480px, 88vw); }
+  .card-container.ratio-4-3  { width: min(480px, 88vw);  height: min(360px, 66vw); }
+  .card-container.ratio-16-9 { width: min(480px, 92vw);  height: min(270px, 51.75vw); }
+
+  /* 헤더 비율/다운로드 버튼 줄바꿈 허용 */
+  .header-right { flex-wrap: wrap; justify-content: flex-end; }
+}
 </style>
 </head>
 <body>

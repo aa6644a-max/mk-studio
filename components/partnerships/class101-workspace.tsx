@@ -83,12 +83,11 @@ export default function Class101Workspace() {
   const { title, body } = extractTitle(output);
 
   return (
-    <div className="flex h-full flex-col md:flex-row gap-0 overflow-hidden">
+    <div className="flex flex-col md:flex-row gap-0 md:h-full md:overflow-hidden">
 
       {/* ── 왼쪽 패널 ── */}
       <div
-        className="shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-[var(--panel-border)] overflow-y-auto"
-        style={{ width: "clamp(280px,30%,340px)" }}
+        className="shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-[var(--panel-border)] overflow-y-auto w-full md:w-[clamp(280px,30%,340px)]"
       >
         <div className="px-5 h-[52px] flex items-center shrink-0 border-b border-[var(--panel-border)]">
           <h1 className="text-[15px] font-bold text-[var(--text-primary)]">
@@ -221,7 +220,7 @@ export default function Class101Workspace() {
       </div>
 
       {/* ── 오른쪽: 출력 패널 ── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col md:overflow-hidden min-h-[60vh] md:min-h-0">
         <div className="px-5 h-[52px] flex items-center justify-between shrink-0 border-b border-[var(--panel-border)]">
           <span className="text-[13px] text-[var(--text-secondary)] truncate mr-4">
             {status === "idle" && "앵글을 선택하고 생성 버튼을 누르세요"}

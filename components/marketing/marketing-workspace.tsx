@@ -257,10 +257,10 @@ export default function MarketingWorkspace() {
   const isRunning = status === "loading" || status === "streaming";
 
   return (
-    <div className="flex h-full flex-col md:flex-row gap-0 overflow-hidden">
+    <div className="flex flex-col md:flex-row gap-0 md:h-full md:overflow-hidden">
 
       {/* ── 왼쪽 패널 ── */}
-      <div className="shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-[var(--panel-border)] overflow-y-auto" style={{ width: "clamp(280px,30%,360px)" }}>
+      <div className="shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-[var(--panel-border)] overflow-y-auto w-full md:w-[clamp(280px,30%,360px)]">
 
         {/* 헤더 */}
         <div className="px-5 h-[52px] flex items-center shrink-0 border-b border-[var(--panel-border)]">
@@ -377,7 +377,7 @@ export default function MarketingWorkspace() {
       </div>
 
       {/* ── 오른쪽: 출력 패널 ── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col md:overflow-hidden min-h-[60vh] md:min-h-0">
         <div className="px-5 h-[52px] flex items-center justify-between shrink-0 border-b border-[var(--panel-border)]">
           <span className="text-[13px] text-[var(--text-secondary)]">
             {status === "idle" && (tab === "brief" ? "브리핑을 받고 주제를 선택하세요" : "주제를 입력하고 전략 생성을 눌러주세요")}

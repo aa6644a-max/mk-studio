@@ -4,7 +4,7 @@ import Header from "@/components/header";
 
 export default function ImagesView() {
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-full flex-col">
       <Header title="카드뉴스 제작소" />
       <iframe
         src="/studio/MK_STUDIO.html"
