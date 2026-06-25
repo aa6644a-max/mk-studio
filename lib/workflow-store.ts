@@ -10,7 +10,7 @@ export type WorkflowStage =
   | "generating"
   | "result";
 
-export type PhotoCategory = "맛집카페" | "일상기록" | "여행나들이" | "전시문화";
+export type PhotoCategory = "맛집카페" | "일상기록" | "여행나들이" | "전시문화" | "제품리뷰";
 
 export type StrategyCard = {
   postType: PostType;

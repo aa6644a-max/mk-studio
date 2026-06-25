@@ -43,8 +43,8 @@ const STRATEGY_TOOL: Anthropic.Tool = {
       },
       photoCategory: {
         type: "string",
-        enum: ["맛집카페", "일상기록", "여행나들이", "전시문화"],
-        description: "postType이 photo일 때만 설정. 사진 정보·주제로 카테고리 분류. 음식/카페/식당→맛집카페, 일기/소소한기록→일상기록, 여행/나들이/명소→여행나들이, 전시/공연/축제/박물관→전시문화. photo가 아니면 생략",
+        enum: ["맛집카페", "일상기록", "여행나들이", "전시문화", "제품리뷰"],
+        description: "postType이 photo일 때만 설정. 사용자가 직접 고른 카테고리가 제공되면 그것을 그대로 사용. 없으면 사진·주제로 분류: 음식/카페/식당→맛집카페, 일기/소소한기록→일상기록, 여행/나들이/명소→여행나들이, 전시/공연/축제/박물관→전시문화, 구매한 제품/사용기/언박싱→제품리뷰. photo가 아니면 생략",
       },
       hook: {
         type: "string",
@@ -84,7 +84,7 @@ topic 추출:
 
 keywords: 주제에서 고유명사(영화제목, 지역명, 행사명)를 그대로 추출해 검색 키워드 2~3개 생성
 
-photoCategory: postType이 photo일 때만 반드시 설정. 사진 정보·캡션·주제를 보고 4개 중 하나로 분류. (음식/카페/식당→맛집카페, 개인 일상/소소한 기록→일상기록, 여행/나들이/명소 방문→여행나들이, 전시/공연/축제/박물관/문화행사→전시문화)
+photoCategory: postType이 photo일 때만 반드시 설정. 사용자가 직접 고른 카테고리가 있으면 그대로 사용. 없으면 사진·캡션·주제로 분류: 음식/카페/식당→맛집카페, 개인 일상/소소한 기록→일상기록, 여행/나들이/명소 방문→여행나들이, 전시/공연/축제/박물관/문화행사→전시문화, 구매·사용한 제품 후기/언박싱→제품리뷰
 
 🎬 영화 타입(review/preview/curation/binge) 차별화 전략 — 반드시 준수:
 - [작품 데이터]가 제공되면 그 줄거리·장르·감독·출연을 근거로 hook/watchPoints/differentiator를 채운다. 작품 데이터 없이는 절대 일반론으로 채우지 말 것.
@@ -102,6 +102,7 @@ export async function POST(req: Request) {
       imageInfo,
       tmdbSelections,
       seed,
+      photoCategory,
     } = (await req.json()) as {
       topic?: string;
       selectedType?: string;
@@ -109,6 +110,7 @@ export async function POST(req: Request) {
       imageInfo?: string;
       tmdbSelections?: TmdbSel[]; // 영화 타입: 선택된 작품 (서버에서 TMDB 상세 조회)
       seed?: string; // 사용자가 직접 쓴 감상평 — hook/watchPoints/differentiator 추출 근거
+      photoCategory?: string; // 사진 타입: 사용자가 직접 고른 카테고리 (AI 자동분류 대체)
     };
 
     const tmdbData = tmdbSelections?.length ? await formatTmdbDetailsText(tmdbSelections).catch(() => "") : "";
@@ -123,7 +125,9 @@ export async function POST(req: Request) {
     } else if (pdfText) {
       userContent = `사용자가 선택한 포스팅 타입: ${selectedType ?? "local"}\n\nPDF 내용 (주제 자동 추출 필요):\n${pdfText.slice(0, 3000)}`;
     } else if (imageInfo) {
-      userContent = `사용자가 선택한 포스팅 타입: ${selectedType ?? "photo"}\n\n업로드된 사진 정보 (장소/주제 추론 필요):\n${imageInfo}`;
+      const catLine = photoCategory ? `\n사용자가 직접 고른 카테고리: ${photoCategory} (이 카테고리를 photoCategory로 그대로 사용)` : "";
+      const topicLine = topic ? `\n포스팅 주제: "${topic}"` : "";
+      userContent = `사용자가 선택한 포스팅 타입: ${selectedType ?? "photo"}${catLine}${topicLine}\n\n업로드된 사진 정보:\n${imageInfo}`;
     } else {
       userContent = `사용자가 선택한 포스팅 타입: ${selectedType ?? "review"}\n포스팅 주제: "${topic}"`;
     }
@@ -151,6 +155,10 @@ export async function POST(req: Request) {
     const input = toolUse.input as Record<string, unknown>;
     if (selectedType) {
       input.postType = selectedType;
+    }
+    // 사진 타입: 사용자가 직접 고른 카테고리를 AI 자동분류보다 우선 적용
+    if (selectedType === "photo" && photoCategory) {
+      input.photoCategory = photoCategory;
     }
 
     return NextResponse.json(input);

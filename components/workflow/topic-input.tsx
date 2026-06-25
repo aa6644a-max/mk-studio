@@ -17,6 +17,14 @@ const TYPE_CHIPS: { type: PostType; label: string; icon: string; placeholder: st
 const FILE_TYPES: PostType[] = ["local", "pdf"];
 const MOVIE_TYPES: PostType[] = ["review", "preview", "curation", "binge"];
 
+const PHOTO_CATEGORIES: { value: string; label: string; icon: string }[] = [
+  { value: "맛집카페", label: "맛집·카페", icon: "🍽️" },
+  { value: "일상기록", label: "일상", icon: "📔" },
+  { value: "여행나들이", label: "여행·나들이", icon: "🧳" },
+  { value: "전시문화", label: "전시·문화", icon: "🎭" },
+  { value: "제품리뷰", label: "제품·리뷰", icon: "📦" },
+];
+
 export default function TopicInput() {
   const [selectedType, setSelectedTypeLocal] = useState<PostType>("review");
   const [input, setInput] = useState("");
@@ -31,6 +39,7 @@ export default function TopicInput() {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imageCaptions, setImageCaptions] = useState<string[]>([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+  const [photoCategory, setPhotoCategory] = useState("맛집카페");
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -145,10 +154,11 @@ export default function TopicInput() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          topic: !isFileType && !isPhotoType ? input.trim() : undefined,
+          topic: isPhotoType ? input.trim() || undefined : !isFileType ? input.trim() : undefined,
           selectedType,
           pdfText: isFileType ? storeState.fileContent : undefined,
           imageInfo: isPhotoType ? imageInfo : undefined,
+          photoCategory: isPhotoType ? photoCategory : undefined,
         }),
       });
       if (!res.ok) throw new Error("전략 분석 실패");
@@ -295,9 +305,53 @@ export default function TopicInput() {
           </>
         )}
 
+        {/* 사진 — 카테고리 + 주제 (업로드 전 먼저) */}
+        {isPhotoType && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <span style={{ fontSize: "12px", color: "#5a5c63", fontWeight: 600 }}>① 어떤 종류의 포스팅인가요?</span>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                {PHOTO_CATEGORIES.map((cat) => {
+                  const active = photoCategory === cat.value;
+                  return (
+                    <button
+                      key={cat.value}
+                      onClick={() => setPhotoCategory(cat.value)}
+                      style={{
+                        padding: "7px 13px",
+                        borderRadius: "18px",
+                        border: active ? "2px solid #0066FF" : "1.5px solid rgba(112,115,124,0.2)",
+                        background: active ? "#EBF2FF" : "#fff",
+                        color: active ? "#0066FF" : "#5a5c63",
+                        fontSize: "13px",
+                        fontWeight: active ? 700 : 500,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      {cat.icon} {cat.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <span style={{ fontSize: "12px", color: "#5a5c63", fontWeight: 600 }}>② 무엇에 대한 포스팅인가요? <span style={{ color: "#aaa", fontWeight: 400 }}>(선택)</span></span>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={chipInfo.placeholder}
+                style={{ width: "100%", border: "1.5px solid rgba(112,115,124,0.2)", borderRadius: "10px", padding: "10px 14px", fontSize: "14px", outline: "none", fontFamily: "inherit", color: "#171719", background: "#fff", boxSizing: "border-box" }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* 사진 업로드 */}
         {isPhotoType && (
           <>
+            <span style={{ fontSize: "12px", color: "#5a5c63", fontWeight: 600 }}>③ 사진을 업로드하세요</span>
             <input
               ref={photoInputRef}
               type="file"
