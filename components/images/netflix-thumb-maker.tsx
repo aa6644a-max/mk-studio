@@ -140,8 +140,8 @@ function renderThumb(ctx: CanvasRenderingContext2D, S: number, st: RenderState) 
 
 export default function NetflixThumbMaker({ onBack }: { onBack?: () => void }) {
   const [stage, setStage] = useState<Stage>("edit");
-  const [title, setTitle] = useState("");
-  const [sub, setSub] = useState("");
+  const [title, setTitle] = useState("악마는 프라다를 입는다2");
+  const [sub, setSub] = useState("20년만의 속편, 보기 전 꼭 알아야 할 정보");
   const [progress, setProgress] = useState(20);
   const [size, setSize] = useState(1080);
   const [img, setImg] = useState<HTMLImageElement | null>(null);

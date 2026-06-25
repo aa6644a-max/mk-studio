@@ -4,6 +4,7 @@ import { useState } from "react";
 import CardMaker from "./card-maker";
 import NetflixThumbMaker from "./netflix-thumb-maker";
 import AdOverlayMaker from "./ad-overlay-maker";
+import AdListMaker from "./ad-list-maker";
 import ImagesView from "./images-view";
 
 type Mode = "maker" | "studio";
@@ -17,7 +18,7 @@ const MAKERS: { id: Maker; icon: string; label: string; desc: string; slides?: s
     icon: "📣",
     label: "광고 오버레이",
     desc: "이미지 위 강조 카피 카드",
-    slides: ["슬라이드 1 — 오버레이 카피", "슬라이드 2 — 리스트형 (준비 중)", "슬라이드 3 — 클로징 (준비 중)"],
+    slides: ["슬라이드 1 — 오버레이 카피", "슬라이드 2 — 리스트형", "슬라이드 3 — 클로징 (준비 중)"],
   },
 ];
 
@@ -90,7 +91,7 @@ export default function ImagesWorkspace() {
             </button>
             <p className="text-sm text-[var(--text-secondary)]">{activeMaker.label} — 슬라이드를 골라주세요.</p>
             {activeMaker.slides.map((label, i) => {
-              const ready = i === 0; // 현재 슬라이드1만 구현
+              const ready = i === 0 || i === 1; // 슬라이드 1·2 구현
               return (
                 <button
                   key={i}
@@ -111,7 +112,11 @@ export default function ImagesWorkspace() {
         ) : maker === "netflix" ? (
           <NetflixThumbMaker onBack={reset} />
         ) : maker === "ad" ? (
-          <AdOverlayMaker onBack={() => setSlide(null)} />
+          slide === 1 ? (
+            <AdListMaker onBack={() => setSlide(null)} />
+          ) : (
+            <AdOverlayMaker onBack={() => setSlide(null)} />
+          )
         ) : (
           <CardMaker hideHeader onBack={reset} />
         )}
