@@ -84,7 +84,9 @@ export default function Class101Workflow() {
 
   async function handlePdf(file: File | undefined) {
     if (!file) return;
-    if (file.type !== "application/pdf") {
+    const isPdf =
+      file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+    if (!isPdf) {
       setError("PDF 파일만 업로드 가능합니다.");
       return;
     }
