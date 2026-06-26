@@ -1,9 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import {
-  buildClass101Prompt,
+  buildClass101InterviewSystem,
   type Class101Angle,
 } from "@/lib/prompts/class101";
-import { getRssLatestText } from "@/lib/rss-client";
 import type { ChatMessage } from "@/lib/workflow-store";
 
 export const maxDuration = 300;
@@ -27,14 +26,6 @@ function materialBlocks(
   return blocks;
 }
 
-/** 인터뷰 대화 → 프롬프트용 경험 텍스트. */
-function interviewToText(messages: ChatMessage[]): string {
-  return messages
-    .filter((m) => m.content.trim())
-    .map((m) => `[${m.role === "assistant" ? "질문" : "답변"}] ${m.content.trim()}`)
-    .join("\n");
-}
-
 export async function POST(req: Request) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return new Response("ANTHROPIC_API_KEY 미설정", { status: 500 });
@@ -44,54 +35,59 @@ export async function POST(req: Request) {
     messages = [],
     angle = 1,
     category = "AI·업무자동화",
-    secondaryKeyword = "",
     materialPdfBase64 = "",
     materialText = "",
   } = (await req.json().catch(() => ({}))) as {
     messages?: ChatMessage[];
     angle?: Class101Angle;
     category?: string;
-    secondaryKeyword?: string;
     materialPdfBase64?: string;
     materialText?: string;
   };
 
-  const rssText = await getRssLatestText("shock552", 5).catch(() => "");
-  const interviewText = interviewToText(messages);
+  const system = buildClass101InterviewSystem(angle as Class101Angle, category);
 
-  const { system, user } = buildClass101Prompt(
-    angle as Class101Angle,
-    category,
-    secondaryKeyword,
-    interviewText,
-    rssText,
-  );
-
-  const userContent: Anthropic.ContentBlockParam[] = [
+  // seed: 자료 + 인터뷰 시작 지시 → 이후 클라이언트 대화 turn 이어붙임
+  const seedContent: Anthropic.ContentBlockParam[] = [
     ...materialBlocks(materialPdfBase64, materialText),
-    { type: "text", text: user },
+    {
+      type: "text",
+      text: "위 강의 자료를 참고해 인터뷰를 진행하세요. 자료에 없는 제 개인 경험을 물어봐 주세요. 첫 질문부터 시작하세요.",
+    },
+  ];
+
+  const anthropicMessages: Anthropic.MessageParam[] = [
+    { role: "user", content: seedContent },
+    ...messages.map((m) => ({ role: m.role, content: m.content })),
   ];
 
   const client = new Anthropic();
   const stream = client.messages.stream({
     model: "claude-sonnet-4-6",
-    max_tokens: 8192,
+    max_tokens: 1024,
     system,
-    messages: [{ role: "user", content: userContent }],
+    messages: anthropicMessages,
   });
 
+  const encoder = new TextEncoder();
   const readable = new ReadableStream({
     async start(controller) {
-      const encoder = new TextEncoder();
       try {
-        for await (const chunk of stream) {
+        for await (const event of stream) {
           if (
-            chunk.type === "content_block_delta" &&
-            chunk.delta.type === "text_delta"
+            event.type === "content_block_delta" &&
+            event.delta.type === "text_delta"
           ) {
-            controller.enqueue(encoder.encode(chunk.delta.text));
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`),
+            );
           }
         }
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      } catch (e) {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ error: String(e) })}\n\n`),
+        );
       } finally {
         controller.close();
       }
@@ -100,9 +96,9 @@ export async function POST(req: Request) {
 
   return new Response(readable, {
     headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Transfer-Encoding": "chunked",
+      "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
+      Connection: "keep-alive",
     },
   });
 }

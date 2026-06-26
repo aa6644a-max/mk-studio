@@ -7,6 +7,29 @@ const DISCLOSURE =
 
 const LINK_BTN = `<p style="text-align: center; margin: 24px 0;"><a href="${REFERRAL_LINK}" target="_blank" style="background-color: #26C6A4; color: #fff; padding: 13px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">👉 클래스101 구독 할인 링크 바로가기</a></p>`;
 
+export type Class101Angle = 1 | 2 | 3;
+
+export const ANGLE_LABELS: Record<Class101Angle, string> = {
+  1: "구독 계기",
+  2: "강의 내용",
+  3: "강의 후기",
+};
+
+export const DONE_SIGNAL = "포스팅 생성 시작할게요";
+
+/** 선택한 유형 = 글의 무게중심. 3파트는 항상 포함하되 어디에 비중을 둘지. */
+function angleEmphasis(angle: Class101Angle, category: string): string {
+  const cat = category.trim() || "관심 분야";
+  switch (angle) {
+    case 1:
+      return `[구독 계기 중심] ${cat}에 관심 갖게 된 계기와 클래스101 구독을 시작한 동기·흐름을 메인으로 길게. 소개 파트에 비중.`;
+    case 2:
+      return `[강의 내용 중심] 첨부 자료의 강의에서 실제로 무엇을 배우는지, 커리큘럼·핵심 개념을 구체적으로. 강의 내용 설명에 비중.`;
+    case 3:
+      return `[강의 후기 중심] 실제 수강 경험·적용 결과물·전후 변화를 메인으로. 후기 파트에 비중(성장 스토리).`;
+  }
+}
+
 /** 카테고리 + 보조 키워드 → 키워드 토큰 배열 (중복 제거, 공백·기호 정리). */
 function keywordTokens(category: string, secondaryKeyword: string): string[] {
   const raw = [category, secondaryKeyword]
@@ -53,15 +76,43 @@ ${rssText}
 }
 
 /**
- * 클래스101 파트너스 포스팅 프롬프트.
- * 강의 내용은 호출부에서 첨부하는 강의 PDF(document 블록)를 사실 원천으로 사용한다.
- * category/secondaryKeyword: 공식 지침의 카테고리별 필수 키워드(예: 드로잉 + 그림).
+ * 클래스101 파트너스 인터뷰어 시스템 프롬프트.
+ * 자료(첨부 PDF/텍스트)는 호출부에서 함께 전달된다. 인터뷰는 자료에 없는
+ * MK의 개인 경험·감상·강조점을 캐는 역할.
+ */
+export function buildClass101InterviewSystem(
+  angle: Class101Angle,
+  category = "AI·업무자동화",
+): string {
+  const cat = category.trim() || "AI·업무자동화";
+  return `당신은 클래스101 파트너스 블로그 포스팅 인터뷰어입니다.
+사용자(MK)가 "${ANGLE_LABELS[angle]}" 유형, "${cat}" 카테고리로 포스팅을 만들려고 합니다.
+함께 첨부된 강의 자료에는 강의의 "사실"(내용·커리큘럼)이 들어있습니다.
+
+당신의 목적: 자료에 없는 **MK 개인의 경험**을 끌어내는 것입니다.
+- 자료에 이미 있는 강의 내용은 다시 묻지 마세요.
+- "${ANGLE_LABELS[angle]}" 유형에 맞춰 개인 경험을 물으세요. 예시:
+  · 구독 계기 → 왜 이 분야에 관심? 구독 결심한 결정적 순간?
+  · 강의 내용 → 어느 챕터가 가장 인상 깊었나? 왜?
+  · 강의 후기 → 실제 적용해본 결과물·전후 변화? 가장 도움된 점?
+
+규칙:
+- 질문은 한 번에 하나씩, 짧고 구체적으로.
+- 총 2~3개만 물으세요. 충분히 모이면 더 묻지 마세요.
+- 수집 완료 시 반드시 "좋아요! 포스팅 생성 시작할게요 ✍️" 로 정확히 종료.
+- 종료 후 추가 질문 금지.`;
+}
+
+/**
+ * 클래스101 파트너스 포스팅 생성 프롬프트.
+ * 강의 내용은 호출부에서 첨부하는 자료(document/text 블록)를 사실 원천으로 사용한다.
+ * interviewText: 인터뷰에서 수집한 MK 개인 경험.
  */
 export function buildClass101Prompt(
+  angle: Class101Angle,
   category = "AI·업무자동화",
-  courseName = "",
   secondaryKeyword = "",
-  userNotes = "",
+  interviewText = "",
   rssText = "",
 ): { system: string; user: string } {
   const cat = category.trim() || "AI·업무자동화";
@@ -93,9 +144,14 @@ ${commonConstraints}
 - 핵심 결론 구절에는 <b> 태그로 굵게 처리.
 
 ## 🚨 강의 내용의 진실 원천 (절대 준수)
-- 첨부된 **강의 PDF**가 실제 수강한 강의의 유일한 사실 원천입니다.
-- 강의의 구체적 내용·챕터·배운 점·실습은 **PDF에 적힌 사실만** 사용하세요.
-- PDF에 없는 강의 내용을 상상·추측·창작하지 마세요. 허위·과장 광고 금지.
+- 첨부된 **강의 자료**가 실제 수강한 강의의 유일한 사실 원천입니다.
+- 강의의 구체적 내용·챕터·배운 점·실습은 **자료에 적힌 사실만** 사용하세요.
+- 자료에 없는 강의 내용을 상상·추측·창작하지 마세요. 허위·과장 광고 금지.
+- 개인 경험·감상은 아래 [인터뷰] 내용을 활용하세요.
+
+## 이 글의 무게중심
+${angleEmphasis(angle, cat)}
+※ 무게중심과 무관하게 아래 필수 3파트는 모두 포함해야 합니다.
 
 ## 클래스101 파트너스 필수 글 구조 (3파트 전부 포함)
 반드시 아래 3개 단락을 모두 작성하세요. 하나라도 빠지면 안 됩니다.
@@ -106,7 +162,7 @@ ${commonConstraints}
    - 구독료 외 추가 결제 없이 매달 신규 강의 (월 평균 120개 추가, 2025년 +960개)
    - 매일 3회까지 1강 수강 시 최대 100만 포인트 당첨 복권 (출금 가능)
    - "${cat}" 관련 강의도 풍부함을 자연스럽게 언급
-2. **[실제 수강 후기]** — 첨부 PDF 강의를 실제 들은 경험:
+2. **[실제 수강 후기]** — 첨부 자료 강의를 실제 들은 경험:
    - "좋았어요" 수준 금지. **어떤 점이 어떻게 유용했는지** 구체적으로.
    - 배운 내용을 직접 적용한 결과물·전후 비교를 보여주세요(성장 스토리).
 3. **[전용 링크 + 가격 메리트]**:
@@ -153,23 +209,22 @@ ${DISCLOSURE}
 - 전체를 <div style="font-family: 'Nanum Gothic', '나눔고딕', sans-serif; color: #333; line-height: 1.8;"> 로 감싸기`;
 
   const rss = rssSection(rssText);
+  const interview = interviewText.trim()
+    ? `\n## [인터뷰] MK 개인 경험 (글에 반영)\n${interviewText.trim()}\n`
+    : "";
 
-  const user = `첨부한 강의 PDF를 실제 수강한 강의로 삼아, 네이버 블로그 클래스101 파트너스 포스팅을 작성해줘.
+  const user = `첨부한 강의 자료를 실제 수강한 강의로 삼아, 네이버 블로그 클래스101 파트너스 포스팅을 작성해줘.
 
 ## 카테고리
 ${cat}
 
-## 수강 강의명
-${courseName.trim() || "첨부 PDF의 강의 (PDF 제목/내용 기준)"}
-
-## 추가 메모
-${userNotes.trim() || "없음"}
-
-${rss}
+## 유형(무게중심)
+${ANGLE_LABELS[angle]}
+${interview}${rss}
 
 ## 작성 기준
 - 글 길이: 순수 텍스트 기준 1500~2000자
-- 광고처럼 보이면 안 됨 — 첨부 PDF 강의의 실제 내용 기반으로 자연스럽게
+- 광고처럼 보이면 안 됨 — 첨부 자료 강의의 실제 내용 + 인터뷰 경험 기반으로 자연스럽게
 - 필수 3파트(소개 / 실제 수강 후기 / 링크+가격) 전부 포함
 - 작성 완료 후 내부 점검: 필수 키워드 각 5회 이상 + 링크 2회 + 표기문구 + 해시태그 확인 후 출력`;
 
