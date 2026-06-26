@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { ANGLE_LABELS, type Class101Angle } from "@/lib/prompts/class101";
 
 type Status = "idle" | "loading" | "streaming" | "done" | "error";
 type ViewMode = "preview" | "html";
@@ -24,8 +23,8 @@ function extractTitle(raw: string): { title: string; body: string } {
 }
 
 export default function Class101Workspace() {
-  const [angle, setAngle] = useState<Class101Angle>(1);
   const [category, setCategory] = useState("AI·업무자동화");
+  const [secondaryKeyword, setSecondaryKeyword] = useState("");
   const [courseName, setCourseName] = useState("");
   const [notes, setNotes] = useState("");
   const [output, setOutput] = useState("");
@@ -46,7 +45,7 @@ export default function Class101Workspace() {
       const res = await fetch("/api/partnerships/class101", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ angle, category, courseName, userNotes: notes }),
+        body: JSON.stringify({ category, secondaryKeyword, courseName, userNotes: notes }),
         signal: abortRef.current.signal,
       });
       if (!res.ok) throw new Error((await res.text()) || `오류 ${res.status}`);
@@ -68,7 +67,7 @@ export default function Class101Workspace() {
       setError((e as Error).message);
       setStatus("error");
     }
-  }, [angle, category, courseName, notes, status]);
+  }, [category, secondaryKeyword, courseName, notes, status]);
 
   const stop = useCallback(() => abortRef.current?.abort(), []);
 
@@ -130,37 +129,26 @@ export default function Class101Workspace() {
             />
           </div>
 
-          {/* 앵글 선택 */}
-          <div className="flex flex-col gap-2">
+          {/* 보조 키워드 */}
+          <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">
-              포스팅 앵글 선택
+              보조 키워드 <span className="normal-case font-normal">(선택)</span>
             </label>
-            {([1, 2, 3] as Class101Angle[]).map((a) => (
-              <button
-                key={a}
-                onClick={() => setAngle(a)}
-                className={`w-full text-left rounded-lg border p-3 transition-all ${
-                  angle === a
-                    ? "border-[var(--accent)] bg-[var(--accent)]/8 text-[var(--text-primary)]"
-                    : "border-[var(--panel-border)] text-[var(--text-secondary)] hover:border-[var(--accent)]/50"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                      angle === a
-                        ? "bg-[var(--accent)] text-white"
-                        : "bg-[var(--panel-border)] text-[var(--text-secondary)]"
-                    }`}
-                  >
-                    {a}편
-                  </span>
-                  <span className="text-xs font-semibold">
-                    {ANGLE_LABELS[a]}
-                  </span>
-                </div>
-              </button>
-            ))}
+            <input
+              value={secondaryKeyword}
+              onChange={(e) => setSecondaryKeyword(e.target.value)}
+              placeholder="예: 드로잉 → 그림 / AI → 자동화"
+              className="w-full rounded-lg border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+            />
+            <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+              클래스101 지침의 카테고리별 추가 필수 키워드 (제목·본문·해시태그에 함께 삽입)
+            </p>
+          </div>
+
+          {/* 강의자료 안내 */}
+          <div className="rounded-lg bg-[var(--accent)]/8 border border-[var(--accent)]/20 px-3 py-2.5 text-xs text-[var(--text-secondary)] leading-relaxed">
+            <p className="font-semibold text-[var(--text-primary)] mb-1">📄 강의자료 자동 반영</p>
+            <p>정리한 강의 PDF가 자동으로 첨부되어, 실제 강의 내용 기반으로 작성됩니다.</p>
           </div>
 
           {/* 추가 메모 */}
@@ -223,10 +211,10 @@ export default function Class101Workspace() {
       <div className="flex-1 flex flex-col md:overflow-hidden min-h-[60vh] md:min-h-0">
         <div className="px-5 h-[52px] flex items-center justify-between shrink-0 border-b border-[var(--panel-border)]">
           <span className="text-[13px] text-[var(--text-secondary)] truncate mr-4">
-            {status === "idle" && "앵글을 선택하고 생성 버튼을 누르세요"}
+            {status === "idle" && "카테고리를 입력하고 생성 버튼을 누르세요"}
             {status === "loading" && "생성 중..."}
             {status === "streaming" && "작성 중..."}
-            {status === "done" && (title || `${angle}편 완료`)}
+            {status === "done" && (title || "작성 완료")}
             {status === "error" && "오류 발생"}
           </span>
 

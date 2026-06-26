@@ -20,7 +20,7 @@ export function getDesignSystem(brandColor = "#333333"): string {
   return `
         1. 소제목(H2) 시각화:
            - 단순 텍스트 대신 1x1 표를 활용한 '타이틀 박스'를 만드세요.
-           - 구조: <table width="100%" border="0" cellpadding="15" bgcolor="${brandColor}"><tr><td><b style="color:#ffffff; font-size:18px;">[소제목 내용]</b></td></tr></table>
+          - 구조: <table width="100%" border="0" cellpadding="15" bgcolor="${brandColor}"><tr><td><b style="color:#ffffff; font-size:18px;">[소제목 내용]</b></td></tr></table>
            - 모든 주요 단락의 시작은 이 타이틀 박스로 시작하세요.
 
         2. 버티컬 라인 (포인트 강조):

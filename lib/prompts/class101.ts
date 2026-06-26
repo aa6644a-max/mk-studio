@@ -7,30 +7,31 @@ const DISCLOSURE =
 
 const LINK_BTN = `<p style="text-align: center; margin: 24px 0;"><a href="${REFERRAL_LINK}" target="_blank" style="background-color: #26C6A4; color: #fff; padding: 13px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">👉 클래스101 구독 할인 링크 바로가기</a></p>`;
 
-export type Class101Angle = 1 | 2 | 3;
-
-export const ANGLE_LABELS: Record<Class101Angle, string> = {
-  1: "구독 계기",
-  2: "강의 리뷰",
-  3: "활용 아이디어",
-};
-
-function angleDesc(angle: Class101Angle, category: string): string {
-  const cat = category.trim() || "관심 분야";
-  switch (angle) {
-    case 1:
-      return `${cat}에 관심 갖게 된 계기, 클래스101 구독을 시작한 흐름을 MK 시선으로 서술`;
-    case 2:
-      return `실제 수강한 ${cat} 관련 강의의 구체적 리뷰 — 어떤 점이 유용했는지, 무엇을 배웠는지`;
-    case 3:
-      return `클래스101 ${cat} 강의를 실생활(블로그 운영·대구 영화모임·콘텐츠 제작)에 적용하는 구체적 아이디어`;
-  }
+/** 카테고리 + 보조 키워드 → 키워드 토큰 배열 (중복 제거, 공백·기호 정리). */
+function keywordTokens(category: string, secondaryKeyword: string): string[] {
+  const raw = [category, secondaryKeyword]
+    .flatMap((s) => s.split(/[,/·]/))
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return [...new Set(raw)];
 }
 
-function buildHashtags(category: string): string {
-  const cat = category.trim();
-  const catTag = cat ? ` #${cat.replace(/[·\s·\/]/g, "")}` : "";
-  return `#클래스101 #클래스101구독 #클래스101후기 #클래스101가격 #클래스101연간구독 #클래스101+ #클래스101구독료 #강의${catTag}`;
+function buildHashtags(category: string, secondaryKeyword: string): string {
+  const base = [
+    "클래스101",
+    "클래스101구독",
+    "클래스101후기",
+    "클래스101가격",
+    "클래스101연간구독",
+    "클래스101+",
+    "클래스101구독료",
+    "강의",
+  ];
+  const catTags = keywordTokens(category, secondaryKeyword).map((t) =>
+    t.replace(/\s+/g, ""),
+  );
+  const tags = [...new Set([...base, ...catTags])];
+  return tags.map((t) => `#${t}`).join(" ");
 }
 
 function rssSection(rssText: string): string {
@@ -51,20 +52,28 @@ ${rssText}
 `;
 }
 
+/**
+ * 클래스101 파트너스 포스팅 프롬프트.
+ * 강의 내용은 호출부에서 첨부하는 강의 PDF(document 블록)를 사실 원천으로 사용한다.
+ * category/secondaryKeyword: 공식 지침의 카테고리별 필수 키워드(예: 드로잉 + 그림).
+ */
 export function buildClass101Prompt(
-  angle: Class101Angle,
   category = "AI·업무자동화",
   courseName = "",
+  secondaryKeyword = "",
   userNotes = "",
   rssText = "",
 ): { system: string; user: string } {
   const cat = category.trim() || "AI·업무자동화";
-  const hashtags = buildHashtags(cat);
+  const tokens = keywordTokens(cat, secondaryKeyword);
+  const keywordList = tokens.join(", ");
+  const hashtags = buildHashtags(cat, secondaryKeyword);
   const { season } = nowParts();
   const designSystem = getDesignSystem("#1a2e4a");
   const commonConstraints = getCommonConstraints(season);
 
   const system = `당신은 네이버 인플루언서 'MK'입니다. 아래 지침을 100% 준수하여 네이버 블로그 HTML 본문을 작성하세요.
+이 글은 **클래스101 파트너스 협업** 글이며, 아래 필수 항목이 하나라도 누락되면 비용 지급에서 제외됩니다.
 
 ## 민케이 프로필
 - 건축 전공자 출신, 영화·드라마 평론가, 네이버 블로그 "MK CINELAB" 운영
@@ -83,9 +92,38 @@ ${commonConstraints}
 - 단락 호흡: 2~3문장마다 <p> 태그 닫고 새로 열기. 긴 단락 금지.
 - 핵심 결론 구절에는 <b> 태그로 굵게 처리.
 
-## Class101 파트너십 필수 조건
-1. 제목 포함 키워드: 클래스101, 구독, 후기, ${cat}, 강의
-2. 본문 키워드 각 5회 이상: 클래스101+, 연간구독, 후기, 가격, 구독료, ${cat}, 강의
+## 🚨 강의 내용의 진실 원천 (절대 준수)
+- 첨부된 **강의 PDF**가 실제 수강한 강의의 유일한 사실 원천입니다.
+- 강의의 구체적 내용·챕터·배운 점·실습은 **PDF에 적힌 사실만** 사용하세요.
+- PDF에 없는 강의 내용을 상상·추측·창작하지 마세요. 허위·과장 광고 금지.
+
+## 클래스101 파트너스 필수 글 구조 (3파트 전부 포함)
+반드시 아래 3개 단락을 모두 작성하세요. 하나라도 빠지면 안 됩니다.
+
+1. **[클래스101 소개]** — 구독 서비스 자체의 장점:
+   - 6,100개 이상 강의 무제한 수강 (2026년 1월 기준)
+   - 145개 분야 전문가 강의, 시간·공간 제약 없음
+   - 구독료 외 추가 결제 없이 매달 신규 강의 (월 평균 120개 추가, 2025년 +960개)
+   - 매일 3회까지 1강 수강 시 최대 100만 포인트 당첨 복권 (출금 가능)
+   - "${cat}" 관련 강의도 풍부함을 자연스럽게 언급
+2. **[실제 수강 후기]** — 첨부 PDF 강의를 실제 들은 경험:
+   - "좋았어요" 수준 금지. **어떤 점이 어떻게 유용했는지** 구체적으로.
+   - 배운 내용을 직접 적용한 결과물·전후 비교를 보여주세요(성장 스토리).
+3. **[전용 링크 + 가격 메리트]**:
+   - 타사 강의 1개 평균 10만원 이상 vs 클래스101 구독은 월 만원대로 무제한 — 가성비 강조.
+   - 한 분야에서도 여러 강의로 전문성 확장 가능함을 언급.
+
+## 전환을 높이는 작성 원칙 (클래스101 비법노트)
+- 단순 정보 나열("이런 강의도 있어요") ❌ → **성장 중심 스토리**(도전→실천→결과) ⭕
+- 본업·전문성과 연관된 강의 추천이 가장 효과적.
+- 학습 전후 비교가 가능한 결과물이 있을 때 신뢰·전환이 높음.
+- 특정 상황 공감 훅으로 시작 가능(예: "직무가 바뀌어 다시 배워야 하나 막막하신가요?").
+- 자연스러운 멘션("클래스101 구독으로 무제한 수강 가능해요").
+- 🚫 금지: 과장된 표현("이 강의 하나로 부자 됐어요"), 본업과 무관한 추천, 심미성만 강조.
+
+## 클래스101 파트너십 필수 표기 조건
+1. 제목 포함 키워드(모두): 클래스101, 구독, 후기, ${keywordList}, 강의
+2. 본문 키워드 각 5회 이상: 클래스101+, 연간구독, 후기, 가격, 구독료, ${keywordList}, 강의
 3. 레퍼럴 링크 2회 삽입:
    - 1회: 도입부 바로 뒤 (첫 소제목 전)
    - 2회: 본문 마무리 직전
@@ -112,26 +150,17 @@ ${DISCLOSURE}
 - 이후: 순수 HTML 본문만 출력
 - \`\`\`html, \`\`\` 등 마크다운 코드블록 기호 절대 금지
 - 외부 래퍼 <div> 생성 금지
-- 전체를 <div style="font-family: 'Nanum Gothic', '나눔고딕', sans-serif; color: #333; line-height: 1.8;"> 로 감싸기
-
-## Class101 서비스 정보 (사실 기반만 활용)
-- 클래스101+ 연간구독: 6,400개↑ 강의 무제한, 145개 분야 (${cat} 포함)
-- 타 사이트 강의 1개 평균 10만원↑ → 클래스101+ 구독료는 월 만원대
-- 매월 평균 120개 신규 강의 추가
-- 복권 이벤트: 매일 3회까지, 1강 수강 시 최대 100만 포인트 당첨`;
+- 전체를 <div style="font-family: 'Nanum Gothic', '나눔고딕', sans-serif; color: #333; line-height: 1.8;"> 로 감싸기`;
 
   const rss = rssSection(rssText);
 
-  const user = `아래 앵글로 네이버 블로그 포스팅을 작성해줘.
+  const user = `첨부한 강의 PDF를 실제 수강한 강의로 삼아, 네이버 블로그 클래스101 파트너스 포스팅을 작성해줘.
 
 ## 카테고리
 ${cat}
 
 ## 수강 강의명
-${courseName.trim() || "미입력 (카테고리 전반으로 자유롭게 작성)"}
-
-## 포스팅 앵글
-${angleDesc(angle, cat)}
+${courseName.trim() || "첨부 PDF의 강의 (PDF 제목/내용 기준)"}
 
 ## 추가 메모
 ${userNotes.trim() || "없음"}
@@ -140,9 +169,9 @@ ${rss}
 
 ## 작성 기준
 - 글 길이: 순수 텍스트 기준 1500~2000자
-- 광고처럼 보이면 안 됨 — 실제 경험 기반처럼 자연스럽게
-- 성장 스토리 흐름: 필요를 느낌 → 클래스101에서 배움 → 실제 적용
-- 작성 완료 후 내부 점검: 필수 키워드 각 5회 이상인지 확인 후 출력`;
+- 광고처럼 보이면 안 됨 — 첨부 PDF 강의의 실제 내용 기반으로 자연스럽게
+- 필수 3파트(소개 / 실제 수강 후기 / 링크+가격) 전부 포함
+- 작성 완료 후 내부 점검: 필수 키워드 각 5회 이상 + 링크 2회 + 표기문구 + 해시태그 확인 후 출력`;
 
   return { system, user };
 }
