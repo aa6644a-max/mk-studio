@@ -7,8 +7,9 @@ import AdOverlayMaker from "./ad-overlay-maker";
 import AdListMaker from "./ad-list-maker";
 import AdClosingMaker from "./ad-closing-maker";
 import ImagesView from "./images-view";
+import AiGenMaker from "./ai-gen-maker";
 
-type Mode = "maker" | "studio";
+type Mode = "maker" | "studio" | "ai-gen";
 type Maker = "basic" | "netflix" | "ad";
 
 const MAKERS: { id: Maker; icon: string; label: string; desc: string; slides?: string[] }[] = [
@@ -57,10 +58,20 @@ export default function ImagesWorkspace() {
           🎨 템플릿 스튜디오
           <span className="ml-1 hidden text-[11px] font-normal opacity-80 sm:inline">(PC 권장)</span>
         </button>
+        <button
+          onClick={() => setMode("ai-gen")}
+          className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${
+            mode === "ai-gen" ? "bg-[var(--accent)] text-white" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          }`}
+        >
+          ✨ AI 생성
+        </button>
       </div>
 
-      <div className="min-h-0 flex-1">
-        {mode === "studio" ? (
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {mode === "ai-gen" ? (
+          <AiGenMaker />
+        ) : mode === "studio" ? (
           <ImagesView hideHeader />
         ) : maker === null ? (
           // 1단계: 메이커 종류 선택
