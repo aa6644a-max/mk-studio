@@ -59,7 +59,7 @@ export async function generatePost(draft: PostDraft): Promise<GenerateResult> {
   }
 
   const { html: rawHtml, titles } = splitTitles(stripFence(text.trim()));
-  const wrappedTitle = draft.title || draft.movieTitle || "포스팅";
+  const wrappedTitle = draft.shortTitle || draft.title || draft.movieTitle || "포스팅";
   // MK LINK 협업 시그니처는 wrapHtml이 전 타입에 자동 삽입.
   const html = wrapHtml(rawHtml, wrappedTitle, draft.postType);
   return { html, titles };

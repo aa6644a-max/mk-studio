@@ -900,8 +900,25 @@ function FinalStep({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const needsShortTitle = ["pdf", "local", "photo"].includes(draft.postType);
+
   return (
     <StepLayout title="마지막으로 제목을 확인하고 생성하세요">
+      {needsShortTitle && (
+        <div className="mb-4">
+          <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">
+            헤더 제목 <span className="text-[var(--accent)]">짧게</span> (2~5단어)
+          </label>
+          <input
+            value={draft.shortTitle}
+            onChange={(e) => onChange({ shortTitle: e.target.value })}
+            placeholder="예: 메가박스 현황 정리 / 을지로 카페 후기"
+            className="w-full rounded-xl border border-[var(--panel-border)] bg-white px-4 py-3 text-base font-semibold outline-none focus:border-[var(--accent)]"
+            autoFocus
+          />
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">포스팅 상단 MK LINK DAILY 아래 표시되는 제목</p>
+        </div>
+      )}
       <div className="mb-6">
         <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">
           블로그 포스팅 제목 (네이버 SEO)
@@ -910,7 +927,7 @@ function FinalStep({
           value={draft.title}
           onChange={(e) => onChange({ title: e.target.value })}
           placeholder="자동 입력된 제목을 수정하거나 직접 입력하세요"
-          className="w-full rounded-xl border border-[var(--panel-border)] bg-white px-4 py-3 text-base font-semibold outline-none focus:border-[var(--accent)]"
+          className="w-full rounded-xl border border-[var(--panel-border)] bg-white px-4 py-3 text-base outline-none focus:border-[var(--accent)]"
         />
       </div>
 

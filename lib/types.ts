@@ -107,6 +107,8 @@ export type PostDraft = {
   pdfNames: string[];
   // 로컬소식 브랜드 색상 (섹션 헤더 bg)
   brandColor: string;
+  // 헤더 표시용 짧은 제목 (PDF·사진·로컬 전용, 비워두면 title 사용)
+  shortTitle: string;
   // 본문 (사용자 메모/지시) + 생성 결과
   body: string;
   generatedHtml: string;
@@ -139,6 +141,7 @@ export function emptyDraft(postType: PostType = "review"): PostDraft {
     pdfText: "",
     pdfNames: [],
     brandColor: "#1a2e4a",
+    shortTitle: "",
     body: "",
     generatedHtml: "",
     seoTitles: [],
