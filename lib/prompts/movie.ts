@@ -386,13 +386,28 @@ export function buildCurationPrompt(
 
         [수집된 영화 데이터에 포함된 <메인 포스터 HTML 코드>를 여기에 반드시 삽입]
 
-        <div style="background: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
-            <p style="margin: 0;">🏷️ 원제 : [Original Title]</p>
-            <p style="margin: 0;">🌍 국가 : [Country]</p>
-            <p style="margin: 0;">🎬 감독 : [Director]</p>
-            <p style="margin: 0;">👤 출연 : [Actors (주연 위주로 2~3명)]</p>
-            <p style="margin: 0;">📅 개봉일 : [Release Date]</p>
-        </div>
+        <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border:1px solid #e3e8ef; margin:15px 0 20px; font-size:14px;">
+          <tr>
+            <td width="26%" bgcolor="#f4f7fb" style="padding:11px 14px; font-weight:bold; color:#2e7d32; border-bottom:1px solid #eef0f5; border-right:1px solid #eef0f5;"><b>🏷️ 원제</b></td>
+            <td style="padding:11px 14px; border-bottom:1px solid #eef0f5;">[Original Title]</td>
+          </tr>
+          <tr>
+            <td bgcolor="#f4f7fb" style="padding:11px 14px; font-weight:bold; color:#2e7d32; border-bottom:1px solid #eef0f5; border-right:1px solid #eef0f5;"><b>🌍 국가</b></td>
+            <td style="padding:11px 14px; border-bottom:1px solid #eef0f5;">[Country]</td>
+          </tr>
+          <tr>
+            <td bgcolor="#f4f7fb" style="padding:11px 14px; font-weight:bold; color:#2e7d32; border-bottom:1px solid #eef0f5; border-right:1px solid #eef0f5;"><b>🎬 감독</b></td>
+            <td style="padding:11px 14px; border-bottom:1px solid #eef0f5;">[Director]</td>
+          </tr>
+          <tr>
+            <td bgcolor="#f4f7fb" style="padding:11px 14px; font-weight:bold; color:#2e7d32; border-bottom:1px solid #eef0f5; border-right:1px solid #eef0f5;"><b>👤 출연</b></td>
+            <td style="padding:11px 14px; border-bottom:1px solid #eef0f5;">[Actors (주연 위주로 2~3명)]</td>
+          </tr>
+          <tr>
+            <td bgcolor="#f4f7fb" style="padding:11px 14px; font-weight:bold; color:#2e7d32; border-right:1px solid #eef0f5;"><b>📅 개봉일</b></td>
+            <td style="padding:11px 14px;">[Release Date]</td>
+          </tr>
+        </table>
 
         <p>[TMDB 줄거리를 바탕으로 하되, 아주 간결하게 압축한 영화 소개글. (1~2문장)]</p>
 
@@ -441,11 +456,20 @@ export function buildBingePrompt(
         1. 글 전체 톤: "실제로 정주행해봤어요"처럼 직접 경험한 1인칭 체험기 스타일로 작성하세요.
         2. 작품 1편당 소개글 + 정주행 포인트 합쳐 200~250자 내외로 타이트하게 요약하세요.
         3. 🚨 [정주행 정보 박스 — 절대 필수]: 각 작품 포스터 바로 아래에 반드시 아래 형식을 삽입하세요:
-           <div style="background:#f4f4f4; border-radius:8px; padding:12px 18px; margin:15px 0; font-size:14px; line-height:2.2;">
-             <p style="margin:0;">📺 <b>총 화수</b> : [총화수]화 ([시즌수]시즌)</p>
-             <p style="margin:0;">⏱️ <b>편당 러닝타임</b> : 약 [편당분수]분</p>
-             <p style="margin:0;">🕐 <b>정주행 완료 시 총 시청 시간</b> : 약 [총시청시간]</p>
-           </div>
+           <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border:1px solid #e3e8ef; margin:15px 0; font-size:14px;">
+             <tr>
+               <td width="40%" bgcolor="#eef4fb" style="padding:11px 14px; font-weight:bold; color:#1565c0; border-bottom:1px solid #e5ebf2; border-right:1px solid #e5ebf2;"><b>📺 총 화수</b></td>
+               <td style="padding:11px 14px; border-bottom:1px solid #e5ebf2;">[총화수]화 ([시즌수]시즌)</td>
+             </tr>
+             <tr>
+               <td bgcolor="#eef4fb" style="padding:11px 14px; font-weight:bold; color:#1565c0; border-bottom:1px solid #e5ebf2; border-right:1px solid #e5ebf2;"><b>⏱️ 편당 러닝타임</b></td>
+               <td style="padding:11px 14px; border-bottom:1px solid #e5ebf2;">약 [편당분수]분</td>
+             </tr>
+             <tr>
+               <td bgcolor="#eef4fb" style="padding:11px 14px; font-weight:bold; color:#1565c0; border-right:1px solid #e5ebf2;"><b>🕐 총 시청 시간</b></td>
+               <td style="padding:11px 14px;">약 [총시청시간]</td>
+             </tr>
+           </table>
         4. 정주행 포인트는 "이런 사람에게", "이럴 때 보면 딱"인 관점에서 구체적으로 작성하세요.
 
         [🚨 절대 준수: MK LINK 정주행 추천 HTML 레이아웃]
