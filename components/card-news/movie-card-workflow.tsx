@@ -390,8 +390,8 @@ export default function MovieCardWorkflow() {
                   <div className="space-y-2">
                     {infoRows.map((r, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <input value={r.label} onChange={(e) => updateInfoRow(i, "label", e.target.value)} placeholder="항목" className={`${inputCls} w-20`} />
-                        <input value={r.value} onChange={(e) => updateInfoRow(i, "value", e.target.value)} placeholder="내용" className={`${inputCls} flex-1`} />
+                        <input value={r.label} onChange={(e) => updateInfoRow(i, "label", e.target.value)} placeholder="항목" className="w-20 shrink-0 rounded-lg border border-[var(--panel-border)] bg-white px-3 py-2.5 text-sm" />
+                        <input value={r.value} onChange={(e) => updateInfoRow(i, "value", e.target.value)} placeholder="내용" className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-white px-3 py-2.5 text-sm" />
                         <button
                           onClick={() => deleteInfoRow(i)}
                           aria-label="삭제"
