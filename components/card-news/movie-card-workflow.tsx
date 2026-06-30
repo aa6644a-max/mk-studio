@@ -212,10 +212,10 @@ export default function MovieCardWorkflow() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {/* live preview (steps 1+) */}
-        {movie && step > 0 && (
-          <div ref={previewBoxRef} className="flex justify-center bg-[#0e0e10] p-3">
-            <div style={{ width: 1080 * scale, height: 1350 * scale, overflow: "hidden" }}>
+        {/* 미리보기 — 마지막 단계에서만 */}
+        {movie && step === 6 && (
+          <div ref={previewBoxRef} className="flex min-h-full items-start justify-center bg-[#0e0e10] p-4">
+            <div style={{ width: 1080 * scale, height: 1350 * scale, overflow: "hidden", borderRadius: 8 * scale, boxShadow: "0 10px 40px rgba(0,0,0,0.5)" }}>
               <div style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>{card}</div>
             </div>
           </div>
