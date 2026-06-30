@@ -65,13 +65,15 @@ export default function MovieCardWorkflow() {
   const [ostTitle, setOstTitle] = useState("");
   const [galleryPaths, setGalleryPaths] = useState<string[]>([]);
 
-  const [accentColor] = useState("#1c2b5e");
+  const [accentColor, setAccentColor] = useState("#1c2b5e");
+  const [accentAuto, setAccentAuto] = useState(true);
   const [bgColor] = useState("#eef0f3");
   const [creditText, setCreditText] = useState("MK LINK © 2026");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const cardRef = useRef<HTMLDivElement>(null);
+  const colorCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const previewBoxRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.3);
 
@@ -86,6 +88,50 @@ export default function MovieCardWorkflow() {
     window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
   }, [fit, step]);
+
+  // 스틸컷에서 브랜드 컬러 자동 추출
+  useEffect(() => {
+    if (!accentAuto || !heroPath) return;
+    const url = `/api/card-news/img?u=${encodeURIComponent(IMG("w300", heroPath))}`;
+    const img = new Image();
+    img.onload = () => {
+      let canvas = colorCanvasRef.current;
+      if (!canvas) {
+        canvas = document.createElement("canvas");
+        colorCanvasRef.current = canvas;
+      }
+      const w = 80;
+      const h = Math.max(1, Math.round((img.height / img.width) * 80));
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0, w, h);
+      let data: Uint8ClampedArray;
+      try {
+        data = ctx.getImageData(0, 0, w, h).data;
+      } catch {
+        return;
+      }
+      let best = -1;
+      let br = 28, bg = 43, bb = 94;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i + 1], b = data[i + 2];
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        const sat = max === 0 ? 0 : (max - min) / max;
+        const lum = (max + min) / 2 / 255;
+        const score = sat * (1 - Math.abs(lum - 0.5));
+        if (score > best) {
+          best = score;
+          br = r; bg = g; bb = b;
+        }
+      }
+      const f = 0.55; // 흰 텍스트 대비 위해 어둡게
+      const hx = (n: number) => Math.round(Math.min(255, n)).toString(16).padStart(2, "0");
+      setAccentColor(`#${hx(br * f)}${hx(bg * f)}${hx(bb * f)}`);
+    };
+    img.src = url;
+  }, [heroPath, accentAuto]);
 
   async function runSearch() {
     const q = query.trim();
@@ -143,6 +189,12 @@ export default function MovieCardWorkflow() {
   }
   function updateInfoRow(i: number, field: "label" | "value", val: string) {
     setInfoRows((rows) => rows.map((r, idx) => (idx === i ? { ...r, [field]: val } : r)));
+  }
+  function addInfoRow() {
+    setInfoRows((rows) => (rows.length >= 6 ? rows : [...rows, { label: "", value: "" }]));
+  }
+  function deleteInfoRow(i: number) {
+    setInfoRows((rows) => rows.filter((_, idx) => idx !== i));
   }
 
   async function exportPng() {
@@ -266,20 +318,48 @@ export default function MovieCardWorkflow() {
 
             {/* STEP 1 — hero bg */}
             {step === 1 && movie && (
-              <Section label="히어로 배경 이미지">
-                <div className="grid grid-cols-2 gap-2">
-                  {movie.backdrops.map((p) => (
+              <>
+                <Section label="히어로 배경 이미지">
+                  <div className="grid grid-cols-2 gap-2">
+                    {movie.backdrops.map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => setHeroPath(p)}
+                        className={`overflow-hidden rounded-lg border-2 transition ${heroPath === p ? "border-[var(--accent)]" : "border-transparent"}`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={IMG("w300", p)} alt="" className="aspect-video w-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                </Section>
+
+                <Section label="브랜드 컬러">
+                  <div className="flex items-center gap-2">
+                    <div className="h-9 w-9 shrink-0 rounded-lg border border-[var(--panel-border)]" style={{ background: accentColor }} />
+                    <input
+                      type="color"
+                      value={accentColor}
+                      onChange={(e) => { setAccentAuto(false); setAccentColor(e.target.value); }}
+                      className="h-9 w-12 rounded border border-[var(--panel-border)]"
+                    />
+                    <span className="font-mono text-xs text-[var(--text-secondary)]">{accentColor}</span>
                     <button
-                      key={p}
-                      onClick={() => setHeroPath(p)}
-                      className={`overflow-hidden rounded-lg border-2 transition ${heroPath === p ? "border-[var(--accent)]" : "border-transparent"}`}
+                      onClick={() => setAccentAuto(true)}
+                      className={`ml-auto rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        accentAuto
+                          ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
+                          : "border-[var(--panel-border)] text-[var(--text-secondary)]"
+                      }`}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={IMG("w300", p)} alt="" className="aspect-video w-full object-cover" />
+                      🎨 스틸컷 자동
                     </button>
-                  ))}
-                </div>
-              </Section>
+                  </div>
+                  <p className="mt-2 text-xs text-[var(--text-secondary)]">
+                    {accentAuto ? "선택한 스틸컷 색감에서 자동 추출 중." : "수동 지정됨. '스틸컷 자동'으로 되돌릴 수 있어요."}
+                  </p>
+                </Section>
+              </>
             )}
 
             {/* STEP 2 — hero text */}
@@ -306,15 +386,30 @@ export default function MovieCardWorkflow() {
                     ))}
                   </div>
                 </Section>
-                <Section label="주요 정보">
+                <Section label="주요 정보 (항목 추가·삭제·수정)">
                   <div className="space-y-2">
                     {infoRows.map((r, i) => (
-                      <div key={i} className="flex gap-2">
-                        <input value={r.label} onChange={(e) => updateInfoRow(i, "label", e.target.value)} className={`${inputCls} w-20`} />
-                        <input value={r.value} onChange={(e) => updateInfoRow(i, "value", e.target.value)} className={`${inputCls} flex-1`} />
+                      <div key={i} className="flex items-center gap-2">
+                        <input value={r.label} onChange={(e) => updateInfoRow(i, "label", e.target.value)} placeholder="항목" className={`${inputCls} w-20`} />
+                        <input value={r.value} onChange={(e) => updateInfoRow(i, "value", e.target.value)} placeholder="내용" className={`${inputCls} flex-1`} />
+                        <button
+                          onClick={() => deleteInfoRow(i)}
+                          aria-label="삭제"
+                          className="shrink-0 rounded-lg border border-[var(--panel-border)] px-2.5 py-2 text-sm text-[var(--text-secondary)] hover:border-red-400 hover:text-red-500"
+                        >
+                          ✕
+                        </button>
                       </div>
                     ))}
                   </div>
+                  {infoRows.length < 6 && (
+                    <button
+                      onClick={addInfoRow}
+                      className="mt-2 w-full rounded-lg border border-dashed border-[var(--panel-border)] py-2 text-sm font-semibold text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                    >
+                      + 항목 추가
+                    </button>
+                  )}
                 </Section>
               </>
             )}
