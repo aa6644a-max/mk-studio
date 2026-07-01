@@ -54,6 +54,7 @@ export default function MovieCardWorkflow() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searched, setSearched] = useState(false);
 
   // movie + card fields
   const [movie, setMovie] = useState<MovieDetail | null>(null);
@@ -139,6 +140,29 @@ export default function MovieCardWorkflow() {
     img.src = url;
   }, [heroPath, accentAuto]);
 
+  function resetAll() {
+    setStep(0);
+    setQuery("");
+    setResults([]);
+    setSearched(false);
+    setMovie(null);
+    setHeroPath("");
+    setMovieTitle("");
+    setBadgeText("오늘의 추천작");
+    setHeroTagline("");
+    setMetaLine("");
+    setBodyCopy("");
+    setRatings([]);
+    setInfoRows([]);
+    setOstTitle("");
+    setGalleryPaths([]);
+    setUploads([]);
+    setAccentColor("#1c2b5e");
+    setAccentAuto(true);
+    setCreditText("MK LINK © 2026");
+    setError("");
+  }
+
   async function runSearch() {
     const q = query.trim();
     if (!q) return;
@@ -148,6 +172,7 @@ export default function MovieCardWorkflow() {
       const res = await fetch(`/api/card-news/search?q=${encodeURIComponent(q)}`);
       const data = await res.json();
       setResults(data.results ?? []);
+      setSearched(true);
     } catch {
       setError("검색 실패");
     } finally {
@@ -349,6 +374,14 @@ export default function MovieCardWorkflow() {
             {i + 1}. {s}
           </button>
         ))}
+        {movie && (
+          <button
+            onClick={resetAll}
+            className="ml-auto shrink-0 rounded-full border border-[var(--panel-border)] px-2.5 py-1 font-semibold text-[var(--text-secondary)] hover:border-red-400 hover:text-red-500"
+          >
+            🔄 처음부터
+          </button>
+        )}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -366,6 +399,16 @@ export default function MovieCardWorkflow() {
             {/* STEP 0 — search */}
             {step === 0 && (
               <>
+                {movie && (
+                  <div className="flex items-center gap-3 rounded-lg border border-[var(--accent)] bg-[var(--accent)]/5 p-3 text-sm">
+                    <span className="min-w-0 flex-1">
+                      현재 <b className="text-[var(--accent)]">{movie.title}</b> 작업 중. 다른 영화로 만들려면 아래에서 새로 검색·선택하세요.
+                    </span>
+                    <button onClick={resetAll} className="shrink-0 rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:border-red-400 hover:text-red-500">
+                      🔄 처음부터
+                    </button>
+                  </div>
+                )}
                 <Section label="영화 검색">
                   <div className="flex gap-2">
                     <input
@@ -380,6 +423,13 @@ export default function MovieCardWorkflow() {
                     </button>
                   </div>
                 </Section>
+                {searched && !searching && results.length === 0 && (
+                  <p className="rounded-lg bg-[var(--page-bg)] p-3 text-xs leading-relaxed text-[var(--text-secondary)]">
+                    검색 결과가 없어요. TMDB에 아직 등록되지 않은 신작일 수 있습니다.
+                    <br />
+                    이 경우 비슷한 다른 영화로 틀을 잡은 뒤 <b>＋ 사진 추가</b>로 이미지를 직접 올리고, 텍스트를 수정해 만들 수 있어요.
+                  </p>
+                )}
                 <div className="space-y-2">
                   {results.map((r) => (
                     <button
