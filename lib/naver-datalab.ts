@@ -11,6 +11,14 @@ export interface TrendResult {
   changePercent: number;
 }
 
+export interface KeywordGroup {
+  groupName: string;
+  keywords: string[];
+}
+
+/** DataLab API 1회 호출당 최대 그룹 수. */
+const MAX_GROUPS_PER_CALL = 5;
+
 const KEYWORD_GROUPS = [
   {
     groupName: "대구 영화·독립영화",
@@ -59,7 +67,8 @@ function calcTrend(data: { period: string; ratio: number }[]): {
   return { trend, latestRatio: Math.round(latest), changePercent };
 }
 
-export async function fetchTrends(): Promise<TrendResult[]> {
+/** DataLab API 1회 호출 (그룹 최대 5개). */
+async function callDataLab(groups: KeywordGroup[]): Promise<TrendResult[]> {
   const clientId = process.env.NAVER_CLIENT_ID;
   const clientSecret = process.env.NAVER_CLIENT_SECRET;
 
@@ -73,7 +82,7 @@ export async function fetchTrends(): Promise<TrendResult[]> {
     startDate,
     endDate,
     timeUnit: "week",
-    keywordGroups: KEYWORD_GROUPS,
+    keywordGroups: groups,
     device: "",
     ages: [],
     gender: "",
@@ -105,13 +114,33 @@ export async function fetchTrends(): Promise<TrendResult[]> {
   return json.results.map((r, i) => {
     const { trend, latestRatio, changePercent } = calcTrend(r.data);
     return {
-      groupName: KEYWORD_GROUPS[i]?.groupName ?? r.title,
+      groupName: groups[i]?.groupName ?? r.title,
       keywords: r.keywords,
       trend,
       latestRatio,
       changePercent,
     };
   });
+}
+
+/** 임의 키워드그룹 조회 (10개까지 지원, 5개 단위로 배치 호출). */
+export async function fetchTrendsForGroups(
+  groups: KeywordGroup[]
+): Promise<TrendResult[]> {
+  const validGroups = groups.filter((g) => g.keywords.length > 0);
+  if (validGroups.length === 0) return [];
+
+  const chunks: KeywordGroup[][] = [];
+  for (let i = 0; i < validGroups.length; i += MAX_GROUPS_PER_CALL) {
+    chunks.push(validGroups.slice(i, i + MAX_GROUPS_PER_CALL));
+  }
+
+  const results = await Promise.all(chunks.map((chunk) => callDataLab(chunk)));
+  return results.flat();
+}
+
+export async function fetchTrends(): Promise<TrendResult[]> {
+  return fetchTrendsForGroups(KEYWORD_GROUPS);
 }
 
 export function formatTrendsForPrompt(trends: TrendResult[]): string {
