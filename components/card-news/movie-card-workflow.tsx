@@ -3,37 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import CardCanvas, { type InfoRow, type RatingItem } from "./card-canvas";
+import { fileToScaledDataUrl } from "@/lib/image";
 
 const IMG = (size: string, path: string) => `https://image.tmdb.org/t/p/${size}${path}`;
 // 업로드(data URL)면 원본 그대로, TMDB 경로면 사이즈별 URL 조립.
 const resolve = (size: string, v: string) => (v.startsWith("data:") ? v : IMG(size, v));
-
-// 올린 이미지 긴 변 1920px로 축소 + jpeg 85% → data URL.
-function fileToScaledDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("read fail"));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error("decode fail"));
-      img.onload = () => {
-        const MAX = 1920;
-        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-        const w = Math.round(img.width * scale);
-        const h = Math.round(img.height * scale);
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return reject(new Error("no ctx"));
-        ctx.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/jpeg", 0.85));
-      };
-      img.src = reader.result as string;
-    };
-    reader.readAsDataURL(file);
-  });
-}
 
 type SearchResult = { id: number; title: string; year: string; posterUrl: string | null };
 
