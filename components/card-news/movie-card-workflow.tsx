@@ -264,17 +264,65 @@ export default function MovieCardWorkflow() {
   }
 
   async function exportPng() {
-    const node = cardRef.current;
-    if (!node) return;
     setBusy(true);
+    setError("");
     try {
-      const url = await toPng(node, { width: 1080, height: 1350, pixelRatio: 2, cacheBust: true });
+      const url = await renderPng();
       const a = document.createElement("a");
       a.href = url;
       a.download = `${movieTitle || "movie"}_card.png`;
       a.click();
     } catch {
       setError("이미지 생성 실패");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function renderPng() {
+    const node = cardRef.current;
+    if (!node) throw new Error("no node");
+    return toPng(node, { width: 1080, height: 1350, pixelRatio: 2, cacheBust: true });
+  }
+
+  function buildCaption() {
+    const tag = (movieTitle || "").replace(/[^\p{L}\p{N}]/gu, "");
+    return [
+      `🎬 ${movieTitle}`,
+      "",
+      heroTagline,
+      "",
+      `#영화추천 #영화 #무비${tag ? ` #${tag}` : ""}`,
+    ]
+      .filter((l) => l !== undefined)
+      .join("\n");
+  }
+
+  async function shareInstagram() {
+    setBusy(true);
+    setError("");
+    try {
+      const url = await renderPng();
+      const blob = await (await fetch(url)).blob();
+      const file = new File([blob], `${movieTitle || "movie"}_card.png`, { type: "image/png" });
+      const caption = buildCaption();
+      try {
+        await navigator.clipboard.writeText(caption);
+      } catch {
+        /* clipboard 권한 없으면 무시 */
+      }
+      const nav = navigator as Navigator & { canShare?: (d?: ShareData) => boolean };
+      if (nav.canShare && nav.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text: caption });
+      } else {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file.name;
+        a.click();
+        setError("이 브라우저는 직접 공유가 안 돼요. 이미지 저장됨 — 인스타 앱에서 올려주세요. (캡션은 복사됨)");
+      }
+    } catch (e) {
+      if ((e as Error)?.name !== "AbortError") setError("공유 실패");
     } finally {
       setBusy(false);
     }
@@ -558,9 +606,14 @@ export default function MovieCardWorkflow() {
               다음 →
             </button>
           ) : (
-            <button onClick={exportPng} disabled={busy} className="flex-[2] rounded-xl bg-[var(--accent)] py-3 text-sm font-bold text-white disabled:opacity-60">
-              {busy ? "생성 중..." : "PNG 다운로드 (1080×1350)"}
-            </button>
+            <>
+              <button onClick={exportPng} disabled={busy} className="flex-1 rounded-xl border border-[var(--panel-border)] py-3 text-sm font-bold text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--text-primary)] disabled:opacity-60">
+                {busy ? "..." : "PNG 저장"}
+              </button>
+              <button onClick={shareInstagram} disabled={busy} className="flex-[2] rounded-xl bg-[var(--accent)] py-3 text-sm font-bold text-white disabled:opacity-60">
+                {busy ? "처리 중..." : "📷 인스타 공유"}
+              </button>
+            </>
           )}
         </div>
       )}
