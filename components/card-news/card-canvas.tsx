@@ -24,7 +24,7 @@ export interface CardCanvasProps {
 }
 
 const px = (url?: string) =>
-  url ? `/api/card-news/img?u=${encodeURIComponent(url)}` : "";
+  url ? (url.startsWith("data:") ? url : `/api/card-news/img?u=${encodeURIComponent(url)}`) : "";
 
 const sideIcons = [
   <><path key="a" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline key="b" points="9 22 9 12 15 12 15 22" /></>,

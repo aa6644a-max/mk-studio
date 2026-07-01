@@ -5,6 +5,35 @@ import { toPng } from "html-to-image";
 import CardCanvas, { type InfoRow, type RatingItem } from "./card-canvas";
 
 const IMG = (size: string, path: string) => `https://image.tmdb.org/t/p/${size}${path}`;
+// 업로드(data URL)면 원본 그대로, TMDB 경로면 사이즈별 URL 조립.
+const resolve = (size: string, v: string) => (v.startsWith("data:") ? v : IMG(size, v));
+
+// 올린 이미지 긴 변 1920px로 축소 + jpeg 85% → data URL.
+function fileToScaledDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("read fail"));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("decode fail"));
+      img.onload = () => {
+        const MAX = 1920;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("no ctx"));
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 type SearchResult = { id: number; title: string; year: string; posterUrl: string | null };
 
@@ -64,6 +93,7 @@ export default function MovieCardWorkflow() {
   const [infoRows, setInfoRows] = useState<InfoRow[]>([]);
   const [ostTitle, setOstTitle] = useState("");
   const [galleryPaths, setGalleryPaths] = useState<string[]>([]);
+  const [uploads, setUploads] = useState<string[]>([]); // 올린 스틸컷(히어로·갤러리 공용)
 
   const [accentColor, setAccentColor] = useState("#1c2b5e");
   const [accentAuto, setAccentAuto] = useState(true);
@@ -92,7 +122,9 @@ export default function MovieCardWorkflow() {
   // 스틸컷에서 브랜드 컬러 자동 추출
   useEffect(() => {
     if (!accentAuto || !heroPath) return;
-    const url = `/api/card-news/img?u=${encodeURIComponent(IMG("w300", heroPath))}`;
+    const url = heroPath.startsWith("data:")
+      ? heroPath
+      : `/api/card-news/img?u=${encodeURIComponent(IMG("w300", heroPath))}`;
     const img = new Image();
     img.onload = () => {
       let canvas = colorCanvasRef.current;
@@ -169,6 +201,7 @@ export default function MovieCardWorkflow() {
         { label: "장르", value: m.genres.join(", ") || "-" },
       ]);
       setOstTitle(`${m.title} OST`);
+      setUploads([]);
       setGalleryPaths(m.backdrops.slice(0, 6));
       setHeroPath(m.backdrops[0] || "");
       setCreditText("MK LINK © 2026");
@@ -178,6 +211,39 @@ export default function MovieCardWorkflow() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function onFiles(fileList: FileList | null, mode: "hero" | "gallery") {
+    if (!fileList?.length) return;
+    setError("");
+    const urls: string[] = [];
+    for (const f of Array.from(fileList)) {
+      if (!f.type.startsWith("image/")) continue;
+      try {
+        urls.push(await fileToScaledDataUrl(f));
+      } catch {
+        /* skip bad file */
+      }
+    }
+    if (!urls.length) {
+      setError("이미지 파일만 올릴 수 있어요.");
+      return;
+    }
+    setUploads((prev) => [...urls, ...prev]);
+    if (mode === "hero") {
+      setHeroPath(urls[0]);
+    } else {
+      setGalleryPaths((prev) => {
+        const room = 6 - prev.length;
+        return [...prev, ...urls.slice(0, Math.max(0, room)).filter((u) => !prev.includes(u))];
+      });
+    }
+  }
+
+  function removeUpload(url: string) {
+    setUploads((prev) => prev.filter((u) => u !== url));
+    setHeroPath((h) => (h === url ? "" : h));
+    setGalleryPaths((prev) => prev.filter((p) => p !== url));
   }
 
   function toggleGallery(path: string) {
@@ -214,10 +280,10 @@ export default function MovieCardWorkflow() {
     }
   }
 
-  const heroUrl = heroPath ? IMG("w1280", heroPath) : "";
+  const heroUrl = heroPath ? resolve("w1280", heroPath) : "";
   const posterUrl = movie?.poster_path ? IMG("w342", movie.poster_path) : "";
-  const ostBgUrl = galleryPaths[1] ? IMG("w780", galleryPaths[1]) : heroUrl;
-  const galleryUrls = galleryPaths.map((p) => IMG("w300", p));
+  const ostBgUrl = galleryPaths[1] ? resolve("w780", galleryPaths[1]) : heroUrl;
+  const galleryUrls = galleryPaths.map((p) => resolve("w300", p));
 
   const card = (
     <CardCanvas
@@ -321,16 +387,30 @@ export default function MovieCardWorkflow() {
               <>
                 <Section label="히어로 배경 이미지">
                   <div className="grid grid-cols-2 gap-2">
-                    {movie.backdrops.map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => setHeroPath(p)}
-                        className={`overflow-hidden rounded-lg border-2 transition ${heroPath === p ? "border-[var(--accent)]" : "border-transparent"}`}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={IMG("w300", p)} alt="" className="aspect-video w-full object-cover" />
-                      </button>
-                    ))}
+                    <UploadTile onFiles={(f) => onFiles(f, "hero")} />
+                    {[...uploads, ...movie.backdrops].map((p) => {
+                      const isUp = p.startsWith("data:");
+                      return (
+                        <div key={p} className="relative">
+                          <button
+                            onClick={() => setHeroPath(p)}
+                            className={`block w-full overflow-hidden rounded-lg border-2 transition ${heroPath === p ? "border-[var(--accent)]" : "border-transparent"}`}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={resolve("w300", p)} alt="" className="aspect-video w-full object-cover" />
+                          </button>
+                          {isUp && (
+                            <button
+                              onClick={() => removeUpload(p)}
+                              aria-label="삭제"
+                              className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-[11px] text-white hover:bg-red-500"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </Section>
 
@@ -427,21 +507,33 @@ export default function MovieCardWorkflow() {
               <Section label={`갤러리 스틸컷 선택 (${galleryPaths.length}/6)`}>
                 <p className="mb-2 text-xs text-[var(--text-secondary)]">최대 6장, 선택 순서대로 배치.</p>
                 <div className="grid grid-cols-3 gap-2">
-                  {movie.backdrops.map((p) => {
+                  <UploadTile onFiles={(f) => onFiles(f, "gallery")} />
+                  {[...uploads, ...movie.backdrops].map((p) => {
+                    const isUp = p.startsWith("data:");
                     const idx = galleryPaths.indexOf(p);
                     const sel = idx >= 0;
                     const full = galleryPaths.length >= 6 && !sel;
                     return (
-                      <button
-                        key={p}
-                        onClick={() => toggleGallery(p)}
-                        disabled={full}
-                        className={`relative overflow-hidden rounded-lg border-2 transition ${sel ? "border-[var(--accent)]" : full ? "border-transparent opacity-30" : "border-transparent"}`}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={IMG("w185", p)} alt="" className="aspect-video w-full object-cover" />
-                        {sel && <span className="absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-bold text-white">{idx + 1}</span>}
-                      </button>
+                      <div key={p} className="relative">
+                        <button
+                          onClick={() => toggleGallery(p)}
+                          disabled={full}
+                          className={`block w-full overflow-hidden rounded-lg border-2 transition ${sel ? "border-[var(--accent)]" : full ? "border-transparent opacity-30" : "border-transparent"}`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={resolve("w185", p)} alt="" className="aspect-video w-full object-cover" />
+                          {sel && <span className="absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-bold text-white">{idx + 1}</span>}
+                        </button>
+                        {isUp && (
+                          <button
+                            onClick={() => removeUpload(p)}
+                            aria-label="삭제"
+                            className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-[11px] text-white hover:bg-red-500"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
@@ -477,6 +569,25 @@ export default function MovieCardWorkflow() {
 }
 
 const inputCls = "w-full rounded-lg border border-[var(--panel-border)] bg-white px-3 py-2.5 text-sm";
+
+function UploadTile({ onFiles }: { onFiles: (files: FileList | null) => void }) {
+  return (
+    <label className="flex aspect-video cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border-2 border-dashed border-[var(--panel-border)] text-[var(--text-secondary)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]">
+      <input
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          onFiles(e.target.files);
+          e.currentTarget.value = "";
+        }}
+      />
+      <span className="text-xl leading-none">＋</span>
+      <span className="text-xs font-semibold">사진 추가</span>
+    </label>
+  );
+}
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
