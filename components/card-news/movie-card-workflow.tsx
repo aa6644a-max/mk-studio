@@ -281,7 +281,7 @@ export default function MovieCardWorkflow() {
   async function renderPng() {
     const node = cardRef.current;
     if (!node) throw new Error("no node");
-    return toPng(node, { width: 1080, height: 1350, pixelRatio: 2, cacheBust: true });
+    return toPng(node, { width: 1080, height: 1350, pixelRatio: 2, cacheBust: true, includeQueryParams: true });
   }
 
   function buildCaption() {
