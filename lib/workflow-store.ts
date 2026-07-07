@@ -47,6 +47,8 @@ type State = {
   selectedType: PostType | null;
   messages: ChatMessage[];
   generatedHtml: string;
+  /** wrapHtml 래핑 전 본문 — SEO 제목 변경 시 h1 재래핑용 */
+  rawHtml: string;
   seoTitles: string[];
   isStreaming: boolean;
   error: string;
@@ -71,6 +73,7 @@ type Actions = {
   addMessage: (m: ChatMessage) => void;
   appendToLastMessage: (chunk: string) => void;
   setGeneratedHtml: (html: string) => void;
+  setRawHtml: (html: string) => void;
   setSeoTitles: (titles: string[]) => void;
   setStreaming: (b: boolean) => void;
   setError: (e: string) => void;
@@ -91,6 +94,7 @@ const INIT: State = {
   selectedType: null,
   messages: [],
   generatedHtml: "",
+  rawHtml: "",
   seoTitles: [],
   isStreaming: false,
   error: "",
@@ -121,6 +125,7 @@ export const useWorkflowStore = create<State & Actions>((set) => ({
       return { messages: msgs };
     }),
   setGeneratedHtml: (generatedHtml) => set({ generatedHtml }),
+  setRawHtml: (rawHtml) => set({ rawHtml }),
   setSeoTitles: (seoTitles) => set({ seoTitles }),
   setStreaming: (isStreaming) => set({ isStreaming }),
   setError: (error) => set({ error }),

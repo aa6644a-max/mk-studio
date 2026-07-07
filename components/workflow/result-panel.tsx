@@ -2,15 +2,24 @@
 
 import { useState } from "react";
 import { useWorkflowStore } from "@/lib/workflow-store";
+import { wrapHtml } from "@/lib/html-formatter";
 
 export default function ResultPanel() {
-  const { generatedHtml, seoTitles, topic, postType, messages, seed, reset } =
+  const { generatedHtml, rawHtml, seoTitles, topic, postType, messages, seed, reset, setGeneratedHtml } =
     useWorkflowStore();
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
   const [selectedTitle, setSelectedTitle] = useState(0);
   const [tab, setTab] = useState<"preview" | "html">("preview");
+
+  // SEO 제목 선택 변경 → 포스팅 h1도 같은 제목으로 재래핑
+  function handleSelectTitle(i: number) {
+    setSelectedTitle(i);
+    if (rawHtml) {
+      setGeneratedHtml(wrapHtml(rawHtml, seoTitles[i] || topic, postType));
+    }
+  }
 
   async function handleCopy() {
     await navigator.clipboard.writeText(generatedHtml);
@@ -192,7 +201,7 @@ export default function ResultPanel() {
             {seoTitles.map((title, i) => (
               <button
                 key={i}
-                onClick={() => setSelectedTitle(i)}
+                onClick={() => handleSelectTitle(i)}
                 style={{
                   padding: "6px 12px",
                   borderRadius: "6px",

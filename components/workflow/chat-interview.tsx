@@ -165,10 +165,14 @@ export default function ChatInterview() {
                 .replace(/<!--\s*TITLES:[\s\S]*?-->/i, "")
                 .trim();
               const postType = parsed.postType as string;
-              const finalHtml = wrapHtml(rawHtml, topic, postType);
-              useWorkflowStore.getState().setGeneratedHtml(finalHtml);
-              useWorkflowStore.getState().setSeoTitles(parsed.titles ?? []);
-              useWorkflowStore.getState().setStage("result");
+              const titles: string[] = parsed.titles ?? [];
+              // h1 제목은 SEO 제목 1번 우선 — topic은 PDF/로컬에서 긴 요약문이라 제목으로 부적합
+              const finalHtml = wrapHtml(rawHtml, titles[0] || topic, postType);
+              const store = useWorkflowStore.getState();
+              store.setRawHtml(rawHtml);
+              store.setGeneratedHtml(finalHtml);
+              store.setSeoTitles(titles);
+              store.setStage("result");
             }
           } catch {}
         }
