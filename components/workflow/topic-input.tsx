@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useWorkflowStore } from "@/lib/workflow-store";
 import type { PostType } from "@/lib/types";
 
@@ -30,10 +30,10 @@ export default function TopicInput() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // PDF/local
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [pdfExtracting, setPdfExtracting] = useState(false);
+  // PDF/local — 여러 파일 업로드 지원
+  const [pdfDocs, setPdfDocs] = useState<{ id: string; name: string; text: string; extracting: boolean; error: boolean }[]>([]);
   const pdfInputRef = useRef<HTMLInputElement>(null);
+  const pdfExtracting = pdfDocs.some((d) => d.extracting);
 
   // Photo
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -59,7 +59,7 @@ export default function TopicInput() {
   function handleTypeSelect(type: PostType) {
     setSelectedTypeLocal(type);
     setSelectedType(type);
-    setPdfFile(null);
+    setPdfDocs([]);
     setFileContent("");
     setImageFiles([]);
     setImageCaptions([]);
@@ -68,21 +68,46 @@ export default function TopicInput() {
     setInput("");
   }
 
-  async function handlePdfSelect(file: File) {
-    setPdfFile(file);
-    setPdfExtracting(true);
-    try {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await fetch("/api/extract-pdf", { method: "POST", body: form });
-      if (!res.ok) throw new Error("PDF 추출 실패");
-      const { text } = await res.json();
-      setFileContent(text);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setPdfExtracting(false);
-    }
+  // 추출 완료된 PDF 텍스트를 파일명 헤더로 구분해 하나로 합쳐 store에 반영
+  useEffect(() => {
+    if (!FILE_TYPES.includes(selectedType)) return;
+    const done = pdfDocs.filter((d) => !d.extracting && !d.error && d.text);
+    const merged = done
+      .map((d) => (done.length > 1 ? `[문서: ${d.name}]\n${d.text}` : d.text))
+      .join("\n\n---\n\n");
+    setFileContent(merged);
+  }, [pdfDocs, selectedType, setFileContent]);
+
+  async function handlePdfSelect(files: File[]) {
+    const pdfs = files.filter((f) => f.name.toLowerCase().endsWith(".pdf"));
+    if (pdfs.length === 0) return;
+
+    // id로 항목 식별 (동시 업로드 시 인덱스 밀림 방지)
+    const added = pdfs.map((f) => ({ id: `${Date.now()}-${Math.random()}`, file: f }));
+    setPdfDocs((prev) => [
+      ...prev,
+      ...added.map(({ id, file }) => ({ id, name: file.name, text: "", extracting: true, error: false })),
+    ]);
+
+    await Promise.all(
+      added.map(async ({ id, file }) => {
+        try {
+          const form = new FormData();
+          form.append("file", file);
+          const res = await fetch("/api/extract-pdf", { method: "POST", body: form });
+          if (!res.ok) throw new Error("PDF 추출 실패");
+          const { text } = await res.json();
+          setPdfDocs((prev) => prev.map((d) => (d.id === id ? { ...d, text, extracting: false } : d)));
+        } catch (e) {
+          setError((e as Error).message);
+          setPdfDocs((prev) => prev.map((d) => (d.id === id ? { ...d, extracting: false, error: true } : d)));
+        }
+      }),
+    );
+  }
+
+  function removePdf(id: string) {
+    setPdfDocs((prev) => prev.filter((d) => d.id !== id));
   }
 
   function handlePhotoSelect(files: File[]) {
@@ -117,7 +142,7 @@ export default function TopicInput() {
 
   function canSubmit(): boolean {
     if (loading) return false;
-    if (isFileType) return !!pdfFile && !pdfExtracting;
+    if (isFileType) return pdfDocs.some((d) => !d.error) && !pdfExtracting;
     if (isPhotoType) return imageFiles.length > 0;
     return !!input.trim();
   }
@@ -274,33 +299,39 @@ export default function TopicInput() {
               ref={pdfInputRef}
               type="file"
               accept=".pdf"
+              multiple
               hidden
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePdfSelect(f); }}
+              onChange={(e) => { if (e.target.files) handlePdfSelect(Array.from(e.target.files)); e.target.value = ""; }}
             />
-            <div style={{ background: "#fff", borderRadius: "16px", border: "1.5px solid rgba(112,115,124,0.2)", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", padding: "20px" }}>
-              {!pdfFile ? (
-                <div
-                  onClick={() => pdfInputRef.current?.click()}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handlePdfSelect(f); }}
-                  style={{ border: "2px dashed rgba(112,115,124,0.3)", borderRadius: "12px", padding: "32px", textAlign: "center", cursor: "pointer", color: "#5a5c63" }}
-                >
-                  <div style={{ fontSize: "32px", marginBottom: "8px" }}>📄</div>
-                  <div style={{ fontWeight: 600, marginBottom: "4px", fontSize: "14px" }}>PDF 파일을 드래그하거나 클릭해서 업로드</div>
-                  <div style={{ fontSize: "12px", color: "#aaa" }}>공고문, 보도자료, 안내문 등 · AI가 주제 자동 추출</div>
-                </div>
-              ) : (
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px", background: "#f7f7f8", borderRadius: "10px" }}>
+            <div style={{ background: "#fff", borderRadius: "16px", border: "1.5px solid rgba(112,115,124,0.2)", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", padding: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
+              {pdfDocs.map((doc) => (
+                <div key={doc.id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px", background: "#f7f7f8", borderRadius: "10px" }}>
                   <span style={{ fontSize: "24px" }}>📄</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "14px", fontWeight: 600, color: "#171719" }}>{pdfFile.name}</div>
-                    <div style={{ fontSize: "12px", color: pdfExtracting ? "#0066FF" : "#16a34a" }}>
-                      {pdfExtracting ? "텍스트 추출 중…" : "추출 완료 ✓"}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "14px", fontWeight: 600, color: "#171719", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</div>
+                    <div style={{ fontSize: "12px", color: doc.extracting ? "#0066FF" : doc.error ? "#dc2626" : "#16a34a" }}>
+                      {doc.extracting ? "텍스트 추출 중…" : doc.error ? "추출 실패 ✕" : "추출 완료 ✓"}
                     </div>
                   </div>
-                  <button onClick={() => { setPdfFile(null); setFileContent(""); }} style={{ border: "none", background: "none", cursor: "pointer", color: "#aaa", fontSize: "18px" }}>×</button>
+                  <button onClick={() => removePdf(doc.id)} style={{ border: "none", background: "none", cursor: "pointer", color: "#aaa", fontSize: "18px", flexShrink: 0 }}>×</button>
                 </div>
-              )}
+              ))}
+              <div
+                onClick={() => pdfInputRef.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => { e.preventDefault(); handlePdfSelect(Array.from(e.dataTransfer.files)); }}
+                style={{ border: "2px dashed rgba(112,115,124,0.3)", borderRadius: "12px", padding: pdfDocs.length > 0 ? "12px" : "32px", textAlign: "center", cursor: "pointer", color: "#5a5c63" }}
+              >
+                {pdfDocs.length === 0 ? (
+                  <>
+                    <div style={{ fontSize: "32px", marginBottom: "8px" }}>📄</div>
+                    <div style={{ fontWeight: 600, marginBottom: "4px", fontSize: "14px" }}>PDF 파일을 드래그하거나 클릭해서 업로드</div>
+                    <div style={{ fontSize: "12px", color: "#aaa" }}>공고문, 보도자료, 안내문 등 · 여러 개 업로드 가능 · AI가 주제 자동 추출</div>
+                  </>
+                ) : (
+                  <span style={{ fontSize: "13px" }}>+ PDF 추가 ({pdfDocs.length}개 업로드됨)</span>
+                )}
+              </div>
             </div>
           </>
         )}
