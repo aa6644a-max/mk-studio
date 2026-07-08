@@ -17,7 +17,8 @@ export async function GET() {
          ORDER BY id DESC LIMIT 10`,
       ),
       dbQuery(
-        `SELECT id, event_type, title, summary, score, score_reason, status, created_at
+        `SELECT id, event_type, title, summary, score, score_reason, status, created_at,
+                payload->'movie'->>'posterUrl' AS poster_url
          FROM movie_events WHERE status IN ('scored', 'new')
          ORDER BY score DESC NULLS LAST, id DESC LIMIT 15`,
       ),
