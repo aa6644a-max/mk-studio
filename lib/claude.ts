@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { PostDraft } from "@/lib/types";
 import { getPostsByType, getProfile } from "@/lib/google-sheets";
-import { getRssLatestText } from "@/lib/rss-client";
+import { getRssLatestText, TYPE_STYLE_KEYWORDS } from "@/lib/rss-client";
 import { buildPrompt } from "@/lib/prompts";
 import { groupOf, buildProfileInjection } from "@/lib/prompts/profile";
 import { lintPost, buildFixPrompt } from "@/lib/post-lint";
@@ -18,17 +18,6 @@ const MODEL = "claude-sonnet-5";
 // Sonnet 5 토크나이저는 동일 텍스트에 ~30% 더 많은 토큰을 쓰므로 여유 확보
 const MAX_TOKENS = 16000;
 const MAX_RETRIES = 3;
-
-/** postType → RSS 문체 참조 우선 키워드 (같은 계열 글 우선 선별). */
-const RSS_PREFER: Record<string, string[]> = {
-  review: ["영화", "리뷰", "후기", "개봉"],
-  preview: ["영화", "개봉", "기대", "프리뷰"],
-  curation: ["영화", "추천", "큐레이션", "모음"],
-  binge: ["정주행", "시리즈", "드라마", "몰아보기"],
-  photo: ["카페", "맛집", "방문", "여행", "전시"],
-  local: ["모집", "공고", "지원", "교육", "행사"],
-  pdf: ["안내", "정리", "총정리", "소식"],
-};
 
 export type GenerateResult = { html: string; titles: string[]; warnings?: string[] };
 
@@ -75,7 +64,7 @@ export async function generatePost(draft: PostDraft): Promise<GenerateResult> {
 
   // RSS 원문(문체 학습, 같은 계열 글 우선) + 같은 타입 Sheets 글(구조 참조) + 누적 프로필 병렬 로드
   const [rssText, references, profile] = await Promise.all([
-    getRssLatestText("shock552", 5, RSS_PREFER[draft.postType] ?? []).catch(() => ""),
+    getRssLatestText("shock552", 5, TYPE_STYLE_KEYWORDS[draft.postType] ?? []).catch(() => ""),
     getPostsByType(draft.postType, 3).catch(() => []),
     getProfile(groupOf(draft.postType)).catch(() => null),
   ]);

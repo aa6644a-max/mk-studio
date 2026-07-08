@@ -37,6 +37,7 @@ async function askClaude(system: string, user: string, maxTokens: number): Promi
       const res = await client.messages.create({
         model: MODEL,
         max_tokens: maxTokens,
+        thinking: { type: "disabled" }, // JSON 구조 출력(채점·초안) — 예산 잠식 방지
         system,
         messages: [{ role: "user", content: user }],
       });

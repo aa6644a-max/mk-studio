@@ -65,6 +65,7 @@ export async function POST(req: Request) {
   const stream = client.messages.stream({
     model: "claude-sonnet-5",
     max_tokens: 1024,
+    thinking: { type: "disabled" }, // 짧은 예산 잠식 방지
     system,
     messages: anthropicMessages,
   });

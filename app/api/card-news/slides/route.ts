@@ -41,6 +41,8 @@ export async function POST(req: Request) {
     const res = await client.messages.create({
       model: MODEL,
       max_tokens: 2500,
+      thinking: { type: "disabled" }, // JSON 구조 출력 — 예산 잠식 방지
+
       system: `당신은 영화 블로거 MK의 인스타그램 카드뉴스 에디터입니다. MK의 블로그 리뷰 전문에서 카드뉴스 문구를 뽑습니다.
 
 원칙:

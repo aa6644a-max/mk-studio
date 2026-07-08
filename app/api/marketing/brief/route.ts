@@ -66,6 +66,7 @@ ${MK_LINK_CONTEXT}`;
   const res = await client.messages.create({
     model: "claude-sonnet-5",
     max_tokens: 1024,
+    thinking: { type: "disabled" }, // 짧은 예산 잠식 방지
     system,
     messages: [{ role: "user", content: user }],
   });

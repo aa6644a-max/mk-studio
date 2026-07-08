@@ -140,6 +140,8 @@ export async function POST(req: Request) {
     const res = await client.messages.create({
       model: "claude-sonnet-5",
       max_tokens: 1200,
+      thinking: { type: "disabled" }, // 강제 tool_choice + 짧은 예산 — thinking 비활성
+
       system: STRATEGY_SYSTEM,
       tools: [STRATEGY_TOOL],
       tool_choice: { type: "tool", name: "create_strategy" },

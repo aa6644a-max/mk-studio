@@ -72,6 +72,8 @@ export async function POST(req: Request) {
           const anthropicStream = client.messages.stream({
             model: "claude-sonnet-5",
             max_tokens: 512,
+            // Sonnet 5는 미지정 시 adaptive thinking이 켜져 짧은 예산을 잠식 → 명시 비활성
+            thinking: { type: "disabled" },
             system,
             messages: claudeMessages,
           });

@@ -1,5 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { getRssLatestText } from "@/lib/rss-client";
+import { getRssLatestText, TYPE_STYLE_KEYWORDS } from "@/lib/rss-client";
+import { lintPost } from "@/lib/post-lint";
+import type { PostType } from "@/lib/types";
 import { getPostsByType } from "@/lib/google-sheets";
 import { searchMovies, getMovieDetails, searchTv, getTvDetails } from "@/lib/tmdb";
 import {
@@ -41,7 +43,7 @@ export async function POST(req: Request) {
     };
 
     const [rssText, references] = await Promise.all([
-      getRssLatestText("shock552", 5).catch(() => ""),
+      getRssLatestText("shock552", 5, TYPE_STYLE_KEYWORDS[strategy.postType] ?? []).catch(() => ""),
       getPostsByType(strategy.postType, 3).catch(() => []),
     ]);
 
@@ -204,9 +206,16 @@ export async function POST(req: Request) {
                 .filter(Boolean)
             : [];
 
+          // 스트리밍이라 수정 루프는 불가 — 규칙 위반을 경고로 전달 (클라이언트 표시용)
+          const warnings = lintPost(
+            fullText,
+            strategy.postType as PostType,
+            titles,
+          ).map((v) => v.message);
+
           controller.enqueue(
             encoder.encode(
-              `data: ${JSON.stringify({ done: true, titles, postType: strategy.postType })}\n\n`,
+              `data: ${JSON.stringify({ done: true, titles, postType: strategy.postType, warnings })}\n\n`,
             ),
           );
         } catch (e) {

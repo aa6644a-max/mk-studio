@@ -25,6 +25,17 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+/** postType → RSS 문체 참조 우선 키워드 (같은 계열 글 우선 선별). */
+export const TYPE_STYLE_KEYWORDS: Record<string, string[]> = {
+  review: ["영화", "리뷰", "후기", "개봉"],
+  preview: ["영화", "개봉", "기대", "프리뷰"],
+  curation: ["영화", "추천", "큐레이션", "모음"],
+  binge: ["정주행", "시리즈", "드라마", "몰아보기"],
+  photo: ["카페", "맛집", "방문", "여행", "전시"],
+  local: ["모집", "공고", "지원", "교육", "행사"],
+  pdf: ["안내", "정리", "총정리", "소식"],
+};
+
 interface RSSPost {
   title: string;
   text: string;

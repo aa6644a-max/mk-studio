@@ -72,6 +72,8 @@ export async function POST(req: Request) {
     const res = await client.messages.create({
       model: MODEL,
       max_tokens: 1024,
+      thinking: { type: "disabled" }, // 짧은 예산 잠식 방지
+
       system,
       messages: [{ role: "user", content }],
     });

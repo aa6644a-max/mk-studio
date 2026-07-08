@@ -97,6 +97,8 @@ export async function POST(req: Request) {
     const res = await client.messages.create({
       model: "claude-sonnet-5",
       max_tokens: 1024,
+      thinking: { type: "disabled" }, // 강제 tool_choice + 짧은 예산 — thinking 비활성
+
       system: buildProfileMergeSystem(group),
       tools: [MERGE_TOOL],
       tool_choice: { type: "tool", name: "update_profile" },

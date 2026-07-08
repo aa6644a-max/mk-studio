@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
   const stream = client.messages.stream({
     model: "claude-sonnet-5",
-    max_tokens: 8192,
+    max_tokens: 12000, // 장문 출력 + adaptive thinking 여유
     system,
     messages: [{ role: "user", content: user }],
   });
