@@ -5,17 +5,21 @@
 
 export type BoxOfficeMovie = {
   rank: string;
+  movieCd: string; // KOBIS 영화 코드 (이벤트 dedup 키)
   movieNm: string;
+  audiCnt: string; // 당일 관객수
   audiAcc: string; // 누적 관객수
   openDt: string;
+  rankInten: string; // 전일 대비 순위 증감
+  rankOldAndNew: "OLD" | "NEW"; // TOP10 신규 진입 여부
 };
 
 const MOCK_BOXOFFICE: BoxOfficeMovie[] = [
-  { rank: "1", movieNm: "듄: 파트 2", audiAcc: "1820000", openDt: "2026-02-28" },
-  { rank: "2", movieNm: "추락의 해부", audiAcc: "540000", openDt: "2026-05-31" },
-  { rank: "3", movieNm: "가여운 것들", audiAcc: "430000", openDt: "2026-03-06" },
-  { rank: "4", movieNm: "오펜하이머", audiAcc: "3230000", openDt: "2025-08-15" },
-  { rank: "5", movieNm: "패스트 라이브즈", audiAcc: "310000", openDt: "2026-03-06" },
+  { rank: "1", movieCd: "20240001", movieNm: "듄: 파트 2", audiCnt: "120000", audiAcc: "1820000", openDt: "2026-02-28", rankInten: "0", rankOldAndNew: "OLD" },
+  { rank: "2", movieCd: "20240002", movieNm: "추락의 해부", audiCnt: "45000", audiAcc: "540000", openDt: "2026-05-31", rankInten: "1", rankOldAndNew: "OLD" },
+  { rank: "3", movieCd: "20240003", movieNm: "가여운 것들", audiCnt: "38000", audiAcc: "430000", openDt: "2026-03-06", rankInten: "-1", rankOldAndNew: "OLD" },
+  { rank: "4", movieCd: "20240004", movieNm: "오펜하이머", audiCnt: "30000", audiAcc: "3230000", openDt: "2025-08-15", rankInten: "0", rankOldAndNew: "OLD" },
+  { rank: "5", movieCd: "20240005", movieNm: "패스트 라이브즈", audiCnt: "27000", audiAcc: "310000", openDt: "2026-03-06", rankInten: "0", rankOldAndNew: "NEW" },
 ];
 
 export function isKobisConfigured(): boolean {

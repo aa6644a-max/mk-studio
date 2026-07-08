@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Header from "@/components/header";
 import TrendDashboard from "@/components/dashboard/trend-dashboard";
+import MovieNewsPanel from "@/components/dashboard/movie-news-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,8 @@ export default function HomePage() {
             </Link>
           ))}
         </div>
+
+        <MovieNewsPanel />
 
         <TrendDashboard />
       </div>

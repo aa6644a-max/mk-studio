@@ -291,6 +291,28 @@ export async function getTvDetails(id: number): Promise<TvDetails | null> {
   };
 }
 
+// ── 목록 조회 (영화소식 자동수집용) ────────────
+export type MovieListKind = "trending" | "now_playing" | "upcoming";
+
+/**
+ * trending은 전세계 일간, now_playing/upcoming은 region=KR.
+ * 상위 10개만 반환 — 이벤트 감지(전일 스냅샷 비교)에 사용.
+ */
+export async function getMovieList(kind: MovieListKind): Promise<MovieResult[]> {
+  const key = process.env.TMDB_API_KEY;
+  if (!key) return MOCK_RESULTS;
+
+  const path = kind === "trending" ? "/trending/movie/day" : `/movie/${kind}`;
+  const params: Record<string, string> =
+    kind === "trending" ? {} : { region: "KR" };
+  const res = await tmdbGet(path, params);
+  if (!res.ok) throw new Error(`TMDB ${kind} 실패: ${res.status}`);
+  const data = (await res.json()) as {
+    results?: Parameters<typeof mapResult>[0][];
+  };
+  return (data.results ?? []).slice(0, 10).map(mapResult);
+}
+
 export type TmdbSelectionRef = { id: number; title: string; mediaType: "movie" | "tv" };
 
 /**
