@@ -21,6 +21,7 @@ export type ReviewSlides = {
   slides: { headline: string; quote: string }[];
   ending: { hook: string; followLine: string };
   caption: string;
+  dm: { opening: string; button: string; linkMessage: string };
 };
 
 function stripFences(text: string): string {
@@ -48,7 +49,11 @@ export async function POST(req: Request) {
 - ending.hook: 엔딩 카드 상단 문구, 25자 이내 (예: "이 리뷰의 전문이 궁금하다면?").
 - ending.followLine: 팔로우 유도 한 줄, 30자 이내.
 - caption: 인스타 게시글 캡션. 구성 = 🎬 영화제목+한줄 소감 / 빈 줄 / 카드 요약 2~3줄 / 빈 줄 / 💬 "댓글에 '${keyword}' 남기면 DM으로 리뷰 전문 링크를 보내드려요" / 빈 줄 / 해시태그 6~8개(#영화추천 #영화리뷰 포함).
-- JSON만 출력: {"slides":[{"headline":"...","quote":"..."},...3개],"ending":{"hook":"...","followLine":"..."},"caption":"..."}`,
+- dm: Manychat 댓글 자동화용 DM 문구 3종.
+  - dm.opening: 오프닝 DM. 첫 줄은 인사가 아니라 용건(리뷰 내용 포인트 하나를 살짝 흘려 클릭 유도), 둘째 줄에 "아래 버튼 누르시면 리뷰 전문 링크 보내드려요 👇". 2줄, 이모지 1~2개.
+  - dm.button: 버튼명. 행동 동사 포함 12자 이내 (예: "📖 리뷰 전문 받기").
+  - dm.linkMessage: 링크와 함께 보낼 한 줄 멘트. 링크 URL은 포함하지 말 것. 팔로우 유도 자연스럽게 (예: "여기요! 재밌게 읽으시고 다른 리뷰도 궁금하면 팔로우해주세요 🎬").
+- JSON만 출력: {"slides":[{"headline":"...","quote":"..."},...3개],"ending":{"hook":"...","followLine":"..."},"caption":"...","dm":{"opening":"...","button":"...","linkMessage":"..."}}`,
       messages: [
         {
           role: "user",

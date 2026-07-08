@@ -106,6 +106,10 @@ export default function MovieCardWorkflow() {
   const [triggerKeyword, setTriggerKeyword] = useState("리뷰");
   const [followLine, setFollowLine] = useState("팔로우하면 다음 리뷰도 만나볼 수 있어요");
   const [caption, setCaption] = useState("");
+  const [dmOpening, setDmOpening] = useState("");
+  const [dmButton, setDmButton] = useState("");
+  const [dmLinkMessage, setDmLinkMessage] = useState("");
+  const [copiedKey, setCopiedKey] = useState("");
 
   const cardRef = useRef<HTMLDivElement>(null);
   const bodyRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -202,6 +206,19 @@ export default function MovieCardWorkflow() {
     setTriggerKeyword("리뷰");
     setFollowLine("팔로우하면 다음 리뷰도 만나볼 수 있어요");
     setCaption("");
+    setDmOpening("");
+    setDmButton("");
+    setDmLinkMessage("");
+  }
+
+  async function copyToClipboard(key: string, text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(""), 1500);
+    } catch {
+      setError("복사 실패 — 텍스트를 직접 선택해 복사해주세요.");
+    }
   }
 
   // ── 블로그 리뷰 연계 ────────────────────────────
@@ -258,9 +275,13 @@ export default function MovieCardWorkflow() {
         slides?: { headline: string; quote: string }[];
         ending?: { hook: string; followLine: string };
         caption?: string;
+        dm?: { opening: string; button: string; linkMessage: string };
         error?: string;
       };
       if (!res.ok || !data.slides) throw new Error(data.error ?? "문구 생성 실패");
+      setDmOpening(data.dm?.opening ?? "");
+      setDmButton(data.dm?.button ?? "");
+      setDmLinkMessage(data.dm?.linkMessage ?? "");
       setSlides(
         data.slides.slice(0, 3).map((s, i) => ({
           headline: s.headline,
@@ -947,13 +968,57 @@ export default function MovieCardWorkflow() {
                     <Section label="인스타 캡션 (공유 시 자동 복사)">
                       <textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={7} className={`${inputCls} resize-none`} />
                     </Section>
-                    {blogUrl && (
-                      <p className="break-all rounded-lg bg-[var(--page-bg)] p-3 text-xs text-[var(--text-secondary)]">
-                        🔗 연계된 블로그 글: {blogUrl}
-                        <br />
-                        Manychat DM 자동화에 이 링크를 등록하세요.
+
+                    {/* Manychat DM 문구 — 복붙용 */}
+                    <div className="rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/5 p-4">
+                      <div className="mb-3 text-xs font-bold uppercase tracking-wide text-[var(--accent)]">
+                        💬 Manychat DM 문구 (복사 → 붙여넣기)
+                      </div>
+                      <div className="space-y-3">
+                        <DmField
+                          label="① 오프닝 DM (an opening DM)"
+                          value={dmOpening}
+                          onChange={setDmOpening}
+                          rows={3}
+                          copied={copiedKey === "dm-open"}
+                          onCopy={() => copyToClipboard("dm-open", dmOpening)}
+                        />
+                        <DmField
+                          label="② 버튼명"
+                          value={dmButton}
+                          onChange={setDmButton}
+                          rows={1}
+                          copied={copiedKey === "dm-btn"}
+                          onCopy={() => copyToClipboard("dm-btn", dmButton)}
+                        />
+                        <DmField
+                          label="③ 링크 DM 멘트 (a DM with a link)"
+                          value={dmLinkMessage}
+                          onChange={setDmLinkMessage}
+                          rows={2}
+                          copied={copiedKey === "dm-link"}
+                          onCopy={() => copyToClipboard("dm-link", dmLinkMessage)}
+                        />
+                        {blogUrl && (
+                          <div>
+                            <div className="mb-1 flex items-center justify-between">
+                              <span className="text-[11px] font-semibold text-[var(--text-secondary)]">④ 블로그 링크 (DM에 함께 등록)</span>
+                              <button
+                                onClick={() => copyToClipboard("dm-url", blogUrl)}
+                                className="rounded border border-[var(--panel-border)] px-2 py-0.5 text-[11px] font-bold text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                              >
+                                {copiedKey === "dm-url" ? "✓ 복사됨" : "복사"}
+                              </button>
+                            </div>
+                            <p className="break-all rounded-lg bg-white p-2.5 text-xs text-[var(--text-secondary)]">{blogUrl}</p>
+                          </div>
+                        )}
+                      </div>
+                      <p className="mt-3 text-[11px] leading-relaxed text-[var(--text-secondary)]">
+                        Manychat에서 기존 자동화 복제 → 게시물 변경 → 위 문구 ①②③ 붙여넣기 → 링크 ④ 교체 → Set Live.
+                        댓글 자동답글은 &quot;DM 보냈어요! 확인해주세요 📩&quot; 고정 추천.
                       </p>
-                    )}
+                    </div>
                   </>
                 )}
               </>
@@ -1010,6 +1075,37 @@ function UploadTile({ onFiles }: { onFiles: (files: FileList | null) => void }) 
       <span className="text-xl leading-none">＋</span>
       <span className="text-xs font-semibold">사진 추가</span>
     </label>
+  );
+}
+
+function DmField({
+  label, value, onChange, rows, copied, onCopy,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  rows: number;
+  copied: boolean;
+  onCopy: () => void;
+}) {
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-[11px] font-semibold text-[var(--text-secondary)]">{label}</span>
+        <button
+          onClick={onCopy}
+          disabled={!value}
+          className="rounded border border-[var(--panel-border)] px-2 py-0.5 text-[11px] font-bold text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-40"
+        >
+          {copied ? "✓ 복사됨" : "복사"}
+        </button>
+      </div>
+      {rows === 1 ? (
+        <input value={value} onChange={(e) => onChange(e.target.value)} className={inputCls} />
+      ) : (
+        <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows} className={`${inputCls} resize-none`} />
+      )}
+    </div>
   );
 }
 
