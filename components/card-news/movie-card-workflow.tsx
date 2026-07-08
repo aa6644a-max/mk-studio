@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import CardCanvas, { type InfoRow, type RatingItem } from "./card-canvas";
+import { BodySlideCanvas, EndingSlideCanvas } from "./review-slides";
 import { fileToScaledDataUrl } from "@/lib/image";
 
 const IMG = (size: string, path: string) => `https://image.tmdb.org/t/p/${size}${path}`;
@@ -37,8 +38,22 @@ const STEPS = [
   "작품 정보",
   "OST 플레이어",
   "갤러리 선택",
+  "블로그 리뷰",
+  "리뷰 카드",
+  "엔딩 카드",
   "미리보기",
 ];
+const LAST_STEP = STEPS.length - 1;
+
+type BlogPost = {
+  title: string;
+  link: string;
+  pubDate: string;
+  thumbnail: string | null;
+  excerpt: string;
+};
+
+type ReviewSlide = { headline: string; quote: string; imagePath: string };
 
 function fmtRuntime(min: number) {
   if (!min) return "";
@@ -77,7 +92,24 @@ export default function MovieCardWorkflow() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  // 리뷰 카드뉴스 (블로그 연계 5장)
+  const [blogPosts, setBlogPosts] = useState<BlogPost[] | null>(null);
+  const [blogLoading, setBlogLoading] = useState(false);
+  const [postLoading, setPostLoading] = useState("");
+  const [reviewTitle, setReviewTitle] = useState("");
+  const [reviewText, setReviewText] = useState("");
+  const [blogUrl, setBlogUrl] = useState("");
+  const [genBusy, setGenBusy] = useState(false);
+  const [slides, setSlides] = useState<ReviewSlide[]>([]);
+  const [slideEdit, setSlideEdit] = useState(0);
+  const [endingHook, setEndingHook] = useState("");
+  const [triggerKeyword, setTriggerKeyword] = useState("리뷰");
+  const [followLine, setFollowLine] = useState("팔로우하면 다음 리뷰도 만나볼 수 있어요");
+  const [caption, setCaption] = useState("");
+
   const cardRef = useRef<HTMLDivElement>(null);
+  const bodyRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const endingRef = useRef<HTMLDivElement>(null);
   const colorCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const previewBoxRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.3);
@@ -161,6 +193,95 @@ export default function MovieCardWorkflow() {
     setAccentAuto(true);
     setCreditText("MK LINK © 2026");
     setError("");
+    setReviewTitle("");
+    setReviewText("");
+    setBlogUrl("");
+    setSlides([]);
+    setSlideEdit(0);
+    setEndingHook("");
+    setTriggerKeyword("리뷰");
+    setFollowLine("팔로우하면 다음 리뷰도 만나볼 수 있어요");
+    setCaption("");
+  }
+
+  // ── 블로그 리뷰 연계 ────────────────────────────
+  async function loadBlogPosts() {
+    setBlogLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/blog/posts");
+      const data = (await res.json()) as { posts?: BlogPost[]; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "블로그 목록 조회 실패");
+      setBlogPosts(data.posts ?? []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "블로그 목록 조회 실패");
+    } finally {
+      setBlogLoading(false);
+    }
+  }
+
+  async function pickBlogPost(p: BlogPost) {
+    setPostLoading(p.link);
+    setError("");
+    try {
+      const res = await fetch(`/api/blog/post?url=${encodeURIComponent(p.link)}`);
+      const data = (await res.json()) as { text?: string; error?: string };
+      if (!res.ok || !data.text) throw new Error(data.error ?? "본문 추출 실패");
+      setReviewTitle(p.title);
+      setReviewText(data.text);
+      setBlogUrl(p.link.split("?")[0]);
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? `${e.message} — 글 내용을 아래에 직접 붙여넣어도 됩니다.`
+          : "본문 추출 실패",
+      );
+    } finally {
+      setPostLoading("");
+    }
+  }
+
+  async function generateSlides() {
+    if (!reviewText.trim()) {
+      setError("리뷰 본문이 비어 있어요. 블로그 글을 선택하거나 붙여넣어 주세요.");
+      return;
+    }
+    setGenBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/card-news/slides", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ movieTitle, reviewTitle, reviewText, triggerKeyword }),
+      });
+      const data = (await res.json()) as {
+        slides?: { headline: string; quote: string }[];
+        ending?: { hook: string; followLine: string };
+        caption?: string;
+        error?: string;
+      };
+      if (!res.ok || !data.slides) throw new Error(data.error ?? "문구 생성 실패");
+      setSlides(
+        data.slides.slice(0, 3).map((s, i) => ({
+          headline: s.headline,
+          quote: s.quote,
+          imagePath: galleryPaths[i] ?? galleryPaths[0] ?? heroPath,
+        })),
+      );
+      setEndingHook(data.ending?.hook ?? "");
+      if (data.ending?.followLine) setFollowLine(data.ending.followLine);
+      if (data.caption) setCaption(data.caption);
+      setSlideEdit(0);
+      setStep(7);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "문구 생성 실패");
+    } finally {
+      setGenBusy(false);
+    }
+  }
+
+  function updateSlide(i: number, patch: Partial<ReviewSlide>) {
+    setSlides((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
   }
 
   async function runSearch() {
@@ -262,15 +383,40 @@ export default function MovieCardWorkflow() {
     setInfoRows((rows) => rows.filter((_, idx) => idx !== i));
   }
 
+  const hasReviewDeck = slides.length === 3;
+
+  function nodeToPng(node: HTMLDivElement) {
+    return toPng(node, { width: 1080, height: 1350, pixelRatio: 2, cacheBust: true, includeQueryParams: true });
+  }
+
+  /** 덱 전체(표지+본문3+엔딩) 또는 표지 1장의 [파일명, 노드] 목록 */
+  function deckNodes(): [string, HTMLDivElement][] {
+    const title = movieTitle || "movie";
+    const list: [string, HTMLDivElement | null][] = hasReviewDeck
+      ? [
+          [`${title}_01_표지.png`, cardRef.current],
+          [`${title}_02_리뷰1.png`, bodyRefs.current[0]],
+          [`${title}_03_리뷰2.png`, bodyRefs.current[1]],
+          [`${title}_04_리뷰3.png`, bodyRefs.current[2]],
+          [`${title}_05_엔딩.png`, endingRef.current],
+        ]
+      : [[`${title}_card.png`, cardRef.current]];
+    return list.filter((e): e is [string, HTMLDivElement] => Boolean(e[1]));
+  }
+
   async function exportPng() {
     setBusy(true);
     setError("");
     try {
-      const url = await renderPng();
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${movieTitle || "movie"}_card.png`;
-      a.click();
+      for (const [name, node] of deckNodes()) {
+        const url = await nodeToPng(node);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = name;
+        a.click();
+        // 브라우저 다중 다운로드 차단 회피
+        await new Promise((r) => setTimeout(r, 400));
+      }
     } catch {
       setError("이미지 생성 실패");
     } finally {
@@ -278,47 +424,47 @@ export default function MovieCardWorkflow() {
     }
   }
 
-  async function renderPng() {
-    const node = cardRef.current;
-    if (!node) throw new Error("no node");
-    return toPng(node, { width: 1080, height: 1350, pixelRatio: 2, cacheBust: true, includeQueryParams: true });
-  }
-
   function buildCaption() {
+    if (caption.trim()) return caption;
     const tag = (movieTitle || "").replace(/[^\p{L}\p{N}]/gu, "");
-    return [
-      `🎬 ${movieTitle}`,
-      "",
-      heroTagline,
-      "",
-      `#영화추천 #영화 #무비${tag ? ` #${tag}` : ""}`,
-    ]
-      .filter((l) => l !== undefined)
-      .join("\n");
+    const lines = [`🎬 ${movieTitle}`, "", heroTagline, ""];
+    if (hasReviewDeck) {
+      lines.push(`💬 댓글에 '${triggerKeyword || "리뷰"}' 남기면 DM으로 리뷰 전문 링크를 보내드려요`, "");
+    }
+    lines.push(`#영화추천 #영화리뷰 #영화${tag ? ` #${tag}` : ""}`);
+    return lines.join("\n");
   }
 
   async function shareInstagram() {
     setBusy(true);
     setError("");
     try {
-      const url = await renderPng();
-      const blob = await (await fetch(url)).blob();
-      const file = new File([blob], `${movieTitle || "movie"}_card.png`, { type: "image/png" });
-      const caption = buildCaption();
+      const files: File[] = [];
+      for (const [name, node] of deckNodes()) {
+        const url = await nodeToPng(node);
+        const blob = await (await fetch(url)).blob();
+        files.push(new File([blob], name, { type: "image/png" }));
+      }
+      const captionText = buildCaption();
       try {
-        await navigator.clipboard.writeText(caption);
+        await navigator.clipboard.writeText(captionText);
       } catch {
         /* clipboard 권한 없으면 무시 */
       }
       const nav = navigator as Navigator & { canShare?: (d?: ShareData) => boolean };
-      if (nav.canShare && nav.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], text: caption });
+      if (nav.canShare && nav.canShare({ files })) {
+        await navigator.share({ files, text: captionText });
       } else {
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = file.name;
-        a.click();
-        setError("이 브라우저는 직접 공유가 안 돼요. 이미지 저장됨 — 인스타 앱에서 올려주세요. (캡션은 복사됨)");
+        for (const f of files) {
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(f);
+          a.download = f.name;
+          a.click();
+          await new Promise((r) => setTimeout(r, 400));
+        }
+        setError(
+          `이 브라우저는 직접 공유가 안 돼요. 이미지 ${files.length}장 저장됨 — 인스타 앱에서 올려주세요. (캡션은 복사됨)`,
+        );
       }
     } catch (e) {
       if ((e as Error)?.name !== "AbortError") setError("공유 실패");
@@ -385,16 +531,57 @@ export default function MovieCardWorkflow() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {/* 미리보기 — 마지막 단계에서만 */}
-        {movie && step === 6 && (
-          <div ref={previewBoxRef} className="flex min-h-full items-start justify-center bg-[#0e0e10] p-4">
-            <div style={{ width: 1080 * scale, height: 1350 * scale, overflow: "hidden", borderRadius: 8 * scale, boxShadow: "0 10px 40px rgba(0,0,0,0.5)" }}>
-              <div style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>{card}</div>
-            </div>
+        {/* 미리보기 — 마지막 단계에서만 (덱이면 5장 전체) */}
+        {movie && step === LAST_STEP && (
+          <div ref={previewBoxRef} className="flex min-h-full flex-col items-center gap-4 bg-[#0e0e10] p-4">
+            {hasReviewDeck && (
+              <p className="text-xs text-white/50">
+                표지 → 리뷰 01·02·03 → 엔딩 · 총 5장이 순서대로 저장/공유됩니다.
+              </p>
+            )}
+            {[
+              <div key="cover">{card}</div>,
+              ...(hasReviewDeck
+                ? [
+                    ...slides.map((s, i) => (
+                      <BodySlideCanvas
+                        key={`body-${i}`}
+                        ref={(el) => {
+                          bodyRefs.current[i] = el;
+                        }}
+                        index={i}
+                        headline={s.headline}
+                        quote={s.quote}
+                        imageUrl={s.imagePath ? resolve("w1280", s.imagePath) : ""}
+                        movieTitle={movieTitle}
+                        accentColor={accentColor}
+                        bgColor={bgColor}
+                        creditText={creditText}
+                      />
+                    )),
+                    <EndingSlideCanvas
+                      key="ending"
+                      ref={endingRef}
+                      hook={endingHook}
+                      triggerKeyword={triggerKeyword}
+                      followLine={followLine}
+                      posterUrl={posterUrl}
+                      movieTitle={movieTitle}
+                      accentColor={accentColor}
+                      bgColor={bgColor}
+                      creditText={creditText}
+                    />,
+                  ]
+                : []),
+            ].map((node, i) => (
+              <div key={i} style={{ width: 1080 * scale, height: 1350 * scale, overflow: "hidden", borderRadius: 8 * scale, boxShadow: "0 10px 40px rgba(0,0,0,0.5)", flexShrink: 0 }}>
+                <div style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>{node}</div>
+              </div>
+            ))}
           </div>
         )}
 
-        {step === 6 ? null : (
+        {step === LAST_STEP ? null : (
           <div className="mx-auto max-w-md space-y-5 p-5">
             {/* STEP 0 — search */}
             {step === 0 && (
@@ -611,6 +798,166 @@ export default function MovieCardWorkflow() {
                 </div>
               </Section>
             )}
+
+            {/* STEP 6 — 블로그 리뷰 불러오기 + AI 문구 생성 */}
+            {step === 6 && (
+              <>
+                <Section label="내 블로그 리뷰 불러오기">
+                  <button
+                    onClick={loadBlogPosts}
+                    disabled={blogLoading}
+                    className="w-full rounded-lg border border-[var(--panel-border)] py-2.5 text-sm font-semibold text-[var(--text-primary)] hover:border-[var(--accent)] disabled:opacity-50"
+                  >
+                    {blogLoading ? "불러오는 중…" : blogPosts ? "↻ 목록 새로고침" : "📄 최신 글 목록 불러오기"}
+                  </button>
+                  {blogPosts && (
+                    <div className="mt-2 max-h-64 space-y-1.5 overflow-y-auto">
+                      {blogPosts.map((p) => (
+                        <button
+                          key={p.link}
+                          onClick={() => pickBlogPost(p)}
+                          disabled={!!postLoading}
+                          className={`flex w-full items-center gap-2 rounded-lg border p-2 text-left text-xs transition ${
+                            blogUrl && p.link.startsWith(blogUrl)
+                              ? "border-[var(--accent)] bg-[var(--accent)]/5"
+                              : "border-[var(--panel-border)] bg-white hover:border-[var(--accent)]"
+                          }`}
+                        >
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-semibold">{p.title}</span>
+                            <span className="text-[var(--text-secondary)]">{p.pubDate}</span>
+                          </span>
+                          {postLoading === p.link && <span className="shrink-0 text-[var(--accent)]">추출 중…</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </Section>
+                <Section label={`리뷰 본문 ${reviewText ? `(${reviewText.length.toLocaleString()}자)` : "(선택하거나 직접 붙여넣기)"}`}>
+                  <textarea
+                    value={reviewText}
+                    onChange={(e) => setReviewText(e.target.value)}
+                    rows={7}
+                    placeholder="위에서 글을 선택하면 전문이 자동으로 들어옵니다. 직접 붙여넣어도 돼요."
+                    className={`${inputCls} resize-none`}
+                  />
+                </Section>
+                <Section label="댓글 트리거 키워드 (엔딩 카드·캡션에 사용)">
+                  <input value={triggerKeyword} onChange={(e) => setTriggerKeyword(e.target.value)} className={inputCls} />
+                </Section>
+                <button
+                  onClick={generateSlides}
+                  disabled={genBusy || !reviewText.trim()}
+                  className="w-full rounded-xl bg-[var(--accent)] py-3 text-sm font-bold text-white disabled:opacity-40"
+                >
+                  {genBusy ? "AI가 카드 문구를 뽑는 중… (30초 내외)" : "✨ AI로 리뷰 카드 문구 생성"}
+                </button>
+                {hasReviewDeck && (
+                  <p className="text-center text-xs text-[var(--text-secondary)]">
+                    이미 생성된 문구가 있어요. 다시 누르면 새로 생성됩니다.
+                  </p>
+                )}
+                <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                  이 단계를 건너뛰면 기존처럼 <b>표지 1장</b>만 만들어져요. 생성하면 표지+리뷰3장+엔딩 <b>총 5장</b>이 됩니다.
+                </p>
+              </>
+            )}
+
+            {/* STEP 7 — 리뷰 카드 3장 편집 */}
+            {step === 7 && (
+              <>
+                {!hasReviewDeck ? (
+                  <p className="rounded-lg bg-[var(--page-bg)] p-4 text-sm text-[var(--text-secondary)]">
+                    아직 리뷰 카드 문구가 없어요. <b>6. 블로그 리뷰</b> 단계에서 먼저 생성해주세요.
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      {slides.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setSlideEdit(i)}
+                          className={`flex-1 rounded-lg py-2 text-sm font-bold transition ${
+                            slideEdit === i
+                              ? "bg-[var(--accent)] text-white"
+                              : "border border-[var(--panel-border)] text-[var(--text-secondary)]"
+                          }`}
+                        >
+                          {String(i + 1).padStart(2, "0")}
+                        </button>
+                      ))}
+                    </div>
+                    <Section label={`카드 ${slideEdit + 1} 헤드라인`}>
+                      <input
+                        value={slides[slideEdit]?.headline ?? ""}
+                        onChange={(e) => updateSlide(slideEdit, { headline: e.target.value })}
+                        className={inputCls}
+                      />
+                    </Section>
+                    <Section label="리뷰 발췌 (2~3문장)">
+                      <textarea
+                        value={slides[slideEdit]?.quote ?? ""}
+                        onChange={(e) => updateSlide(slideEdit, { quote: e.target.value })}
+                        rows={4}
+                        className={`${inputCls} resize-none`}
+                      />
+                    </Section>
+                    <Section label="배경 스틸컷">
+                      <div className="grid grid-cols-3 gap-2">
+                        {[...uploads, ...(movie?.backdrops ?? [])].map((p) => (
+                          <button
+                            key={p}
+                            onClick={() => updateSlide(slideEdit, { imagePath: p })}
+                            className={`block w-full overflow-hidden rounded-lg border-2 transition ${
+                              slides[slideEdit]?.imagePath === p ? "border-[var(--accent)]" : "border-transparent"
+                            }`}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={resolve("w185", p)} alt="" className="aspect-video w-full object-cover" />
+                          </button>
+                        ))}
+                      </div>
+                    </Section>
+                  </>
+                )}
+              </>
+            )}
+
+            {/* STEP 8 — 엔딩 카드 + 캡션 */}
+            {step === 8 && (
+              <>
+                {!hasReviewDeck ? (
+                  <p className="rounded-lg bg-[var(--page-bg)] p-4 text-sm text-[var(--text-secondary)]">
+                    아직 리뷰 카드 문구가 없어요. <b>6. 블로그 리뷰</b> 단계에서 먼저 생성해주세요.
+                  </p>
+                ) : (
+                  <>
+                    <Section label="엔딩 훅 (상단 큰 문구)">
+                      <input value={endingHook} onChange={(e) => setEndingHook(e.target.value)} className={inputCls} />
+                    </Section>
+                    <Section label="댓글 트리거 키워드">
+                      <input value={triggerKeyword} onChange={(e) => setTriggerKeyword(e.target.value)} className={inputCls} />
+                      <p className="mt-1.5 text-xs text-[var(--text-secondary)]">
+                        DM 자동 발송은 Manychat 등 외부 서비스에서 이 키워드로 설정해두면 됩니다.
+                      </p>
+                    </Section>
+                    <Section label="팔로우 유도 문구">
+                      <input value={followLine} onChange={(e) => setFollowLine(e.target.value)} className={inputCls} />
+                    </Section>
+                    <Section label="인스타 캡션 (공유 시 자동 복사)">
+                      <textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={7} className={`${inputCls} resize-none`} />
+                    </Section>
+                    {blogUrl && (
+                      <p className="break-all rounded-lg bg-[var(--page-bg)] p-3 text-xs text-[var(--text-secondary)]">
+                        🔗 연계된 블로그 글: {blogUrl}
+                        <br />
+                        Manychat DM 자동화에 이 링크를 등록하세요.
+                      </p>
+                    )}
+                  </>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>
@@ -625,14 +972,14 @@ export default function MovieCardWorkflow() {
               ← 이전
             </button>
           )}
-          {step < 6 ? (
+          {step < LAST_STEP ? (
             <button onClick={() => canNext && setStep((s) => s + 1)} disabled={!canNext} className="flex-[2] rounded-xl bg-[var(--accent)] py-3 text-sm font-bold text-white disabled:opacity-40">
               다음 →
             </button>
           ) : (
             <>
               <button onClick={exportPng} disabled={busy} className="flex-1 rounded-xl border border-[var(--panel-border)] py-3 text-sm font-bold text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--text-primary)] disabled:opacity-60">
-                {busy ? "..." : "PNG 저장"}
+                {busy ? "..." : hasReviewDeck ? "PNG 5장 저장" : "PNG 저장"}
               </button>
               <button onClick={shareInstagram} disabled={busy} className="flex-[2] rounded-xl bg-[var(--accent)] py-3 text-sm font-bold text-white disabled:opacity-60">
                 {busy ? "처리 중..." : "📷 인스타 공유"}
