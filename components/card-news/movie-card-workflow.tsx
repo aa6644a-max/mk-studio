@@ -39,10 +39,11 @@ const STEPS = [
   "OST 플레이어",
   "갤러리 선택",
   "블로그 리뷰",
-  "리뷰 카드",
-  "엔딩 카드",
-  "미리보기",
+  "카드 편집",
+  "미리보기·저장",
+  "업로드 도우미",
 ];
+const PREVIEW_STEP = 8;
 const LAST_STEP = STEPS.length - 1;
 
 type BlogPost = {
@@ -552,8 +553,8 @@ export default function MovieCardWorkflow() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {/* 미리보기 — 마지막 단계에서만 (덱이면 5장 전체) */}
-        {movie && step === LAST_STEP && (
+        {/* 미리보기·저장 (덱이면 5장 전체) */}
+        {movie && step === PREVIEW_STEP && (
           <div ref={previewBoxRef} className="flex min-h-full flex-col items-center gap-4 bg-[#0e0e10] p-4">
             {hasReviewDeck && (
               <p className="text-xs text-white/50">
@@ -602,7 +603,7 @@ export default function MovieCardWorkflow() {
           </div>
         )}
 
-        {step === LAST_STEP ? null : (
+        {step === PREVIEW_STEP ? null : (
           <div className="mx-auto max-w-md space-y-5 p-5">
             {/* STEP 0 — search */}
             {step === 0 && (
@@ -884,19 +885,19 @@ export default function MovieCardWorkflow() {
               </>
             )}
 
-            {/* STEP 7 — 리뷰 카드 3장 편집 */}
+            {/* STEP 7 — 카드 편집 (리뷰 3장 + 엔딩) */}
             {step === 7 && (
               <>
                 {!hasReviewDeck ? (
                   <p className="rounded-lg bg-[var(--page-bg)] p-4 text-sm text-[var(--text-secondary)]">
-                    아직 리뷰 카드 문구가 없어요. <b>6. 블로그 리뷰</b> 단계에서 먼저 생성해주세요.
+                    아직 리뷰 카드 문구가 없어요. <b>7. 블로그 리뷰</b> 단계에서 먼저 생성해주세요.
                   </p>
                 ) : (
                   <>
                     <div className="flex gap-2">
-                      {slides.map((_, i) => (
+                      {[...slides.map((_, i) => String(i + 1).padStart(2, "0")), "엔딩"].map((label, i) => (
                         <button
-                          key={i}
+                          key={label}
                           onClick={() => setSlideEdit(i)}
                           className={`flex-1 rounded-lg py-2 text-sm font-bold transition ${
                             slideEdit === i
@@ -904,72 +905,85 @@ export default function MovieCardWorkflow() {
                               : "border border-[var(--panel-border)] text-[var(--text-secondary)]"
                           }`}
                         >
-                          {String(i + 1).padStart(2, "0")}
+                          {label}
                         </button>
                       ))}
                     </div>
-                    <Section label={`카드 ${slideEdit + 1} 헤드라인`}>
-                      <input
-                        value={slides[slideEdit]?.headline ?? ""}
-                        onChange={(e) => updateSlide(slideEdit, { headline: e.target.value })}
-                        className={inputCls}
-                      />
-                    </Section>
-                    <Section label="리뷰 발췌 (2~3문장)">
-                      <textarea
-                        value={slides[slideEdit]?.quote ?? ""}
-                        onChange={(e) => updateSlide(slideEdit, { quote: e.target.value })}
-                        rows={4}
-                        className={`${inputCls} resize-none`}
-                      />
-                    </Section>
-                    <Section label="배경 스틸컷">
-                      <div className="grid grid-cols-3 gap-2">
-                        {[...uploads, ...(movie?.backdrops ?? [])].map((p) => (
-                          <button
-                            key={p}
-                            onClick={() => updateSlide(slideEdit, { imagePath: p })}
-                            className={`block w-full overflow-hidden rounded-lg border-2 transition ${
-                              slides[slideEdit]?.imagePath === p ? "border-[var(--accent)]" : "border-transparent"
-                            }`}
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={resolve("w185", p)} alt="" className="aspect-video w-full object-cover" />
-                          </button>
-                        ))}
-                      </div>
-                    </Section>
+                    {slideEdit < slides.length ? (
+                      <>
+                        <Section label={`카드 ${slideEdit + 1} 헤드라인`}>
+                          <input
+                            value={slides[slideEdit]?.headline ?? ""}
+                            onChange={(e) => updateSlide(slideEdit, { headline: e.target.value })}
+                            className={inputCls}
+                          />
+                        </Section>
+                        <Section label="리뷰 발췌 (2~3문장)">
+                          <textarea
+                            value={slides[slideEdit]?.quote ?? ""}
+                            onChange={(e) => updateSlide(slideEdit, { quote: e.target.value })}
+                            rows={4}
+                            className={`${inputCls} resize-none`}
+                          />
+                        </Section>
+                        <Section label="배경 스틸컷">
+                          <div className="grid grid-cols-3 gap-2">
+                            {[...uploads, ...(movie?.backdrops ?? [])].map((p) => (
+                              <button
+                                key={p}
+                                onClick={() => updateSlide(slideEdit, { imagePath: p })}
+                                className={`block w-full overflow-hidden rounded-lg border-2 transition ${
+                                  slides[slideEdit]?.imagePath === p ? "border-[var(--accent)]" : "border-transparent"
+                                }`}
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={resolve("w185", p)} alt="" className="aspect-video w-full object-cover" />
+                              </button>
+                            ))}
+                          </div>
+                        </Section>
+                      </>
+                    ) : (
+                      <>
+                        <Section label="엔딩 훅 (상단 큰 문구)">
+                          <input value={endingHook} onChange={(e) => setEndingHook(e.target.value)} className={inputCls} />
+                        </Section>
+                        <Section label="댓글 트리거 키워드 (엔딩 카드에 표시)">
+                          <input value={triggerKeyword} onChange={(e) => setTriggerKeyword(e.target.value)} className={inputCls} />
+                        </Section>
+                        <Section label="팔로우 유도 문구">
+                          <input value={followLine} onChange={(e) => setFollowLine(e.target.value)} className={inputCls} />
+                        </Section>
+                      </>
+                    )}
                   </>
                 )}
               </>
             )}
 
-            {/* STEP 8 — 엔딩 카드 + 캡션 */}
-            {step === 8 && (
+            {/* STEP 9 — 업로드 도우미 (캡션 + Manychat) */}
+            {step === LAST_STEP && (
               <>
-                {!hasReviewDeck ? (
-                  <p className="rounded-lg bg-[var(--page-bg)] p-4 text-sm text-[var(--text-secondary)]">
-                    아직 리뷰 카드 문구가 없어요. <b>6. 블로그 리뷰</b> 단계에서 먼저 생성해주세요.
-                  </p>
-                ) : (
-                  <>
-                    <Section label="엔딩 훅 (상단 큰 문구)">
-                      <input value={endingHook} onChange={(e) => setEndingHook(e.target.value)} className={inputCls} />
-                    </Section>
-                    <Section label="댓글 트리거 키워드">
-                      <input value={triggerKeyword} onChange={(e) => setTriggerKeyword(e.target.value)} className={inputCls} />
-                      <p className="mt-1.5 text-xs text-[var(--text-secondary)]">
-                        DM 자동 발송은 Manychat 등 외부 서비스에서 이 키워드로 설정해두면 됩니다.
-                      </p>
-                    </Section>
-                    <Section label="팔로우 유도 문구">
-                      <input value={followLine} onChange={(e) => setFollowLine(e.target.value)} className={inputCls} />
-                    </Section>
-                    <Section label="인스타 캡션 (공유 시 자동 복사)">
-                      <textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={7} className={`${inputCls} resize-none`} />
-                    </Section>
+                <p className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 p-3 text-xs leading-relaxed text-[var(--text-primary)]">
+                  📋 <b>업로드 순서</b>: ① 인스타에 저장한 이미지 게시 (캡션 붙여넣기) → ② Manychat 자동화 복제 → 게시물 변경 → 아래 DM 문구 붙여넣기 → Set Live
+                </p>
+                <Section label="인스타 캡션">
+                  <textarea
+                    value={caption || buildCaption()}
+                    onChange={(e) => setCaption(e.target.value)}
+                    rows={8}
+                    className={`${inputCls} resize-none`}
+                  />
+                  <button
+                    onClick={() => copyToClipboard("caption", caption || buildCaption())}
+                    className="mt-2 w-full rounded-lg border border-[var(--panel-border)] py-2.5 text-sm font-bold text-[var(--text-primary)] hover:border-[var(--accent)]"
+                  >
+                    {copiedKey === "caption" ? "✓ 복사됨" : "캡션 복사"}
+                  </button>
+                </Section>
 
-                    {/* Manychat DM 문구 — 복붙용 */}
+                {/* Manychat DM 문구 — 복붙용 (덱 생성 시에만) */}
+                {hasReviewDeck && (
                     <div className="rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/5 p-4">
                       <div className="mb-3 text-xs font-bold uppercase tracking-wide text-[var(--accent)]">
                         💬 Manychat DM 문구 (복사 → 붙여넣기)
@@ -1019,7 +1033,6 @@ export default function MovieCardWorkflow() {
                         댓글 자동답글은 &quot;DM 보냈어요! 확인해주세요 📩&quot; 고정 추천.
                       </p>
                     </div>
-                  </>
                 )}
               </>
             )}
@@ -1037,19 +1050,26 @@ export default function MovieCardWorkflow() {
               ← 이전
             </button>
           )}
-          {step < LAST_STEP ? (
-            <button onClick={() => canNext && setStep((s) => s + 1)} disabled={!canNext} className="flex-[2] rounded-xl bg-[var(--accent)] py-3 text-sm font-bold text-white disabled:opacity-40">
-              다음 →
-            </button>
-          ) : (
+          {step === PREVIEW_STEP ? (
             <>
               <button onClick={exportPng} disabled={busy} className="flex-1 rounded-xl border border-[var(--panel-border)] py-3 text-sm font-bold text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--text-primary)] disabled:opacity-60">
                 {busy ? "..." : hasReviewDeck ? "PNG 5장 저장" : "PNG 저장"}
               </button>
-              <button onClick={shareInstagram} disabled={busy} className="flex-[2] rounded-xl bg-[var(--accent)] py-3 text-sm font-bold text-white disabled:opacity-60">
-                {busy ? "처리 중..." : "📷 인스타 공유"}
+              <button onClick={shareInstagram} disabled={busy} className="flex-1 rounded-xl border border-[var(--panel-border)] py-3 text-sm font-bold text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--text-primary)] disabled:opacity-60">
+                {busy ? "..." : "📷 공유"}
+              </button>
+              <button onClick={() => setStep((s) => s + 1)} className="flex-1 rounded-xl bg-[var(--accent)] py-3 text-sm font-bold text-white">
+                다음 →
               </button>
             </>
+          ) : step < LAST_STEP ? (
+            <button onClick={() => canNext && setStep((s) => s + 1)} disabled={!canNext} className="flex-[2] rounded-xl bg-[var(--accent)] py-3 text-sm font-bold text-white disabled:opacity-40">
+              다음 →
+            </button>
+          ) : (
+            <button onClick={resetAll} className="flex-[2] rounded-xl bg-[var(--accent)] py-3 text-sm font-bold text-white">
+              ✅ 완료 — 새 카드뉴스 만들기
+            </button>
           )}
         </div>
       )}
