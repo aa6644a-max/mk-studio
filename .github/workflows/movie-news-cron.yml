@@ -15,7 +15,10 @@ jobs:
     steps:
       - name: Trigger collect pipeline
         run: |
-          curl -sf -X POST "${{ secrets.APP_URL }}/api/cron/collect" \
+          # APP_URL 끝 슬래시 제거 — //api/... 는 308 리다이렉트로 파이프라인이 실행되지 않음
+          BASE="${{ secrets.APP_URL }}"
+          BASE="${BASE%/}"
+          curl -sfL -X POST "$BASE/api/cron/collect" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
             --max-time 290
