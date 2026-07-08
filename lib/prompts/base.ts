@@ -2,6 +2,7 @@
  * 프롬프트 공통 기반 (V2 BasePromptBuilder 1:1 이식).
  * 디자인 시스템 / 공통 제약 / 시즌 컨텍스트.
  */
+import { htmlToStyleText, sampleStyleText } from "@/lib/style-text";
 
 export function getSeason(d = new Date()): string {
   const m = d.getMonth() + 1;
@@ -27,9 +28,9 @@ export function getDesignSystem(brandColor = "#333333"): string {
            - 영화의 명대사, 핵심 요약, 혹은 강조하고 싶은 문구는 반드시 아래 코드로 감싸세요.
            - 구조: <div style="border-left: 5px solid ${brandColor}; padding-left: 15px; margin: 20px 0; color: #555; line-height: 1.8;">[강조 문구]</div>
 
-        3. 노션 스타일 '콜아웃' 박스:
+        3. 노션 스타일 '콜아웃' 박스 (🚨 네이버는 div 배경색을 무시하므로 반드시 table bgcolor 사용):
            - 팁(Tip), 주의사항, 쿠키 영상 유무 등 부가 정보는 박스 처리를 하세요.
-           - 구조: <div style="background-color: #f8f9fa; border-radius: 10px; padding: 20px; border: 1px solid #eee; margin: 20px 0;">💡 [정보 제목]<br><span style="color: #666; font-size: 14px;">[상세 내용]</span></div>
+           - 구조: <table width="100%" border="0" cellpadding="16" cellspacing="0" bgcolor="#f8f9fa" style="border:1px solid #eee; margin:20px 0;"><tr><td style="line-height:1.8;">💡 <b>[정보 제목]</b><br><span style="color:#666; font-size:14px;">[상세 내용]</span></td></tr></table>
 
         4. 여백과 정렬 (시각적 리듬):
            - 문단 사이에는 <p style="text-align: center;">&nbsp;</p>를 넣어 충분한 여백을 확보하세요.
@@ -62,19 +63,13 @@ export function getHashtagRule(): string {
 
 export type PromptResult = { system: string; user: string };
 
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&nbsp;/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 /**
  * 참조 텍스트 생성.
  * rssText: 네이버 블로그 RSS 원문 (문체 학습 소스)
  * posts:   같은 타입 Sheets 저장글 (구조/레이아웃 참조)
+ *
+ * 과거글은 htmlToStyleText로 변환해 단락 리듬(줄바꿈)과 **강조** 패턴을 보존하고,
+ * 앞부분+뒷부분을 함께 샘플링해 도입·마무리 문체를 모두 표집한다.
  */
 export function referenceText(
   posts: { movieTitle: string; content: string }[],
@@ -82,14 +77,14 @@ export function referenceText(
   n = 3,
 ): string {
   const rssPart = rssText
-    ? `[📡 내 네이버 블로그 최신 원문 — 말투·문체 참조]\n${rssText}`
+    ? `[📡 내 네이버 블로그 최신 원문 — 말투·문체·줄바꿈 리듬 참조 (**표시** = 원문의 굵은 글씨)]\n${rssText}`
     : "";
 
   const sheetsPart = posts.length
     ? posts
         .slice(0, n)
         .map((p, i) => {
-          const text = stripHtml(p.content).slice(0, 2000);
+          const text = sampleStyleText(htmlToStyleText(p.content), 1400, 600);
           return `--- 같은 타입 과거글 ${i + 1} (${p.movieTitle}) ---\n${text}`;
         })
         .join("\n\n")

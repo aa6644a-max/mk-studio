@@ -2,6 +2,7 @@
  * Naver Blog RSS 클라이언트.
  * feedparser 없이 순수 fetch + 정규식으로 파싱.
  */
+import { htmlToStyleText, sampleStyleText } from "@/lib/style-text";
 
 function extractCDATA(xml: string, tag: string): string {
   const cdata = new RegExp(
@@ -44,27 +45,40 @@ async function parseRSS(blogId: string): Promise<RSSPost[]> {
     const title = extractCDATA(block, "title");
     const description = extractCDATA(block, "description");
     if (title) {
-      posts.push({ title, text: stripHtml(description) });
+      // 문체 학습용이므로 단락 리듬·강조 패턴을 보존해 변환
+      posts.push({ title, text: htmlToStyleText(description) });
     }
   }
   return posts;
 }
 
 /**
- * 최신 N개 블로그 글을 텍스트로 반환.
- * Claude 참조용 (문체/스타일 학습 소스).
+ * 최신 N개 블로그 글을 문체 학습용 텍스트로 반환.
+ * preferKeywords를 주면 제목에 해당 키워드가 포함된 글(같은 타입 계열)을
+ * 우선 선별해 문체 오염(예: 최신 글이 전부 공고문일 때 영화 리뷰 생성)을 줄인다.
  */
 export async function getRssLatestText(
   blogId = "shock552",
   limit = 5,
+  preferKeywords: string[] = [],
 ): Promise<string> {
   const posts = await parseRSS(blogId);
   if (!posts.length) return "";
-  return posts
+
+  let selected = posts;
+  if (preferKeywords.length) {
+    const matched = posts.filter((p) =>
+      preferKeywords.some((k) => p.title.includes(k)),
+    );
+    const rest = posts.filter((p) => !matched.includes(p));
+    selected = [...matched, ...rest];
+  }
+
+  return selected
     .slice(0, limit)
     .map(
       (p, i) =>
-        `--- 블로그 원문 ${i + 1}: ${p.title} ---\n${p.text.slice(0, 1500)}`,
+        `--- 블로그 원문 ${i + 1}: ${p.title} ---\n${sampleStyleText(p.text, 1100, 400)}`,
     )
     .join("\n\n");
 }

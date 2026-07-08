@@ -9,7 +9,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { dbQuery } from "@/lib/db";
 import { getMovieDetails, searchMovies } from "@/lib/tmdb";
 
-const MODEL = "claude-sonnet-4-6";
+const MODEL = "claude-sonnet-5";
 
 export type DbEvent = {
   id: number;

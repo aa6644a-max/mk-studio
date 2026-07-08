@@ -64,7 +64,7 @@ ${MK_LINK_CONTEXT}`;
 
   const client = new Anthropic();
   const res = await client.messages.create({
-    model: "claude-sonnet-4-6",
+    model: "claude-sonnet-5",
     max_tokens: 1024,
     system,
     messages: [{ role: "user", content: user }],

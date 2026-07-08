@@ -87,6 +87,29 @@ function referencePromptMovie(refText: string): string {
         `;
 }
 
+/**
+ * 도입부 첫 문장 공식 로테이션.
+ * 고정 공식 하나만 쓰면 모든 글이 같은 문장으로 시작해
+ * 네이버 유사문서 판정 위험 + 독자 피로가 쌓이므로 생성마다 랜덤 선택.
+ */
+const REVIEW_OPENERS = [
+  `"최근 영화 <[영화 제목]>을(를) 관람했습니다." 혹은 이와 유사하게 관람 사실을 밝히며 시작하세요.`,
+  `영화에서 가장 인상적이었던 장면·감정의 여운을 담은 한 문장으로 시작하세요. (예: "극장을 나선 뒤에도 한동안 그 장면이 머릿속을 떠나지 않았습니다.")`,
+  `이 작품을 기다렸던 이유나 입소문·기대감을 언급하며 시작하세요. (예: "개봉 소식을 처음 들었을 때부터 궁금했던 작품이었습니다.")`,
+  `독자의 호기심을 건드리는 질문형 문장으로 시작하세요. (예: "과연 이 소재를 스크린에서 어떻게 풀어냈을까요?")`,
+  `관람 상황·계기(언제, 누구와, 어떤 마음으로 보러 갔는지)를 담은 문장으로 시작하세요.`,
+];
+
+const PREVIEW_OPENERS = [
+  `"최근 영화 <[영화 제목]>의 개봉(또는 관련) 소식이 제 호기심을 자극했습니다." 혹은 이와 유사하게 시작하세요.`,
+  `이 작품의 가장 큰 기대 포인트(감독·배우·원작·소재)를 앞세운 문장으로 시작하세요. (예: "[감독/배우]의 신작이라는 것만으로도 기대를 모으는 작품입니다.")`,
+  `개봉 일정·화제성을 언급하며 시작하세요. (예: "다가오는 [개봉 시기], 눈여겨볼 만한 작품이 하나 있습니다.")`,
+];
+
+function pickOpener(openers: string[]): string {
+  return openers[Math.floor(Math.random() * openers.length)];
+}
+
 function getBaseGuideline(postType: "review" | "preview" | "news"): string {
   const { year, month, season } = nowParts();
   const timeContext = `현재 시점은 ${year}년 ${month}월(${season})입니다.`;
@@ -98,16 +121,16 @@ function getBaseGuideline(postType: "review" | "preview" | "news"): string {
 
   if (postType === "preview") {
     introGuideline = `- [서론 - 도입부 공식 절대 준수]:
-              1. "최근 영화 <[영화 제목]>의 개봉(또는 관련) 소식이 제 호기심을 자극했습니다." 혹은 이와 유사하게 시작하세요.
+              1. ${pickOpener(PREVIEW_OPENERS)}
               2. 하단에 제공되는 [포스팅 계기/이유]를 녹여내어 이 영화를 프리뷰하게 된 명확한 동기를 밝히세요.
               3. "그래서 오늘은 개봉에 앞서 이 영화의 기대 포인트에 대해 미리 알아보도록 하겠습니다."로 본론을 여세요.`;
     mediaGuideline = `- 제공된 [메인 포스터]와 [스틸컷 1~N개] HTML 코드는 본문에 모두 1번씩 그대로 복사하여 삽입해야 합니다.
             - 💡 [융통성 발휘]: 개봉 전 프리뷰이므로, 부가적인 정보 사진이 들어가면 좋은 위치에는 언제든지 \`<p style="text-align: center; color: #888; font-size: 14px; background: #eee; padding: 10px;">{{사진: 필요한 실제 사진/상황에 대한 구체적 설명}}</p>\` 코드를 사용하세요.`;
   } else if (postType === "review") {
     introGuideline = `- [서론 - 도입부 공식 절대 준수]:
-              1. "최근 영화 <[영화 제목]>을(를) 관람했습니다." 혹은 이와 유사하게 흥미를 유발하며 시작하세요.
+              1. ${pickOpener(REVIEW_OPENERS)}
               2. 하단에 제공되는 [포스팅 계기/관람 이유]를 녹여내어 영화를 보게 된 동기나 강렬한 첫인상을 밝히세요.
-              3. "그래서 오늘은 이 영화에 대한 솔직한 감상과 리뷰를 남겨보려 합니다."로 본론을 여세요.
+              3. 자연스러운 전환 문장으로 본론(리뷰)을 여세요. (예: "오늘은 이 영화에 대한 솔직한 감상을 남겨보려 합니다." — 단, 매번 같은 문장을 쓰지 말고 변형하세요.)
               4. 서론 마지막 문장 직후에 아래 구분선 코드를 삽입하세요.
                  <p style="text-align:center; color:#bbb; letter-spacing: 8px;">• • • • •</p>
               5. 구분선 바로 아래에 [관람 인증샷] 코드를 삽입하세요.
@@ -156,9 +179,10 @@ function getBaseGuideline(postType: "review" | "preview" | "news"): string {
                 단락당 1~2개를 넘기지 않도록 하세요. 남발하면 효과가 사라집니다.
 
               • 복잡한 요소를 설명하는 구간에는 아래 인용구 박스를 1~2개 삽입하세요.
-                <blockquote style="border-left:4px solid #333; margin:20px 0; padding:10px 20px; background:#f9f9f9; color:#444; font-size:15px;">
-                  [핵심 분석 문장이나 인상적인 표현을 한 문장으로]
-                </blockquote>
+                (🚨 네이버는 div/blockquote 배경색을 무시하므로 반드시 아래 table 구조 사용)
+                <table width="100%" border="0" cellpadding="14" cellspacing="0" bgcolor="#f9f9f9" style="border-left:4px solid #333; margin:20px 0;">
+                  <tr><td style="color:#444; font-size:15px; line-height:1.8;">[핵심 분석 문장이나 인상적인 표현을 한 문장으로]</td></tr>
+                </table>
 
               • 🚨 [스틸컷 분산 배치 필수]:
                 스틸컷은 반드시 각 소제목 단락 사이에 1장씩 고르게 분산하세요.
@@ -166,10 +190,13 @@ function getBaseGuideline(postType: "review" | "preview" | "news"): string {
 
             - [관전 포인트 섹션 - 본론 마지막에 반드시 삽입]:
               마지막 본론 스틸컷 이후, 결론 전에 아래 형식의 관전 포인트 박스를 삽입하세요.
-              <div style="background:#f5f5f5; border:1px solid #ddd; border-radius:8px; padding:16px 20px; margin:30px 0;">
-                <p style="margin:0 0 8px; font-size:13px; color:#e53e3e; font-weight:bold;">🔎 관전 포인트</p>
-                <p style="margin:0; font-size:14px; color:#555;">[이 영화를 어떤 마음으로 보면 좋을지, 주목할 점, 추천 대상을 2~3문장으로 솔직하게 작성. 여기서도 작성자의 개인적인 시선을 담을 것]</p>
-              </div>
+              (🚨 네이버 호환을 위해 반드시 table bgcolor 구조 사용)
+              <table width="100%" border="0" cellpadding="18" cellspacing="0" bgcolor="#f5f5f5" style="border:1px solid #ddd; margin:30px 0;">
+                <tr><td>
+                  <p style="margin:0 0 8px; font-size:13px; color:#e53e3e; font-weight:bold;"><b>🔎 관전 포인트</b></p>
+                  <p style="margin:0; font-size:14px; color:#555; line-height:1.8;">[이 영화를 어떤 마음으로 보면 좋을지, 주목할 점, 추천 대상을 2~3문장으로 솔직하게 작성. 여기서도 작성자의 개인적인 시선을 담을 것]</p>
+                </td></tr>
+              </table>
 
             - [결론 - 🚨 아래 톤으로 마무리]:
               "결론적으로"나 "요약하자면" 같은 AI 말투는 절대 금지.
@@ -213,24 +240,30 @@ function getBaseGuideline(postType: "review" | "preview" | "news"): string {
               이 분량은 네이버 블로그 상위노출 기준을 충족하면서 영화 리뷰로서 충분한 분석 깊이를 확보하기 위한 기준입니다.
               분량이 부족하다면 각 소제목 단락에서 분석을 더 구체적으로 전개하세요. 단순히 문장을 늘리는 것이 아니라, 해당 소제목에서 말하고 싶은 포인트를 끝까지 파고드세요.
             - [최상단]: 시선 끄는 첫 문장으로 시작하고, 바로 아래에 [메인 포스터] HTML 코드를 삽입하세요. 스포일러 경고 문구도 잊지 마세요.
-            - 🚨 [영화 정보 박스 필수 삽입]: 메인 포스터 바로 밑에는 반드시 아래 HTML 형태의 정보 박스를 삽입하여 영화 기본 정보를 정리하세요. 부족한 정보(러닝타임, 쿠키영상 등)는 스스로 검색하여 정확히 채워 넣으세요.
-              <div style="background-color: #f8f9fa; border-radius: 10px; padding: 20px; border: 1px solid #eee; margin: 20px 0; font-size: 15px; line-height: 1.8;">
-                <p style="margin: 0;">📽️ <b>원제</b> : [원제]</p>
-                <p style="margin: 0;">🎞️ <b>장르</b> : [장르]</p>
-                <p style="margin: 0;">🌍 <b>국가</b> : [제작 국가]</p>
-                <p style="margin: 0;">🎬 <b>감독</b> : [감독]</p>
-                <p style="margin: 0;">⏳ <b>러닝타임</b> : [러닝타임, 예: 125분]</p>
-                <p style="margin: 0;">🔞 <b>관람등급</b> : [등급, 예: 12세 이상 관람가]</p>
-                <p style="margin: 0;">📅 <b>개봉일</b> : [개봉일]</p>
-                <p style="margin: 0;">🍪 <b>쿠키영상</b> : [있음 n개/없음/정보 없음]</p>
-              </div>
+            - 🚨 [영화 정보 박스 필수 삽입]: 메인 포스터 바로 밑에는 반드시 아래 HTML 형태의 정보 박스를 삽입하여 영화 기본 정보를 정리하세요.
+              🚫 [할루시네이션 금지]: 반드시 위 [영화 실제 데이터]에 제공된 값만 사용하세요. 데이터에 없는 항목(쿠키영상, 관람등급 등)은 지어내지 말고 "정보 없음"으로 표기하세요.
+              (🚨 네이버 호환을 위해 반드시 table bgcolor 구조 사용)
+              <table width="100%" border="0" cellpadding="20" cellspacing="0" bgcolor="#f8f9fa" style="border:1px solid #eee; margin:20px 0;">
+                <tr><td style="font-size:15px; line-height:1.9;">
+                  <p style="margin: 0;">📽️ <b>원제</b> : [원제]</p>
+                  <p style="margin: 0;">🎞️ <b>장르</b> : [장르]</p>
+                  <p style="margin: 0;">🌍 <b>국가</b> : [제작 국가]</p>
+                  <p style="margin: 0;">🎬 <b>감독</b> : [감독]</p>
+                  <p style="margin: 0;">⏳ <b>러닝타임</b> : [데이터의 러닝타임, 없으면 "정보 없음"]</p>
+                  <p style="margin: 0;">🔞 <b>관람등급</b> : [데이터에 있으면 기재, 없으면 "정보 없음"]</p>
+                  <p style="margin: 0;">📅 <b>개봉일</b> : [개봉일]</p>
+                  <p style="margin: 0;">🍪 <b>쿠키영상</b> : [데이터·감상평에 언급이 있으면 기재, 없으면 "정보 없음"]</p>
+                </td></tr>
+              </table>
             ${introGuideline}
             - [결론]: 전체적인 감상을 2~3문장으로 갈무리하세요. 결론 마지막에는 아래 관련 포스팅 유도 박스를 반드시 삽입하세요.
-              ① 관련 포스팅 유도 박스:
-              <div style="background:#f4f4f4; border-left: 4px solid #333; padding: 15px 20px; margin: 30px 0; border-radius: 0 8px 8px 0;">
-                <p style="margin:0; font-size:13px; color:#888;">📌 함께 읽으면 좋은 글</p>
-                <p style="margin:5px 0 0; font-weight:bold;">[이 영화와 연관된 이전 포스팅 주제 추천 1~2개 제안]</p>
-              </div>
+              ① 관련 포스팅 유도 박스 (🚨 table bgcolor 구조 사용):
+              <table width="100%" border="0" cellpadding="16" cellspacing="0" bgcolor="#f4f4f4" style="border-left:4px solid #333; margin:30px 0;">
+                <tr><td>
+                  <p style="margin:0; font-size:13px; color:#888;">📌 함께 읽으면 좋은 글</p>
+                  <p style="margin:5px 0 0; font-weight:bold;"><b>[이 영화와 연관된 이전 포스팅 주제 추천 1~2개 제안]</b></p>
+                </td></tr>
+              </table>
 
         3. 멀티미디어 및 이미지 가이드 (🚨 절대 준수 사항):
             ${mediaGuideline}
@@ -260,6 +293,7 @@ function detailsBlock(d: MovieDetails): string {
         - 장르: ${d.genres ?? ""}
         - 감독: ${d.director ?? ""}
         - 출연: ${d.actors ?? ""}
+        - 러닝타임: ${d.runtime ? `${d.runtime}분` : "정보 없음"}
         - 줄거리: ${d.overview ?? ""}`;
 }
 

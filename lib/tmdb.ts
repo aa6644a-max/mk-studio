@@ -164,6 +164,7 @@ export async function getMovieDetails(id: number): Promise<MovieDetails | null> 
     overview?: string;
     poster_path?: string | null;
     backdrop_path?: string | null;
+    runtime?: number | null;
     genres?: { name?: string }[];
     production_countries?: { name?: string }[];
     credits?: { crew?: CreditCrew[]; cast?: CreditCast[] };
@@ -202,6 +203,7 @@ export async function getMovieDetails(id: number): Promise<MovieDetails | null> 
     director,
     actors,
     genres,
+    runtime: data.runtime ?? undefined,
     overview: data.overview || "TMDB에 등록된 공식 줄거리가 없습니다.",
     posterUrl: data.poster_path ? `${IMG_BASE}${data.poster_path}` : undefined,
     backdropUrls,

@@ -20,6 +20,7 @@ export type MovieDetails = {
   director?: string;
   actors?: string;
   genres?: string;
+  runtime?: number; // 러닝타임 (분)
   overview?: string;
   posterUrl?: string;
   backdropUrls?: string[];

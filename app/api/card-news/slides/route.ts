@@ -8,7 +8,7 @@ export const maxDuration = 300;
  * 본문 3장(헤드라인+발췌) + 엔딩 카드(훅·팔로우 문구) + 인스타 캡션.
  */
 
-const MODEL = "claude-sonnet-4-6";
+const MODEL = "claude-sonnet-5";
 
 type SlidesRequest = {
   movieTitle?: string;

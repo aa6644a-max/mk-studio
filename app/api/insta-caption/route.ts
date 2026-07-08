@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export const maxDuration = 120;
 
-const MODEL = "claude-sonnet-4-6";
+const MODEL = "claude-sonnet-5";
 
 const TONE_GUIDE: Record<string, string> = {
   emotional: "감성적이고 여운이 남는 톤. 짧은 문장, 서정적 표현. 이모지 절제해서 1~2개.",

@@ -175,8 +175,8 @@ export async function POST(req: Request) {
 
         try {
           const anthropicStream = client.messages.stream({
-            model: "claude-sonnet-4-6",
-            max_tokens: 8192,
+            model: "claude-sonnet-5",
+            max_tokens: 12000,
             system: systemPrompt,
             messages: [{ role: "user", content: userPrompt }],
           });

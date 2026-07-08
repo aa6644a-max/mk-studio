@@ -85,6 +85,27 @@ function pdfGuideline(brandColor = "#1f3a5f"): string {
 export type PdfMode = "narrative" | "info";
 
 /**
+ * PDF 도입부 첫 문장 공식 로테이션.
+ * "호기심을 자극했습니다" 고정 공식은 모든 글의 첫 문장을 동일하게 만들어
+ * 유사문서 위험이 있으므로 생성마다 랜덤 선택.
+ */
+const PDF_OPENERS = [
+  `"최근 [주제/상황]이 제 호기심을 자극했습니다."로 시작하세요.`,
+  `"요즘 [주제] 관련 소식을 자주 접하게 됩니다." 같이 최근의 관심·상황 언급으로 시작하세요.`,
+  `자료에서 가장 눈에 띄는 사실·수치 하나를 앞세워 시작하세요. (예: "[핵심 사실], 생각보다 큰 이야기입니다.")`,
+  `독자의 상황을 건드리는 질문형 문장으로 시작하세요. (예: "[주제]에 관심 있으셨던 분들 계신가요?")`,
+];
+
+function pdfIntroBlock(): string {
+  const opener = PDF_OPENERS[Math.floor(Math.random() * PDF_OPENERS.length)];
+  return `        [🚨 도입부 작성 공식: 무조건 준수]
+        1. ${opener}
+        2. [나의 상황 및 기록 목적]을 녹여내어 이 자료를 들여다보게 된 동기를 밝히세요.
+        3. "그래서 오늘은 [PDF의 핵심 내용]에 대해서 한번 알아보도록 하겠습니다." 혹은 이와 유사한 전환 문장으로 본론을 시작하세요. (매번 같은 문장 금지 — 변형할 것)
+        4. 절대 "안녕하세요", "반갑습니다", "MK입니다" 같은 상투적인 인사는 하지 마세요.`;
+}
+
+/**
  * PDF 요약 프롬프트 — 작성 방식 분기.
  * - narrative: 기존 줄글 서사 방식 (영화 프리뷰·뉴스·해설 등 흐름형)
  * - info: 정보 시각화 방식 (표·박스·플로우 — 공고·일정·제원 등 항목형)
@@ -111,11 +132,7 @@ function buildPdfNarrativePrompt(
   const user = `
         아래 제공된 [원본 데이터(PDF)]를 바탕으로 포스팅을 작성하세요.
 
-        [🚨 도입부 작성 공식: 무조건 준수]
-        1. "최근 [주제/상황]이 제 호기심을 자극했습니다."로 시작하세요.
-        2. [나의 상황 및 기록 목적]을 녹여내어 이 자료를 들여다보게 된 동기를 밝히세요.
-        3. "그래서 오늘은 [PDF의 핵심 내용]에 대해서 한번 알아보도록 하겠습니다."로 본론을 시작하세요.
-        4. 절대 "안녕하세요", "반갑습니다", "MK입니다" 같은 상투적인 인사는 하지 마세요.
+${pdfIntroBlock()}
 
         [🚨 상단 제목 규칙]
         - 카테고리 라벨/제목 헤더를 둘 경우, 제목(h1)은 핵심 주제를 담은 2~6단어의 짧은 카테고리형 제목으로. (예: "범죄도시5 프리뷰") 요약 문장·SEO 제목을 h1에 넣지 마세요.
@@ -157,11 +174,7 @@ function buildPdfInfoPrompt(
   const user = `
         아래 제공된 [원본 데이터(PDF)]를 바탕으로 '정보성 요약 포스팅'을 작성하세요.
 
-        [🚨 도입부 작성 공식: 무조건 준수]
-        1. "최근 [주제/상황]이 제 호기심을 자극했습니다."로 시작하세요.
-        2. [나의 상황 및 기록 목적]을 녹여내어 이 자료를 들여다보게 된 동기를 밝히세요.
-        3. "그래서 오늘은 [PDF의 핵심 내용]에 대해서 한번 알아보도록 하겠습니다."로 본론을 시작하세요.
-        4. 절대 "안녕하세요", "반갑습니다", "MK입니다" 같은 상투적인 인사는 하지 마세요.
+${pdfIntroBlock()}
 
         [🚨 초강력 지침: 노트북LM 모드]
         - 외부 검색을 차단하고 오직 아래 제공된 [원본 데이터(PDF)]의 내용만 사용하세요. 없는 사실을 지어내지 마세요.
@@ -309,8 +322,8 @@ ${base}
 2. 소제목:
    <table width="100%" border="0" cellpadding="15" bgcolor="#2e7d32"><tr><td><b style="color:#ffffff; font-size:18px;">[소제목]</b></td></tr></table>
 
-3. 콜아웃 박스:
-   <div style="background-color:#f8f9fa; border-radius:10px; padding:20px; border:1px solid #eee; margin:20px 0;">💡 [제목]<br><span style="color:#666; font-size:14px;">[내용]</span></div>
+3. 콜아웃 박스 (🚨 네이버는 div 배경색을 무시하므로 반드시 table bgcolor 사용):
+   <table width="100%" border="0" cellpadding="16" cellspacing="0" bgcolor="#f8f9fa" style="border:1px solid #eee; margin:20px 0;"><tr><td style="line-height:1.8;">💡 <b>[제목]</b><br><span style="color:#666; font-size:14px;">[내용]</span></td></tr></table>
 
 4. 이미지 삽입 (사진 순서 그대로):
 ${imageMode === "placeholder"
