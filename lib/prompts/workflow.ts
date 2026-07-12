@@ -12,6 +12,7 @@ import {
   getHashtagRule,
   nowParts,
   referenceText,
+  safeSlice,
 } from "./base";
 
 // ──────────────────────────────────────────────
@@ -84,7 +85,7 @@ export function buildInterviewSystem(
 ## MK가 쓴 감상평 (대화의 출발점)
 ${seedText}
 
-${tmdbDetail ? `## 작품 실제 데이터 (TMDB 조사 — 감상평과 교차해 질문)\n${tmdbDetail.slice(0, 2500)}` : ""}
+${tmdbDetail ? `## 작품 실제 데이터 (TMDB 조사 — 감상평과 교차해 질문)\n${safeSlice(tmdbDetail, 2500)}` : ""}
 
 ## 포스팅 전략 (감상평에서 도출됨)
 - 타입: ${typeLabel[strategy.postType]}
@@ -109,12 +110,12 @@ ${strategy.differentiator ? `- 차별화 각도: ${strategy.differentiator}` : "
 5. 감상평에 **평점·추천 대상**이 안 보이면, 종료 직전 그 두 가지만 가볍게 확인하세요. (이미 있으면 묻지 말 것)
 
 ## MK 문체 참고 (질문 스타일에만)
-${rssText ? rssText.slice(0, 500) : "자연스럽고 친근한 대화체"}
-${refText ? `\n## 동일 타입 기존 포스팅 구조 참고\n${refText.slice(0, 300)}` : ""}`;
+${rssText ? safeSlice(rssText, 500) : "자연스럽고 친근한 대화체"}
+${refText ? `\n## 동일 타입 기존 포스팅 구조 참고\n${safeSlice(refText, 300)}` : ""}`;
   }
 
   return `당신은 MK 블로그 포스팅 인터뷰어입니다.
-${hasFileContent && fileContent ? `\n## 업로드된 파일 정보 (이미 파악됨)\n${fileContent.slice(0, 2000)}\n파일 내용을 기반으로 구체적인 질문을 하세요.` : ""}
+${hasFileContent && fileContent ? `\n## 업로드된 파일 정보 (이미 파악됨)\n${safeSlice(fileContent, 2000)}\n파일 내용을 기반으로 구체적인 질문을 하세요.` : ""}
 ${hasFileContent && imageInfo ? `\n## 업로드된 사진 정보 (이미 파악됨)\n${imageInfo}\n사진 정보를 기반으로 장소/분위기/경험에 대해 질문하세요.` : ""}
 
 ## 포스팅 정보
@@ -140,9 +141,9 @@ ${requiredInfo[strategy.postType]}
 ${autoTerminate ? "6. 이 타입은 PDF 업로드가 필요해서 인터뷰 없이 바로 포스팅 생성할게요 — 첫 메시지에서 바로 종료 선언" : ""}
 
 ## MK 문체 참고 (인터뷰 질문 스타일에만 참고)
-${rssText ? rssText.slice(0, 500) : "자연스럽고 친근한 대화체"}
+${rssText ? safeSlice(rssText, 500) : "자연스럽고 친근한 대화체"}
 
-${refText ? `## 동일 타입 기존 포스팅 구조 참고\n${refText.slice(0, 300)}` : ""}`;
+${refText ? `## 동일 타입 기존 포스팅 구조 참고\n${safeSlice(refText, 300)}` : ""}`;
 }
 
 // ──────────────────────────────────────────────
@@ -192,7 +193,7 @@ ${conversation}
 
 ${extraData ? `━━━━━━━━━━━━━━━━━━━━━━━━━\n[외부 데이터 (TMDB/KOBIS)]\n━━━━━━━━━━━━━━━━━━━━━━━━━\n${extraData}` : ""}
 
-${fileContent ? `━━━━━━━━━━━━━━━━━━━━━━━━━\n[업로드된 PDF 원문 — 이 내용을 포스팅에 반영]\n━━━━━━━━━━━━━━━━━━━━━━━━━\n${fileContent.slice(0, 4000)}` : ""}
+${fileContent ? `━━━━━━━━━━━━━━━━━━━━━━━━━\n[업로드된 PDF 원문 — 이 내용을 포스팅에 반영]\n━━━━━━━━━━━━━━━━━━━━━━━━━\n${safeSlice(fileContent, 4000)}` : ""}
 
 ${imageInfo ? `━━━━━━━━━━━━━━━━━━━━━━━━━\n[업로드된 사진 목록 — 포스팅에 플레이스홀더로 삽입]\n━━━━━━━━━━━━━━━━━━━━━━━━━\n${imageInfo}\n사진은 HTML에 <p style="text-align:center;color:#aaa;font-size:13px;">[사진: 파일명]</p> 형태로 적재적소에 삽입하세요.` : ""}
 

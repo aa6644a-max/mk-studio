@@ -5,6 +5,7 @@ import { referenceText } from "@/lib/prompts/base";
 import { buildInterviewSystem } from "@/lib/prompts/workflow";
 import { getProfile } from "@/lib/google-sheets";
 import { groupOf, buildProfileInjection } from "@/lib/prompts/profile";
+import { safeSlice } from "@/lib/prompts/base";
 import { formatTmdbDetailsText, type TmdbSelectionRef } from "@/lib/tmdb";
 import type { StrategyCard, ChatMessage } from "@/lib/workflow-store";
 
@@ -53,10 +54,10 @@ export async function POST(req: Request) {
       firstUserContent += `\n\n[선택된 작품: ${tmdbTitles}]`;
     }
     if (seedText) {
-      firstUserContent += `\n\n[내가 쓴 감상평]\n${seedText.slice(0, 3000)}`;
+      firstUserContent += `\n\n[내가 쓴 감상평]\n${safeSlice(seedText, 3000)}`;
     }
     if (fileContent) {
-      firstUserContent += `\n\n[업로드된 PDF 내용]\n${fileContent.slice(0, 4000)}`;
+      firstUserContent += `\n\n[업로드된 PDF 내용]\n${safeSlice(fileContent, 4000)}`;
     } else if (imageInfo) {
       firstUserContent += `\n\n[업로드된 사진 정보]\n${imageInfo}`;
     }

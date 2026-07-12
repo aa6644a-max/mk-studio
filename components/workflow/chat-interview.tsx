@@ -97,7 +97,7 @@ export default function ChatInterview() {
       });
 
       if (!res.body) throw new Error("스트림 없음");
-      await consumeStream(res.body, appendToLastMessage);
+      await consumeStream(res.body, appendToLastMessage, setError);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -151,6 +151,10 @@ export default function ChatInterview() {
 
           try {
             const parsed = JSON.parse(data);
+            if (parsed.error) {
+              setError(String(parsed.error));
+              continue;
+            }
             if (parsed.text) {
               accumulated += parsed.text;
               addGeneratingChars(parsed.text.length);
@@ -344,23 +348,30 @@ export default function ChatInterview() {
 async function consumeStream(
   body: ReadableStream,
   append: (chunk: string) => void,
+  onError: (msg: string) => void,
 ) {
   const reader = body.getReader();
   const decoder = new TextDecoder();
+  let sseBuffer = "";
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
 
-    const text = decoder.decode(value);
-    for (const line of text.split("\n\n")) {
-      if (!line.startsWith("data: ")) continue;
-      const data = line.slice(6).trim();
+    // 버퍼에 누적 후 완전한 SSE 이벤트만 파싱 (패킷 분할 대응)
+    sseBuffer += decoder.decode(value, { stream: true });
+    const events = sseBuffer.split("\n\n");
+    sseBuffer = events.pop() ?? "";
+
+    for (const event of events) {
+      if (!event.startsWith("data: ")) continue;
+      const data = event.slice(6).trim();
       if (data === "[DONE]") return;
 
       try {
         const parsed = JSON.parse(data);
         if (parsed.text) append(parsed.text);
+        if (parsed.error) onError(String(parsed.error));
       } catch {}
     }
   }

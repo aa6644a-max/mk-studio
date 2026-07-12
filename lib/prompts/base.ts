@@ -16,6 +16,20 @@ export function nowParts(d = new Date()) {
   return { year: d.getFullYear(), month: d.getMonth() + 1, season: getSeason(d) };
 }
 
+/**
+ * 서로게이트 쌍 안전 슬라이스. `.slice(0, n)`은 UTF-16 코드유닛 기준이라
+ * 이모지(RSS·리뷰·PDF 텍스트에 흔함) 중간에서 잘리면 짝 없는 서로게이트가 남는다.
+ * 이 상태로 Anthropic API에 보내면 "no low surrogate in string" 400 에러 발생 →
+ * 스트림이 즉시 끊겨 인터뷰 채팅창에서 AI가 아무 말도 안 하는 것처럼 보인다.
+ */
+export function safeSlice(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text;
+  let end = maxLen;
+  const code = text.charCodeAt(end - 1);
+  if (code >= 0xd800 && code <= 0xdbff) end -= 1; // 짝 없는 상위 서로게이트 제거
+  return text.slice(0, end);
+}
+
 /** [🎨 MK CINELAB 디자인 시스템] — 네이버 블로그 시각 장치. */
 export function getDesignSystem(brandColor = "#333333"): string {
   return `

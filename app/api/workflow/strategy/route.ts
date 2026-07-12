@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { formatTmdbDetailsText, type TmdbSelectionRef } from "@/lib/tmdb";
 import { getProfile } from "@/lib/google-sheets";
 import { groupOf, buildProfileInjection } from "@/lib/prompts/profile";
+import { safeSlice } from "@/lib/prompts/base";
 
 export const maxDuration = 60;
 
@@ -119,11 +120,11 @@ export async function POST(req: Request) {
     let userContent = "";
     if (tmdbData) {
       const seedBlock = seedText
-        ? `\n\n[사용자의 실제 감상평 — 전략의 핵심 근거]\n${seedText.slice(0, 3000)}\n\n🎯 감상평이 제공되었다. hook·watchPoints·differentiator는 AI 상상이 아니라 위 [사용자의 실제 감상평]에서 직접 도출하라. 감상평이 짚은 지점·감정·관점을 전략 각도로 승격시키고, 감상평에 없는 일반론으로 채우지 마라. keywords·target만 [작품 데이터]에서 뽑는다.`
+        ? `\n\n[사용자의 실제 감상평 — 전략의 핵심 근거]\n${safeSlice(seedText, 3000)}\n\n🎯 감상평이 제공되었다. hook·watchPoints·differentiator는 AI 상상이 아니라 위 [사용자의 실제 감상평]에서 직접 도출하라. 감상평이 짚은 지점·감정·관점을 전략 각도로 승격시키고, 감상평에 없는 일반론으로 채우지 마라. keywords·target만 [작품 데이터]에서 뽑는다.`
         : "";
-      userContent = `사용자가 선택한 포스팅 타입: ${selectedType ?? "review"}\n포스팅 주제/테마: "${topic ?? ""}"\n\n[작품 데이터]\n${tmdbData.slice(0, 4000)}${seedBlock}\n\n🚨 필수: 이것은 영화 타입이므로 create_strategy 호출 시 hook, watchPoints(2~3개 배열), differentiator 세 필드를 반드시 모두 포함하라. ${seedText ? "감상평 기반으로" : "위 [작품 데이터]의 실제 줄거리·장르·인물에서만"} 도출되는 구체적 내용으로 채우고, 어떤 영화에나 해당될 일반론(예: "감동적 스토리", "뛰어난 연출")은 절대 금지.`;
+      userContent = `사용자가 선택한 포스팅 타입: ${selectedType ?? "review"}\n포스팅 주제/테마: "${topic ?? ""}"\n\n[작품 데이터]\n${safeSlice(tmdbData, 4000)}${seedBlock}\n\n🚨 필수: 이것은 영화 타입이므로 create_strategy 호출 시 hook, watchPoints(2~3개 배열), differentiator 세 필드를 반드시 모두 포함하라. ${seedText ? "감상평 기반으로" : "위 [작품 데이터]의 실제 줄거리·장르·인물에서만"} 도출되는 구체적 내용으로 채우고, 어떤 영화에나 해당될 일반론(예: "감동적 스토리", "뛰어난 연출")은 절대 금지.`;
     } else if (pdfText) {
-      userContent = `사용자가 선택한 포스팅 타입: ${selectedType ?? "local"}\n\nPDF 내용 (주제 자동 추출 필요):\n${pdfText.slice(0, 3000)}`;
+      userContent = `사용자가 선택한 포스팅 타입: ${selectedType ?? "local"}\n\nPDF 내용 (주제 자동 추출 필요):\n${safeSlice(pdfText, 3000)}`;
     } else if (imageInfo) {
       const catLine = photoCategory ? `\n사용자가 직접 고른 카테고리: ${photoCategory} (이 카테고리를 photoCategory로 그대로 사용)` : "";
       const topicLine = topic ? `\n포스팅 주제: "${topic}"` : "";

@@ -9,6 +9,7 @@ import {
   PROFILE_MAX_QUOTES,
 } from "@/lib/prompts/profile";
 import type { ChatMessage } from "@/lib/workflow-store";
+import { safeSlice } from "@/lib/prompts/base";
 
 export const maxDuration = 60;
 
@@ -72,7 +73,7 @@ export async function POST(req: Request) {
     if (set) {
       const g = resolveGroup();
       const quotes = Array.isArray(body.quotes) ? body.quotes.map(String).slice(0, PROFILE_MAX_QUOTES) : [];
-      await upsertProfile(g, (body.profileText ?? "").slice(0, 800), quotes);
+      await upsertProfile(g, safeSlice(body.profileText ?? "", 800), quotes);
       return NextResponse.json({ ok: true, set: g });
     }
 
@@ -112,7 +113,7 @@ export async function POST(req: Request) {
     const input = toolUse.input as { profileText: string; quotes: string[] };
     const quotes = Array.isArray(input.quotes) ? input.quotes.slice(0, PROFILE_MAX_QUOTES) : [];
 
-    await upsertProfile(group, (input.profileText ?? "").slice(0, 800), quotes);
+    await upsertProfile(group, safeSlice(input.profileText ?? "", 800), quotes);
 
     return NextResponse.json({ ok: true, group });
   } catch (e) {

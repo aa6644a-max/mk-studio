@@ -11,7 +11,7 @@ const CONTENT_TYPE_LABEL = {
 };
 
 export default function StrategyCardView() {
-  const { strategy, topic, postType, setPostType, setStage, addMessage, setStreaming } =
+  const { strategy, topic, postType, setPostType, setStage, addMessage, setStreaming, setError } =
     useWorkflowStore();
   const [starting, setStarting] = useState(false);
 
@@ -61,9 +61,10 @@ export default function StrategyCardView() {
       });
 
       if (!res.body) throw new Error("스트림 없음");
-      await consumeStream(res.body);
+      await consumeStream(res.body, setError);
     } catch (e) {
       console.error(e);
+      setError((e as Error).message);
     } finally {
       useWorkflowStore.getState().setStreaming(false);
       setStarting(false);
@@ -351,26 +352,30 @@ export default function StrategyCardView() {
   );
 }
 
-async function consumeStream(body: ReadableStream) {
+async function consumeStream(body: ReadableStream, onError: (msg: string) => void) {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   const store = useWorkflowStore.getState();
+  let sseBuffer = "";
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
 
-    const text = decoder.decode(value);
-    const lines = text.split("\n\n");
+    // 버퍼에 누적 후 완전한 SSE 이벤트만 파싱 (패킷 분할 대응)
+    sseBuffer += decoder.decode(value, { stream: true });
+    const events = sseBuffer.split("\n\n");
+    sseBuffer = events.pop() ?? "";
 
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const data = line.slice(6).trim();
+    for (const event of events) {
+      if (!event.startsWith("data: ")) continue;
+      const data = event.slice(6).trim();
       if (data === "[DONE]") return;
 
       try {
         const parsed = JSON.parse(data);
         if (parsed.text) store.appendToLastMessage(parsed.text);
+        if (parsed.error) onError(String(parsed.error));
       } catch {}
     }
   }

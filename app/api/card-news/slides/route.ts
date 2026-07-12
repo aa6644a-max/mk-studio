@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { safeSlice } from "@/lib/prompts/base";
 
 export const maxDuration = 300;
 
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "user",
-          content: `[영화] ${movieTitle ?? ""}\n[리뷰 제목] ${reviewTitle ?? ""}\n[댓글 트리거 키워드] ${keyword}\n\n[리뷰 전문]\n${reviewText.slice(0, 8000)}`,
+          content: `[영화] ${movieTitle ?? ""}\n[리뷰 제목] ${reviewTitle ?? ""}\n[댓글 트리거 키워드] ${keyword}\n\n[리뷰 전문]\n${safeSlice(reviewText, 8000)}`,
         },
       ],
     });

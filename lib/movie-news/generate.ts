@@ -8,6 +8,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { dbQuery } from "@/lib/db";
 import { getMovieDetails, searchMovies } from "@/lib/tmdb";
+import { safeSlice } from "@/lib/prompts/base";
 
 const MODEL = "claude-sonnet-5";
 
@@ -132,7 +133,7 @@ export async function generateDraftForEvent(eventId: number): Promise<DraftResul
 
   const format = event.event_type === "boxoffice_briefing" ? "briefing" : "spotlight";
   const research = format === "spotlight" ? await buildResearch(event) : "";
-  const payloadText = JSON.stringify(event.payload).slice(0, 4000);
+  const payloadText = safeSlice(JSON.stringify(event.payload), 4000);
 
   const formatGuide =
     format === "briefing"
