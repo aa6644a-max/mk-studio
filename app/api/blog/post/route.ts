@@ -28,16 +28,34 @@ function htmlToText(html: string): string {
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/<(?:br|\/p|\/div|\/h[1-6]|\/li)[^>]*>/gi, "\n")
     .replace(/<[^>]+>/g, "")
-    .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;|​/g, " ")
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/​/g, " ")
     .replace(/[ \t]+/g, " ")
     .replace(/\n\s*\n\s*/g, "\n\n")
     .replace(/<[^>]*$/, "") // 끝 마커 위치에서 잘린 미완성 태그 제거
     .trim();
+}
+
+/**
+ * 컨테이너 div의 닫힘 지점을 div 중첩 깊이로 추적.
+ * 스킨마다 본문 뒤에 붙는 위젯·레이어가 달라 마커만으로는 끝을 못 잡는다.
+ */
+function findDivEnd(html: string, start: number): number {
+  const re = /<\/?div\b/gi;
+  re.lastIndex = start;
+  let depth = 1;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html))) {
+    depth += m[0][1] === "/" ? -1 : 1;
+    if (depth === 0) return m.index;
+  }
+  return html.length;
 }
 
 function extractBody(html: string): string {
@@ -45,7 +63,8 @@ function extractBody(html: string): string {
     const markerIdx = html.indexOf(startMarker);
     if (markerIdx < 0) continue;
     const start = html.indexOf(">", markerIdx) + 1; // 여는 태그 끝까지 건너뛰기
-    let end = html.length;
+    let end = findDivEnd(html, start);
+    // 마크업이 깨져 depth 추적이 실패한 경우를 대비한 안전망
     for (const m of END_MARKERS) {
       const idx = html.indexOf(m, start);
       if (idx > start && idx < end) end = idx;
