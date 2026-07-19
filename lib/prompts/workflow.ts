@@ -62,6 +62,7 @@ export function buildInterviewSystem(
     photo: "사진 포스팅",
     local: "로컬소식/공고문",
     pdf: "PDF 요약",
+    essay: "일상·생각·경험 에세이",
   };
 
   const requiredInfo: Record<PostType, string> = {
@@ -72,6 +73,7 @@ export function buildInterviewSystem(
     photo: "방문/경험 계기, 각 사진 순간의 상황과 느낌, 전체적으로 강조하고 싶은 포인트, 실용 정보(영업시간·주차·입장료·동선 등 알면)",
     local: "이 소식을 전하는 이유/기록 목적, 특히 강조하고 싶은 혜택·자격 요건, 타겟 독자에게 전달할 핵심 메시지 (날짜·장소·신청링크는 PDF에서 자동 추출하니 재질문 금지)",
     pdf: "이 자료를 들여다보는 상황/기록 목적, 내용 중 가장 중요한 포인트, 독자에게 전달할 핵심 메시지 (세부 사실은 PDF에서 자동 추출하니 재질문 금지)",
+    essay: "🚨 가장 먼저 반드시 확인: 이 경험에서 본인의 역할이 무엇이었는지(단순 참석자였는지, 아니면 주최·진행·발표·출연 등 직접 만든 자리였는지) — 이건 절대 넘겨짚지 말고 명시적으로 물을 것. 그다음 이 글을 쓰게 된 계기·상황, 전하고 싶은 생각이나 감정, 독자에게 남기고 싶은 한마디 (참고자료를 첨부했다면 그 안의 사실관계는 이미 확보됐으니 재질문 금지 — 역할과 개인적 의미·소감만 확인)",
   };
 
   const hasFileContent = !!(fileContent || imageInfo);
@@ -193,7 +195,9 @@ ${conversation}
 
 ${extraData ? `━━━━━━━━━━━━━━━━━━━━━━━━━\n[외부 데이터 (TMDB/KOBIS)]\n━━━━━━━━━━━━━━━━━━━━━━━━━\n${extraData}` : ""}
 
-${fileContent ? `━━━━━━━━━━━━━━━━━━━━━━━━━\n[업로드된 PDF 원문 — 이 내용을 포스팅에 반영]\n━━━━━━━━━━━━━━━━━━━━━━━━━\n${safeSlice(fileContent, 4000)}` : ""}
+${fileContent ? `━━━━━━━━━━━━━━━━━━━━━━━━━\n[${strategy.postType === "essay" ? "첨부된 참고자료(대화록/원고 등)" : "업로드된 PDF 원문"} — ${strategy.postType === "essay" ? "구조와 순서를 최대한 보존하며 문체만 다듬어 반영. 마음대로 요약·축약·재배열하지 말 것" : "이 내용을 포스팅에 반영"}]\n━━━━━━━━━━━━━━━━━━━━━━━━━\n${safeSlice(fileContent, 8000)}` : ""}
+
+${strategy.postType === "essay" ? `🚨 [나의 역할 — 절대 넘겨짚지 말 것]\n인터뷰 대화에서 확인된 나의 역할(단순 참석자 / 주최·진행·발표·출연 등)을 정확히 그대로 반영하라. 대화에서 명시되지 않았다면 절대 "관객으로 참석"처럼 임의로 단정하지 말 것.` : ""}
 
 ${imageInfo ? `━━━━━━━━━━━━━━━━━━━━━━━━━\n[업로드된 사진 목록 — 포스팅에 플레이스홀더로 삽입]\n━━━━━━━━━━━━━━━━━━━━━━━━━\n${imageInfo}\n사진은 HTML에 <p style="text-align:center;color:#aaa;font-size:13px;">[사진: 파일명]</p> 형태로 적재적소에 삽입하세요.` : ""}
 
@@ -212,7 +216,7 @@ ${refText ? `━━━━━━━━━━━━━━━━━━━━━━�
 - \`\`\`html 마크다운 기호 절대 포함 금지
 - 전체를 <div style="font-family:'NanumSquare','나눔스퀘어',sans-serif; color:#333; line-height:1.8;"> 로 감싸기
 - 순수 HTML 본문 코드만 출력
-- 🚨 본문 텍스트 분량: 순수 읽기 텍스트 기준 2,500~3,000자 (HTML 태그 제외). 이 이상 쓰지 말 것.
+- 🚨 본문 텍스트 분량: 순수 읽기 텍스트 기준 ${strategy.postType === "essay" && fileContent ? "4,500~5,500자 (참고자료 내용이 많아 늘어난 기준)" : "2,500~3,000자"} (HTML 태그 제외). 이 이상 쓰지 말 것.
 ${getHashtagRule()}
 - 맨 마지막 줄:
 <!-- TITLES: 제목1||제목2||제목3||제목4||제목5 -->
@@ -228,6 +232,7 @@ function getBrandColor(postType: PostType): { brandColor: string } {
     photo: "#4a1a2e",
     local: "#1a2e4a",
     pdf: "#1a1a4a",
+    essay: "#2b2420",
   };
   return { brandColor: map[postType] ?? "#1a2e4a" };
 }

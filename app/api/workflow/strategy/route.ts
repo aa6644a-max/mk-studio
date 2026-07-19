@@ -21,7 +21,7 @@ const STRATEGY_TOOL: Anthropic.Tool = {
       },
       postType: {
         type: "string",
-        enum: ["review", "preview", "curation", "binge", "photo", "local", "pdf"],
+        enum: ["review", "preview", "curation", "binge", "photo", "local", "pdf", "essay"],
         description: "포스팅 타입",
       },
       keywords: {
@@ -76,6 +76,7 @@ postType 판단 (selectedType이 제공된 경우 그것을 사용):
 - "PDF/요약" → pdf
 - 장소/맛집/카페/여행/사진 → photo
 - 영화·드라마 제목 + 리뷰/후기/감상 → review
+- GV/무대인사/시사회/강연/북토크/모임 참석 후기, 잡생각·일상 단상 등 개인적 경험·소회 위주(작품 자체의 리뷰가 아님) → essay
 - 기본값 → review
 
 topic 추출:
@@ -158,6 +159,11 @@ export async function POST(req: Request) {
     const input = toolUse.input as Record<string, unknown>;
     if (selectedType) {
       input.postType = selectedType;
+    }
+    // 사용자가 직접 입력한 주제(PDF/이미지 자동추출이 아닌 경우)는 모델이 임의로
+    // (특히 프로필 데이터 영향으로) 바꿔치기하지 못하게 원문 그대로 강제 고정
+    if (topic?.trim() && !pdfText && !imageInfo) {
+      input.topic = topic.trim();
     }
     // 사진 타입: 사용자가 직접 고른 카테고리를 AI 자동분류보다 우선 적용
     if (selectedType === "photo" && photoCategory) {

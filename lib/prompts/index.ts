@@ -18,6 +18,7 @@ export function buildPrompt(
       return buildMoviePrompt(draft, references, rssText);
     case "photo":
     case "pdf":
+    case "essay": // wizard.tsx 미노출 — workflow(인터뷰) 경로 전용, 폴백만 확보
       return buildDailyPrompt(draft, references, rssText);
     case "local":
       return buildLocalPrompt(draft, references, rssText);

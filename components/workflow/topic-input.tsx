@@ -12,6 +12,7 @@ const TYPE_CHIPS: { type: PostType; label: string; icon: string; placeholder: st
   { type: "photo",    label: "사진",    icon: "📸",  placeholder: "예) 봉평 메밀꽃밭 방문기" },
   { type: "local",    label: "로컬",    icon: "📢",  placeholder: "예) 대구 청년 지원사업 공고" },
   { type: "pdf",      label: "PDF",     icon: "📄",  placeholder: "예) PDF 문서 요약 포스팅" },
+  { type: "essay",    label: "에세이",  icon: "✍️",  placeholder: "예) 그림자 아이 GV 다녀온 이야기, 관객과의 대화 정리" },
 ];
 
 const FILE_TYPES: PostType[] = ["local", "pdf"];
@@ -45,6 +46,7 @@ export default function TopicInput() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const {
+    fileContent,
     setTopic, setStrategy, setStage, setError,
     setSelectedType, setPostType, setFileContent, setImageData, setPdfMode,
   } = useWorkflowStore();
@@ -426,6 +428,25 @@ export default function TopicInput() {
               </div>
             </div>
           </>
+        )}
+
+        {/* 에세이 — 참고자료 붙여넣기 (선택) */}
+        {selectedType === "essay" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <span style={{ fontSize: "12px", color: "#5a5c63", fontWeight: 600 }}>
+              참고자료 <span style={{ color: "#aaa", fontWeight: 400 }}>(선택 — 대화록·GV 정리본·강연 스크립트 등)</span>
+            </span>
+            <textarea
+              value={fileContent}
+              onChange={(e) => setFileContent(e.target.value)}
+              placeholder="원문 그대로 붙여넣으면 구조·순서를 최대한 보존해서 반영해요. (예: GV 질문·답변 정리본)"
+              rows={5}
+              style={{ width: "100%", border: "1.5px solid rgba(112,115,124,0.2)", borderRadius: "10px", padding: "10px 14px", fontSize: "13px", outline: "none", fontFamily: "inherit", color: "#171719", background: "#fff", boxSizing: "border-box", resize: "vertical" }}
+            />
+            {fileContent && (
+              <p style={{ fontSize: "11px", color: "#aaa", margin: 0 }}>{fileContent.length.toLocaleString()}자 입력됨</p>
+            )}
+          </div>
         )}
 
         {/* 텍스트 입력 (photo/pdf/local 외 타입) */}

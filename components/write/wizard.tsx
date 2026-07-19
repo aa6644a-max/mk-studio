@@ -18,6 +18,7 @@ const TYPE_STEPS: Record<PostType, StepDef[]> = {
   photo:    [{ id: "category", label: "카테고리"  }, { id: "upload",   label: "사진 업로드" }, { id: "body",  label: "내용 지시" }, { id: "final", label: "생성" }],
   pdf:      [{ id: "upload",   label: "PDF 업로드" }, { id: "body",    label: "생성 지시"  }, { id: "final", label: "생성" }],
   local:    [{ id: "upload",   label: "PDF 업로드" }, { id: "body",    label: "생성 지시"  }, { id: "final", label: "생성" }],
+  essay:    [{ id: "body",     label: "생성 지시"  }, { id: "final", label: "생성" }],
 };
 
 const TYPE_CARDS = [

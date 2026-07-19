@@ -6,7 +6,8 @@ export type PostType =
   | "binge" // 정주행 추천
   | "photo" // 사진 포스팅
   | "local" // 로컬소식/공고문
-  | "pdf"; // PDF 요약
+  | "pdf" // PDF 요약
+  | "essay"; // 일상·생각·경험 에세이 (GV 후기, 강연·행사 참석기 등)
 
 export type PostStatus = "published" | "draft";
 
@@ -160,6 +161,7 @@ export const POST_TYPE_META: Record<
   photo: { label: "사진 포스팅", icon: "📸" },
   local: { label: "로컬소식/공고문", icon: "📢" },
   pdf: { label: "PDF 요약", icon: "📄" },
+  essay: { label: "일상·생각·경험", icon: "✍️" },
 };
 
 /** 알 수 없는(레거시) post_type 도 안전 처리. */
