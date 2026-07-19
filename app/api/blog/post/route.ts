@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
  */
 
 const END_MARKERS = [
-  'class="se-oglink',
+  'class="u_likeit', // 공감 위젯 — 본문 직후 첫 요소
   'id="naverCommentDiv',
   'class="post_btn',
   'class="blog_authorArea',
@@ -17,8 +17,15 @@ const END_MARKERS = [
 
 function htmlToText(html: string): string {
   return html
+    // 링크 카드(oglink)는 본문 중간에도 등장하므로 끝 마커로 쓰지 않고,
+    // 카드 안의 제목·요약·URL 텍스트만 제거해 노이즈를 없앤다.
+    .replace(
+      /<(strong|p)[^>]*class="se-oglink-[^"]*"[^>]*>[\s\S]*?<\/\1>/gi,
+      "",
+    )
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/<(?:br|\/p|\/div|\/h[1-6]|\/li)[^>]*>/gi, "\n")
     .replace(/<[^>]+>/g, "")
     .replace(/&amp;/g, "&")
@@ -29,6 +36,7 @@ function htmlToText(html: string): string {
     .replace(/&nbsp;|​/g, " ")
     .replace(/[ \t]+/g, " ")
     .replace(/\n\s*\n\s*/g, "\n\n")
+    .replace(/<[^>]*$/, "") // 끝 마커 위치에서 잘린 미완성 태그 제거
     .trim();
 }
 
