@@ -56,18 +56,20 @@ export async function POST(req: Request) {
       const conversationText = formatConversation(messages);
 
       if (strategy.postType === "review") {
-        const details = await fetchMovieDetailsList(tmdbSelections);
+        const details = await fetchSelectionDetailsList(tmdbSelections);
         if (details.length > 0) {
-          const { system, user } = buildReviewPrompt(details[0], conversationText, topic, refText, seed);
+          const mediaType = tmdbSelections[0]?.mediaType === "tv" ? "tv" : "movie";
+          const { system, user } = buildReviewPrompt(details[0], conversationText, topic, refText, seed, mediaType);
           systemPrompt = system;
           userPrompt = user;
         } else {
           ({ systemPrompt, userPrompt } = await fallbackWorkflowPrompt(topic, messages, strategy, references, rssText, fileContent, imageInfo));
         }
       } else if (strategy.postType === "preview") {
-        const details = await fetchMovieDetailsList(tmdbSelections);
+        const details = await fetchSelectionDetailsList(tmdbSelections);
         if (details.length > 0) {
-          const { system, user } = buildPreviewPrompt(details[0], conversationText, topic, refText);
+          const mediaType = tmdbSelections[0]?.mediaType === "tv" ? "tv" : "movie";
+          const { system, user } = buildPreviewPrompt(details[0], conversationText, topic, refText, mediaType);
           systemPrompt = system;
           userPrompt = user;
         } else {
@@ -294,6 +296,18 @@ async function fallbackWorkflowPrompt(
     systemPrompt: buildWorkflowGenerateSystem(),
     userPrompt: buildWorkflowGenerateUser(topic, messages, strategy, references, rssText, extraData, fileContent, imageInfo),
   };
+}
+
+/** review/preview: 선택 작품의 mediaType에 맞춰 영화/TV 상세를 각각 조회. */
+async function fetchSelectionDetailsList(
+  selections: TmdbSelection[],
+): Promise<(MovieDetails | TvDetails)[]> {
+  const results = await Promise.all(
+    selections.map((sel) =>
+      sel.mediaType === "tv" ? getTvDetails(sel.id).catch(() => null) : getMovieDetails(sel.id).catch(() => null),
+    ),
+  );
+  return results.filter((d): d is MovieDetails | TvDetails => d !== null);
 }
 
 async function fetchMovieDetailsList(selections: TmdbSelection[]): Promise<MovieDetails[]> {

@@ -41,6 +41,7 @@ export type TvDetails = {
   genres?: string;
   overview?: string;
   cast?: string;
+  creator?: string; // 연출/원작(크리에이터)
   posterUrl?: string;
   backdropUrls?: string[];
 };

@@ -2,7 +2,7 @@
  * 영화 계열 프롬프트 (V2 PromptBuilder 1:1 이식).
  * 리뷰 / 프리뷰 / 큐레이션 / 정주행 / 뉴스 / HTML 변환.
  */
-import type { CurationItem, MovieDetails, PostDraft } from "@/lib/types";
+import type { CurationItem, MovieDetails, PostDraft, TvDetails } from "@/lib/types";
 import {
   getCommonConstraints,
   getDesignSystem,
@@ -14,6 +14,16 @@ import {
 
 const MAX_STILLS = 5;
 
+// ── 영화/드라마 공통 분기 ────────────────────────────────────────────────
+export type MediaKind = "movie" | "tv";
+type MediaBase = { title?: string; posterUrl?: string; backdropUrls?: string[] };
+
+function mediaMeta(kind: MediaKind) {
+  return kind === "tv"
+    ? { label: "드라마", watchVerb: "정주행", releaseVerb: "공개" }
+    : { label: "영화", watchVerb: "관람", releaseVerb: "개봉" };
+}
+
 function buildImageHtml(url: string | undefined, alt: string): string {
   if (!url) return "";
   return `<div style="text-align: center; margin: 25px 0;"><img src="${url}" alt="${alt}" style="max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"></div>`;
@@ -24,12 +34,14 @@ function buildPlaceholderHtml(text: string): string {
 }
 
 function generateMediaPrompts(
-  d: MovieDetails,
+  d: MediaBase,
   isPreview: boolean,
+  kind: MediaKind = "movie",
 ): { posterHtml: string; stillsPromptText: string; ticketHtml: string } {
+  const { label } = mediaMeta(kind);
   const title = d.title ?? "";
   let posterHtml = buildImageHtml(d.posterUrl, `${title} 메인 포스터`);
-  if (!posterHtml) posterHtml = buildPlaceholderHtml(`영화 '${title}' 메인 포스터`);
+  if (!posterHtml) posterHtml = buildPlaceholderHtml(`${label} '${title}' 메인 포스터`);
 
   const capped = (d.backdropUrls ?? []).slice(0, MAX_STILLS);
   const stills: string[] = capped.map((url, i) =>
@@ -51,7 +63,10 @@ function generateMediaPrompts(
   const stillsPromptText = parts.join("\n");
 
   if (isPreview) return { posterHtml, stillsPromptText, ticketHtml: "" };
-  const ticketHtml = buildPlaceholderHtml(`${title} 영화관 관람 인증샷 (티켓 등)`);
+  const ticketHtml =
+    kind === "tv"
+      ? buildPlaceholderHtml(`${title} 시청 인증샷 (재생 화면·시청 완료 캡처 등)`)
+      : buildPlaceholderHtml(`${title} 영화관 관람 인증샷 (티켓 등)`);
   return { posterHtml, stillsPromptText, ticketHtml };
 }
 
@@ -92,55 +107,66 @@ function referencePromptMovie(refText: string): string {
  * 고정 공식 하나만 쓰면 모든 글이 같은 문장으로 시작해
  * 네이버 유사문서 판정 위험 + 독자 피로가 쌓이므로 생성마다 랜덤 선택.
  */
-const REVIEW_OPENERS = [
-  `"최근 영화 <[영화 제목]>을(를) 관람했습니다." 혹은 이와 유사하게 관람 사실을 밝히며 시작하세요.`,
-  `영화에서 가장 인상적이었던 장면·감정의 여운을 담은 한 문장으로 시작하세요. (예: "극장을 나선 뒤에도 한동안 그 장면이 머릿속을 떠나지 않았습니다.")`,
-  `이 작품을 기다렸던 이유나 입소문·기대감을 언급하며 시작하세요. (예: "개봉 소식을 처음 들었을 때부터 궁금했던 작품이었습니다.")`,
-  `독자의 호기심을 건드리는 질문형 문장으로 시작하세요. (예: "과연 이 소재를 스크린에서 어떻게 풀어냈을까요?")`,
-  `관람 상황·계기(언제, 누구와, 어떤 마음으로 보러 갔는지)를 담은 문장으로 시작하세요.`,
-];
+function reviewOpeners(kind: MediaKind): string[] {
+  const { label, watchVerb } = mediaMeta(kind);
+  const afterWatch = kind === "tv" ? "정주행을 끝낸" : "극장을 나선";
+  return [
+    `"최근 ${label} <[${label} 제목]>을(를) ${watchVerb}했습니다." 혹은 이와 유사하게 ${watchVerb} 사실을 밝히며 시작하세요.`,
+    `${label}에서 가장 인상적이었던 장면·감정의 여운을 담은 한 문장으로 시작하세요. (예: "${afterWatch} 뒤에도 한동안 그 장면이 머릿속을 떠나지 않았습니다.")`,
+    `이 작품을 기다렸던 이유나 입소문·기대감을 언급하며 시작하세요. (예: "${kind === "tv" ? "공개" : "개봉"} 소식을 처음 들었을 때부터 궁금했던 작품이었습니다.")`,
+    `독자의 호기심을 건드리는 질문형 문장으로 시작하세요. (예: "과연 이 소재를 ${kind === "tv" ? "드라마로" : "스크린에서"} 어떻게 풀어냈을까요?")`,
+    `${watchVerb} 상황·계기(언제, 누구와, 어떤 마음으로 보게 됐는지)를 담은 문장으로 시작하세요.`,
+  ];
+}
 
-const PREVIEW_OPENERS = [
-  `"최근 영화 <[영화 제목]>의 개봉(또는 관련) 소식이 제 호기심을 자극했습니다." 혹은 이와 유사하게 시작하세요.`,
-  `이 작품의 가장 큰 기대 포인트(감독·배우·원작·소재)를 앞세운 문장으로 시작하세요. (예: "[감독/배우]의 신작이라는 것만으로도 기대를 모으는 작품입니다.")`,
-  `개봉 일정·화제성을 언급하며 시작하세요. (예: "다가오는 [개봉 시기], 눈여겨볼 만한 작품이 하나 있습니다.")`,
-];
+function previewOpeners(kind: MediaKind): string[] {
+  const { label, releaseVerb } = mediaMeta(kind);
+  const creatorLabel = kind === "tv" ? "연출/배우" : "감독/배우";
+  return [
+    `"최근 ${label} <[${label} 제목]>의 ${releaseVerb}(또는 관련) 소식이 제 호기심을 자극했습니다." 혹은 이와 유사하게 시작하세요.`,
+    `이 작품의 가장 큰 기대 포인트(${kind === "tv" ? "연출·배우·원작" : "감독·배우·원작"}·소재)를 앞세운 문장으로 시작하세요. (예: "[${creatorLabel}]의 신작이라는 것만으로도 기대를 모으는 작품입니다.")`,
+    `${releaseVerb} 일정·화제성을 언급하며 시작하세요. (예: "다가오는 [${releaseVerb} 시기], 눈여겨볼 만한 작품이 하나 있습니다.")`,
+  ];
+}
 
 function pickOpener(openers: string[]): string {
   return openers[Math.floor(Math.random() * openers.length)];
 }
 
-function getBaseGuideline(postType: "review" | "preview" | "news"): string {
+function getBaseGuideline(postType: "review" | "preview" | "news", kind: MediaKind = "movie"): string {
   const { year, month, season } = nowParts();
   const timeContext = `현재 시점은 ${year}년 ${month}월(${season})입니다.`;
   const designSystem = getDesignSystem("#1a1a1a");
   const commonConstraints = getCommonConstraints(season);
+  const { label: mediaLabel, watchVerb, releaseVerb } = mediaMeta(kind);
+  const isTv = kind === "tv";
 
   let introGuideline = "";
   let mediaGuideline = "";
 
   if (postType === "preview") {
     introGuideline = `- [서론 - 도입부 공식 절대 준수]:
-              1. ${pickOpener(PREVIEW_OPENERS)}
-              2. 하단에 제공되는 [포스팅 계기/이유]를 녹여내어 이 영화를 프리뷰하게 된 명확한 동기를 밝히세요.
-              3. "그래서 오늘은 개봉에 앞서 이 영화의 기대 포인트에 대해 미리 알아보도록 하겠습니다."로 본론을 여세요.`;
+              1. ${pickOpener(previewOpeners(kind))}
+              2. 하단에 제공되는 [포스팅 계기/이유]를 녹여내어 이 ${mediaLabel}을(를) 프리뷰하게 된 명확한 동기를 밝히세요.
+              3. "그래서 오늘은 ${releaseVerb}에 앞서 이 ${mediaLabel}의 기대 포인트에 대해 미리 알아보도록 하겠습니다."로 본론을 여세요.`;
     mediaGuideline = `- 제공된 [메인 포스터]와 [스틸컷 1~N개] HTML 코드는 본문에 모두 1번씩 그대로 복사하여 삽입해야 합니다.
-            - 💡 [융통성 발휘]: 개봉 전 프리뷰이므로, 부가적인 정보 사진이 들어가면 좋은 위치에는 언제든지 \`<p style="text-align: center; color: #888; font-size: 14px; background: #eee; padding: 10px;">{{사진: 필요한 실제 사진/상황에 대한 구체적 설명}}</p>\` 코드를 사용하세요.`;
+            - 💡 [융통성 발휘]: ${releaseVerb} 전 프리뷰이므로, 부가적인 정보 사진이 들어가면 좋은 위치에는 언제든지 \`<p style="text-align: center; color: #888; font-size: 14px; background: #eee; padding: 10px;">{{사진: 필요한 실제 사진/상황에 대한 구체적 설명}}</p>\` 코드를 사용하세요.`;
   } else if (postType === "review") {
+    const ticketLabel = isTv ? "시청 인증샷" : "관람 인증샷";
     introGuideline = `- [서론 - 도입부 공식 절대 준수]:
-              1. ${pickOpener(REVIEW_OPENERS)}
-              2. 하단에 제공되는 [포스팅 계기/관람 이유]를 녹여내어 영화를 보게 된 동기나 강렬한 첫인상을 밝히세요.
-              3. 자연스러운 전환 문장으로 본론(리뷰)을 여세요. (예: "오늘은 이 영화에 대한 솔직한 감상을 남겨보려 합니다." — 단, 매번 같은 문장을 쓰지 말고 변형하세요.)
+              1. ${pickOpener(reviewOpeners(kind))}
+              2. 하단에 제공되는 [포스팅 계기/${watchVerb} 이유]를 녹여내어 ${mediaLabel}을(를) 보게 된 동기나 강렬한 첫인상을 밝히세요.
+              3. 자연스러운 전환 문장으로 본론(리뷰)을 여세요. (예: "오늘은 이 ${mediaLabel}에 대한 솔직한 감상을 남겨보려 합니다." — 단, 매번 같은 문장을 쓰지 말고 변형하세요.)
               4. 서론 마지막 문장 직후에 아래 구분선 코드를 삽입하세요.
                  <p style="text-align:center; color:#bbb; letter-spacing: 8px;">• • • • •</p>
-              5. 구분선 바로 아래에 [관람 인증샷] 코드를 삽입하세요.
+              5. 구분선 바로 아래에 [${ticketLabel}] 코드를 삽입하세요.
 
             - [줄거리 요약 섹션 - 구분선+인증샷 직후 반드시 작성]:
               아래 HTML 소제목 스타일을 그대로 복사하여 줄거리 섹션을 여세요.
               (🚨 H2, H3 태그 및 border-bottom 방식 사용 절대 금지 — 반드시 아래 table 구조만 사용)
               <table width="100%" border="0" cellpadding="15" bgcolor="#1a1a1a"><tr><td><b style="color:#ffffff; font-size:18px;">■ 어떤 이야기인가요?</b></td></tr></table>
               - 제공된 [줄거리] 데이터를 바탕으로 결말·반전을 드러내지 않는 선에서 3~4문장으로 압축 정리합니다.
-              - 영화의 배경, 주인공 상황, 핵심 갈등 구조만 간결하게 소개하세요.
+              - ${mediaLabel}의 배경, 주인공 상황, 핵심 갈등 구조만 간결하게 소개하세요.
               - 줄거리 요약 직후에 [스틸컷 1] 코드를 삽입하세요.
 
             - [본론 소제목 스타일 - 🚨 반드시 아래 table 형식만 사용]:
@@ -149,11 +175,11 @@ function getBaseGuideline(postType: "review" | "preview" | "news"): string {
               <table width="100%" border="0" cellpadding="15" bgcolor="#1a1a1a"><tr><td><b style="color:#ffffff; font-size:18px;">[소제목 내용]</b></td></tr></table>
 
             - [본론 구성 - 🚨 아래 조건 전부 필수]:
-              소제목 주제는 영화의 특성과 감상평에서 가장 강조할 포인트를 자유롭게 설정하세요. 단, 아래 조건은 반드시 지키세요.
+              소제목 주제는 ${mediaLabel}의 특성과 감상평에서 가장 강조할 포인트를 자유롭게 설정하세요. 단, 아래 조건은 반드시 지키세요.
 
               • 🚨 [소제목 개수 — 절대 준수]:
                 본론 소제목은 반드시 4~5개를 사용하세요. 3개는 부족합니다.
-                각 소제목은 영화의 서로 다른 층위(서사, 연기, 연출, 감정, 세계관, 주제의식 등)를
+                각 소제목은 ${mediaLabel}의 서로 다른 층위(서사, 연기, 연출, 감정, 세계관, 주제의식 등)를
                 각각 다른 각도에서 분석하는 내용으로 구성하세요.
                 같은 내용을 다른 말로 반복하는 소제목은 절대 금지입니다.
 
@@ -165,7 +191,7 @@ function getBaseGuideline(postType: "review" | "preview" | "news"): string {
                 분석할 내용이 충분하다면 4~5개 단락까지 전개해도 좋습니다.
 
               • 🚨 [작성자 목소리 — 절대 준수]:
-                단순히 영화 내용을 설명하는 서술에 그치지 말고, 반드시 작성자 본인의 시선과 의견을 녹여내세요.
+                단순히 ${mediaLabel} 내용을 설명하는 서술에 그치지 말고, 반드시 작성자 본인의 시선과 의견을 녹여내세요.
                 아래 표현 패턴을 자연스럽게 활용하세요.
                 - 조심스러운 분석: "~이지 않을까 싶어요", "~라고 생각됩니다", "~인 것 같기도 하네요"
                 - 독자에게 말 걸기: "과연 ~일지", "어떻게 보면 ~이기도 하죠", "그도 그럴 것이 ~"
@@ -194,16 +220,16 @@ function getBaseGuideline(postType: "review" | "preview" | "news"): string {
               <table width="100%" border="0" cellpadding="18" cellspacing="0" bgcolor="#f5f5f5" style="border:1px solid #ddd; margin:30px 0;">
                 <tr><td>
                   <p style="margin:0 0 8px; font-size:13px; color:#e53e3e; font-weight:bold;"><b>🔎 관전 포인트</b></p>
-                  <p style="margin:0; font-size:14px; color:#555; line-height:1.8;">[이 영화를 어떤 마음으로 보면 좋을지, 주목할 점, 추천 대상을 2~3문장으로 솔직하게 작성. 여기서도 작성자의 개인적인 시선을 담을 것]</p>
+                  <p style="margin:0; font-size:14px; color:#555; line-height:1.8;">[이 ${mediaLabel}을(를) 어떤 마음으로 보면 좋을지, 주목할 점, 추천 대상을 2~3문장으로 솔직하게 작성. 여기서도 작성자의 개인적인 시선을 담을 것]</p>
                 </td></tr>
               </table>
 
             - [결론 - 🚨 아래 톤으로 마무리]:
               "결론적으로"나 "요약하자면" 같은 AI 말투는 절대 금지.
               전체 감상을 2~3문장으로 자연스럽게 갈무리하되, 마지막 문장은 독자에게 말을 거는 형식으로 끝내세요.
-              예시: "아직 이 작품을 접하지 못하셨다면, 한번쯤 들여다볼 만한 가치가 충분히 있는 영화라고 생각됩니다."
+              예시: "아직 이 작품을 접하지 못하셨다면, 한번쯤 들여다볼 만한 가치가 충분히 있는 ${mediaLabel}라고 생각됩니다."
               `;
-    mediaGuideline = `- 하단에 제공되는 이미지 HTML 코드 목록([메인 포스터], [관람 인증샷], [스틸컷 1~N개]) 전체를 무조건 한 번씩 본문에 1글자도 수정하지 말고 그대로 복사해서 배치해야 합니다.
+    mediaGuideline = `- 하단에 제공되는 이미지 HTML 코드 목록([메인 포스터], [${ticketLabel}], [스틸컷 1~N개]) 전체를 무조건 한 번씩 본문에 1글자도 수정하지 말고 그대로 복사해서 배치해야 합니다.
             - 🚨 [스틸컷 배치 순서 — 절대 준수]:
               • [스틸컷 1]은 줄거리 요약 섹션 직후에 배치하세요.
               • [스틸컷 2]부터는 반드시 각 본론 소제목 단락 아래에 1장씩 배치하세요.
@@ -219,6 +245,24 @@ function getBaseGuideline(postType: "review" | "preview" | "news"): string {
     mediaGuideline = `- 본문에 적절한 이미지가 들어갈 자리에 \`<p style="text-align: center; color: #888; font-size: 14px; background: #eee; padding: 10px;">{{사진: 문맥에 맞는 사진 설명}}</p>\` 코드를 삽입하세요.`;
   }
 
+  const infoBoxRows = isTv
+    ? `                  <p style="margin: 0;">📽️ <b>원제</b> : [원제]</p>
+                  <p style="margin: 0;">🎞️ <b>장르</b> : [장르]</p>
+                  <p style="margin: 0;">🌍 <b>국가</b> : [제작 국가]</p>
+                  <p style="margin: 0;">🎬 <b>연출/원작</b> : [연출/원작]</p>
+                  <p style="margin: 0;">👤 <b>출연</b> : [출연]</p>
+                  <p style="margin: 0;">📺 <b>시즌/화수</b> : [데이터의 시즌·화수, 없으면 "정보 없음"]</p>
+                  <p style="margin: 0;">⏳ <b>편당 러닝타임</b> : [데이터의 편당 러닝타임, 없으면 "정보 없음"]</p>
+                  <p style="margin: 0;">📅 <b>공개일</b> : [방영/공개일]</p>`
+    : `                  <p style="margin: 0;">📽️ <b>원제</b> : [원제]</p>
+                  <p style="margin: 0;">🎞️ <b>장르</b> : [장르]</p>
+                  <p style="margin: 0;">🌍 <b>국가</b> : [제작 국가]</p>
+                  <p style="margin: 0;">🎬 <b>감독</b> : [감독]</p>
+                  <p style="margin: 0;">⏳ <b>러닝타임</b> : [데이터의 러닝타임, 없으면 "정보 없음"]</p>
+                  <p style="margin: 0;">🔞 <b>관람등급</b> : [데이터에 있으면 기재, 없으면 "정보 없음"]</p>
+                  <p style="margin: 0;">📅 <b>개봉일</b> : [개봉일]</p>
+                  <p style="margin: 0;">🍪 <b>쿠키영상</b> : [데이터·감상평에 언급이 있으면 기재, 없으면 "정보 없음"]</p>`;
+
   return `
         [작성 지침]
         ${timeContext}
@@ -230,29 +274,22 @@ function getBaseGuideline(postType: "review" | "preview" | "news"): string {
         1. 어조 및 페르소나 (Tone of Voice):
             - 정중하고 친근한 경어체("~습니다", "~해요", "~죠")를 자연스럽게 섞어 쓰세요.
             - 전문 용어나 복잡한 내용은 정보 전달자로서 친절하게 풀어서 설명하세요.
-            - 영화의 정서를 다룰 때는 서정적이고 감성적인 어휘를 활용하여 분위기를 풍성하게 만드세요.
+            - ${mediaLabel}의 정서를 다룰 때는 서정적이고 감성적인 어휘를 활용하여 분위기를 풍성하게 만드세요.
             - 🚨 [MK 문체 핵심]: 확정적인 단정보다 조심스러운 분석 어투를 기본으로 사용하세요.
               "~입니다" 단정보다 "~이지 않을까 싶어요", "~라고 생각됩니다"를 자주 활용하세요.
               독자가 함께 생각하게 만드는 문체가 이 블로그의 핵심 정체성입니다.
 
         2. 전체 분량 및 구조:
             - 🚨 [글자수 필수 준수]: 공백·HTML 태그·이미지 코드를 제외한 순수 텍스트 기준으로 반드시 2,200 ~ 2,800자를 채워야 합니다.
-              이 분량은 네이버 블로그 상위노출 기준을 충족하면서 영화 리뷰로서 충분한 분석 깊이를 확보하기 위한 기준입니다.
+              이 분량은 네이버 블로그 상위노출 기준을 충족하면서 ${mediaLabel} 리뷰로서 충분한 분석 깊이를 확보하기 위한 기준입니다.
               분량이 부족하다면 각 소제목 단락에서 분석을 더 구체적으로 전개하세요. 단순히 문장을 늘리는 것이 아니라, 해당 소제목에서 말하고 싶은 포인트를 끝까지 파고드세요.
             - [최상단]: 시선 끄는 첫 문장으로 시작하고, 바로 아래에 [메인 포스터] HTML 코드를 삽입하세요. 스포일러 경고 문구도 잊지 마세요.
-            - 🚨 [영화 정보 박스 필수 삽입]: 메인 포스터 바로 밑에는 반드시 아래 HTML 형태의 정보 박스를 삽입하여 영화 기본 정보를 정리하세요.
-              🚫 [할루시네이션 금지]: 반드시 위 [영화 실제 데이터]에 제공된 값만 사용하세요. 데이터에 없는 항목(쿠키영상, 관람등급 등)은 지어내지 말고 "정보 없음"으로 표기하세요.
+            - 🚨 [${mediaLabel} 정보 박스 필수 삽입]: 메인 포스터 바로 밑에는 반드시 아래 HTML 형태의 정보 박스를 삽입하여 ${mediaLabel} 기본 정보를 정리하세요.
+              🚫 [할루시네이션 금지]: 반드시 위 [${mediaLabel} 실제 데이터]에 제공된 값만 사용하세요. 데이터에 없는 항목은 지어내지 말고 "정보 없음"으로 표기하세요.
               (🚨 네이버 호환을 위해 반드시 table bgcolor 구조 사용)
               <table width="100%" border="0" cellpadding="20" cellspacing="0" bgcolor="#f8f9fa" style="border:1px solid #eee; margin:20px 0;">
                 <tr><td style="font-size:15px; line-height:1.9;">
-                  <p style="margin: 0;">📽️ <b>원제</b> : [원제]</p>
-                  <p style="margin: 0;">🎞️ <b>장르</b> : [장르]</p>
-                  <p style="margin: 0;">🌍 <b>국가</b> : [제작 국가]</p>
-                  <p style="margin: 0;">🎬 <b>감독</b> : [감독]</p>
-                  <p style="margin: 0;">⏳ <b>러닝타임</b> : [데이터의 러닝타임, 없으면 "정보 없음"]</p>
-                  <p style="margin: 0;">🔞 <b>관람등급</b> : [데이터에 있으면 기재, 없으면 "정보 없음"]</p>
-                  <p style="margin: 0;">📅 <b>개봉일</b> : [개봉일]</p>
-                  <p style="margin: 0;">🍪 <b>쿠키영상</b> : [데이터·감상평에 언급이 있으면 기재, 없으면 "정보 없음"]</p>
+${infoBoxRows}
                 </td></tr>
               </table>
             ${introGuideline}
@@ -261,7 +298,7 @@ function getBaseGuideline(postType: "review" | "preview" | "news"): string {
               <table width="100%" border="0" cellpadding="16" cellspacing="0" bgcolor="#f4f4f4" style="border-left:4px solid #333; margin:30px 0;">
                 <tr><td>
                   <p style="margin:0; font-size:13px; color:#888;">📌 함께 읽으면 좋은 글</p>
-                  <p style="margin:5px 0 0; font-weight:bold;"><b>[이 영화와 연관된 이전 포스팅 주제 추천 1~2개 제안]</b></p>
+                  <p style="margin:5px 0 0; font-weight:bold;"><b>[이 ${mediaLabel}와(과) 연관된 이전 포스팅 주제 추천 1~2개 제안]</b></p>
                 </td></tr>
               </table>
 
@@ -285,28 +322,41 @@ function getBaseGuideline(postType: "review" | "preview" | "news"): string {
         `;
 }
 
-const SYSTEM = "당신은 네이버 영화 인플루언서 'MK'입니다. 아래 정보와 작성 지침을 100% 준수하여 네이버 블로그 HTML 본문을 작성하세요.";
+const SYSTEM = "당신은 네이버 영화·드라마 인플루언서 'MK'입니다. 아래 정보와 작성 지침을 100% 준수하여 네이버 블로그 HTML 본문을 작성하세요.";
 
-function detailsBlock(d: MovieDetails): string {
-  return `        - 제목: ${d.title ?? ""}
-        - 개봉일: ${d.releaseDate ?? ""}
-        - 장르: ${d.genres ?? ""}
-        - 감독: ${d.director ?? ""}
-        - 출연: ${d.actors ?? ""}
-        - 러닝타임: ${d.runtime ? `${d.runtime}분` : "정보 없음"}
-        - 줄거리: ${d.overview ?? ""}`;
+function detailsBlock(d: MovieDetails | TvDetails, kind: MediaKind): string {
+  if (kind === "tv") {
+    const t = d as TvDetails;
+    return `        - 제목: ${t.title ?? ""}
+        - 공개일: ${t.firstAirDate ?? ""}
+        - 장르: ${t.genres ?? ""}
+        - 연출/원작: ${t.creator ?? ""}
+        - 출연: ${t.cast ?? ""}
+        - 시즌/화수: ${t.numberOfSeasons ?? "?"}시즌 ${t.numberOfEpisodes ?? "?"}화
+        - 편당 러닝타임: ${t.episodeRuntime ? `${t.episodeRuntime}분` : "정보 없음"}
+        - 줄거리: ${t.overview ?? ""}`;
+  }
+  const m = d as MovieDetails;
+  return `        - 제목: ${m.title ?? ""}
+        - 개봉일: ${m.releaseDate ?? ""}
+        - 장르: ${m.genres ?? ""}
+        - 감독: ${m.director ?? ""}
+        - 출연: ${m.actors ?? ""}
+        - 러닝타임: ${m.runtime ? `${m.runtime}분` : "정보 없음"}
+        - 줄거리: ${m.overview ?? ""}`;
 }
 
 export function buildReviewPrompt(
-  d: MovieDetails,
+  d: MovieDetails | TvDetails,
   comment: string,
   reason: string,
   refText: string,
   seed?: string,
+  mediaType: MediaKind = "movie",
 ): PromptResult {
-  const base = getBaseGuideline("review");
+  const base = getBaseGuideline("review", mediaType);
   const ref = referencePromptMovie(refText);
-  const { posterHtml, stillsPromptText, ticketHtml } = generateMediaPrompts(d, false);
+  const { posterHtml, stillsPromptText, ticketHtml } = generateMediaPrompts(d, false, mediaType);
 
   const seedText = seed?.trim() ?? "";
   // 감상평이 있으면 = 사용자가 직접 쓴 리뷰 문장. 골격으로 보존하고 AI는 살만 붙임.
@@ -325,13 +375,15 @@ export function buildReviewPrompt(
         - 감상평이 짧거나 거칠면 그 톤을 유지한 채 인터뷰 디테일로 자연스럽게 확장하세요. 매끄럽게 다듬는다고 글쓴이 목소리를 지우지 마세요.`
     : `        - 감상평에 담긴 저의 솔직한 감정을 본문에 자연스럽게 녹여내 주세요.`;
 
+  const { label: mediaLabel, watchVerb } = mediaMeta(mediaType);
+  const ticketLabel = mediaType === "tv" ? "시청 인증샷" : "관람 인증샷";
   const user = `
-        영화를 직접 관람한 후 작성하는 상세 리뷰 원고를 작성하세요.
+        ${mediaLabel}을(를) 직접 ${watchVerb}한 후 작성하는 상세 리뷰 원고를 작성하세요.
 
-        [영화 실제 데이터]
-${detailsBlock(d)}
+        [${mediaLabel} 실제 데이터]
+${detailsBlock(d, mediaType)}
 
-        [포스팅 계기/관람 이유]
+        [포스팅 계기/${watchVerb} 이유]
         - ${reason}
 
 ${seedBlock}
@@ -339,7 +391,7 @@ ${seedBlock}
 
         [제공되는 실제 이미지 HTML 코드]
         - [메인 포스터]: ${posterHtml}
-        - [관람 인증샷]: ${ticketHtml}
+        - [${ticketLabel}]: ${ticketHtml}
 ${stillsPromptText}
 
         [특이사항]
@@ -351,19 +403,21 @@ ${seedDirective}
 }
 
 export function buildPreviewPrompt(
-  d: MovieDetails,
+  d: MovieDetails | TvDetails,
   point: string,
   reason: string,
   refText: string,
+  mediaType: MediaKind = "movie",
 ): PromptResult {
-  const base = getBaseGuideline("preview");
+  const base = getBaseGuideline("preview", mediaType);
   const ref = referencePromptMovie(refText);
-  const { posterHtml, stillsPromptText } = generateMediaPrompts(d, true);
+  const { posterHtml, stillsPromptText } = generateMediaPrompts(d, true, mediaType);
+  const { label: mediaLabel } = mediaMeta(mediaType);
   const user = `
         아래 정보를 바탕으로 프리뷰 원고를 작성하세요.
 
-        [영화 실제 데이터]
-${detailsBlock(d)}
+        [${mediaLabel} 실제 데이터]
+${detailsBlock(d, mediaType)}
 
         [핵심 주제 및 강조 포인트]
         - ${point}
@@ -378,7 +432,7 @@ ${detailsBlock(d)}
 ${stillsPromptText}
 
         [특이사항]
-        - 반드시 제공된 [영화 실제 데이터]를 바탕으로 작성하여 거짓 정보(할루시네이션)를 만들지 마세요.
+        - 반드시 제공된 [${mediaLabel} 실제 데이터]를 바탕으로 작성하여 거짓 정보(할루시네이션)를 만들지 마세요.
 
         ${base}
         `;

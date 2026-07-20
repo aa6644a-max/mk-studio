@@ -224,6 +224,7 @@ export async function getTvDetails(id: number): Promise<TvDetails | null> {
       genres: "드라마, 스릴러",
       overview: "빚에 쫓기는 사람들의 목숨을 건 서바이벌.",
       cast: "이정재, 박해수, 위하준",
+      creator: "황동혁",
       backdropUrls: [],
     };
   }
@@ -246,10 +247,13 @@ export async function getTvDetails(id: number): Promise<TvDetails | null> {
     backdrop_path?: string | null;
     genres?: { name?: string }[];
     production_countries?: { name?: string }[];
+    created_by?: { name?: string }[];
     credits?: { cast?: CreditCast[] };
     images?: { backdrops?: Backdrop[] };
   };
 
+  const creator =
+    (data.created_by ?? []).map((c) => c.name).filter(Boolean).join(", ") || "정보 없음";
   const avgRuntime = data.episode_run_time?.[0] ?? 24;
   const totalEpisodes = data.number_of_episodes ?? 0;
   const totalMinutes = totalEpisodes * avgRuntime;
@@ -282,6 +286,7 @@ export async function getTvDetails(id: number): Promise<TvDetails | null> {
     genres:
       (data.genres ?? []).map((g) => g.name).filter(Boolean).join(", ") || "정보 없음",
     overview: data.overview || "TMDB에 등록된 공식 줄거리가 없습니다.",
+    creator,
     cast:
       (data.credits?.cast ?? [])
         .slice(0, 3)
@@ -327,7 +332,7 @@ export async function formatTmdbDetailsText(selections: TmdbSelectionRef[]): Pro
       if (sel.mediaType === "tv") {
         const d = await getTvDetails(sel.id).catch(() => null);
         if (!d) return `- ${sel.title} (상세 조회 실패)`;
-        return `[작품: ${d.title} (${d.originalTitle ?? ""})]\n장르: ${d.genres ?? "?"}\n출연: ${d.cast ?? "?"}\n시즌/화수: ${d.numberOfSeasons ?? "?"}시즌 ${d.numberOfEpisodes ?? "?"}화\n줄거리: ${d.overview ?? ""}`;
+        return `[작품: ${d.title} (${d.originalTitle ?? ""})]\n장르: ${d.genres ?? "?"}\n연출/원작: ${d.creator ?? "?"}\n출연: ${d.cast ?? "?"}\n시즌/화수: ${d.numberOfSeasons ?? "?"}시즌 ${d.numberOfEpisodes ?? "?"}화\n줄거리: ${d.overview ?? ""}`;
       }
       const d = await getMovieDetails(sel.id).catch(() => null);
       if (!d) return `- ${sel.title} (상세 조회 실패)`;

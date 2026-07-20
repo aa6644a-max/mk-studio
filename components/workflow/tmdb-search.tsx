@@ -6,13 +6,17 @@ import type { MovieResult } from "@/lib/tmdb";
 
 const SINGLE_TYPES = ["review", "binge"];
 const TV_TYPES = ["binge"];
+// review/preview는 영화/드라마 토글로 검색 대상을 고를 수 있음 (curation·binge는 고정)
+const TOGGLE_TYPES = ["review", "preview"];
 
 export default function TmdbSearchView() {
   const { postType, topic, setStage, setTmdbSelections, setStrategy, setError } =
     useWorkflowStore();
 
   const isMulti = !SINGLE_TYPES.includes(postType);
-  const isTv = TV_TYPES.includes(postType);
+  const canToggle = TOGGLE_TYPES.includes(postType);
+  const [mediaChoice, setMediaChoice] = useState<"movie" | "tv">("movie");
+  const isTv = TV_TYPES.includes(postType) || (canToggle && mediaChoice === "tv");
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<MovieResult[]>([]);
@@ -67,6 +71,14 @@ export default function TmdbSearchView() {
 
   function isSelected(id: number) {
     return selected.some((s) => s.id === id);
+  }
+
+  function switchMedia(next: "movie" | "tv") {
+    if (next === mediaChoice) return;
+    setMediaChoice(next);
+    setQuery("");
+    setResults([]);
+    setSelected([]);
   }
 
   async function handleProceedToStrategy() {
@@ -142,6 +154,30 @@ export default function TmdbSearchView() {
             <p style={{ fontSize: "13px", color: "#5a5c63", margin: "4px 0 0" }}>
               여러 작품을 추가할 수 있어요. 검색어를 바꿔서 계속 추가하세요.
             </p>
+          )}
+          {canToggle && (
+            <div style={{ display: "flex", gap: "6px", marginTop: "10px" }}>
+              {(["movie", "tv"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => switchMedia(m)}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: "999px",
+                    border: mediaChoice === m ? "1.5px solid #0066FF" : "1.5px solid rgba(112,115,124,0.2)",
+                    background: mediaChoice === m ? "#EBF2FF" : "#fff",
+                    color: mediaChoice === m ? "#0066FF" : "#5a5c63",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {m === "movie" ? "🎬 영화" : "📺 드라마"}
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
