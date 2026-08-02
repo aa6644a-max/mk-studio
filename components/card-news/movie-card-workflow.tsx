@@ -355,7 +355,7 @@ export default function MovieCardWorkflow() {
     }
   }
 
-  async function onFiles(fileList: FileList | null, mode: "hero" | "gallery") {
+  async function onFiles(fileList: FileList | null, mode: "hero" | "gallery" | "slide") {
     if (!fileList?.length) return;
     setError("");
     const urls: string[] = [];
@@ -374,6 +374,9 @@ export default function MovieCardWorkflow() {
     setUploads((prev) => [...urls, ...prev]);
     if (mode === "hero") {
       setHeroPath(urls[0]);
+    } else if (mode === "slide") {
+      // 올린 첫 장을 편집 중인 리뷰 카드 배경으로 바로 적용
+      updateSlide(slideEdit, { imagePath: urls[0] });
     } else {
       setGalleryPaths((prev) => {
         const room = 6 - prev.length;
@@ -386,6 +389,14 @@ export default function MovieCardWorkflow() {
     setUploads((prev) => prev.filter((u) => u !== url));
     setHeroPath((h) => (h === url ? "" : h));
     setGalleryPaths((prev) => prev.filter((p) => p !== url));
+    // 삭제한 업로드를 쓰던 리뷰 카드는 대체 이미지로 폴백
+    setSlides((prev) =>
+      prev.map((s) =>
+        s.imagePath === url
+          ? { ...s, imagePath: galleryPaths.find((p) => p !== url) ?? (heroPath !== url ? heroPath : "") }
+          : s,
+      ),
+    );
   }
 
   function toggleGallery(path: string) {
@@ -927,19 +938,36 @@ export default function MovieCardWorkflow() {
                           />
                         </Section>
                         <Section label="배경 스틸컷">
+                          <p className="mb-2 text-xs text-[var(--text-secondary)]">
+                            TMDB 스틸컷을 고르거나, 원하는 이미지를 직접 올릴 수 있어요.
+                          </p>
                           <div className="grid grid-cols-3 gap-2">
-                            {[...uploads, ...(movie?.backdrops ?? [])].map((p) => (
-                              <button
-                                key={p}
-                                onClick={() => updateSlide(slideEdit, { imagePath: p })}
-                                className={`block w-full overflow-hidden rounded-lg border-2 transition ${
-                                  slides[slideEdit]?.imagePath === p ? "border-[var(--accent)]" : "border-transparent"
-                                }`}
-                              >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={resolve("w185", p)} alt="" className="aspect-video w-full object-cover" />
-                              </button>
-                            ))}
+                            <UploadTile onFiles={(f) => onFiles(f, "slide")} />
+                            {[...uploads, ...(movie?.backdrops ?? [])].map((p) => {
+                              const isUp = p.startsWith("data:");
+                              return (
+                                <div key={p} className="relative">
+                                  <button
+                                    onClick={() => updateSlide(slideEdit, { imagePath: p })}
+                                    className={`block w-full overflow-hidden rounded-lg border-2 transition ${
+                                      slides[slideEdit]?.imagePath === p ? "border-[var(--accent)]" : "border-transparent"
+                                    }`}
+                                  >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={resolve("w185", p)} alt="" className="aspect-video w-full object-cover" />
+                                  </button>
+                                  {isUp && (
+                                    <button
+                                      onClick={() => removeUpload(p)}
+                                      aria-label="삭제"
+                                      className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-[11px] text-white hover:bg-red-500"
+                                    >
+                                      ✕
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         </Section>
                       </>
