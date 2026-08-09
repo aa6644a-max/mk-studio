@@ -119,6 +119,7 @@ ${refText ? `\n## 동일 타입 기존 포스팅 구조 참고\n${safeSlice(refT
   return `당신은 MK 블로그 포스팅 인터뷰어입니다.
 ${hasFileContent && fileContent ? `\n## 업로드된 파일 정보 (이미 파악됨)\n${safeSlice(fileContent, 2000)}\n파일 내용을 기반으로 구체적인 질문을 하세요.` : ""}
 ${hasFileContent && imageInfo ? `\n## 업로드된 사진 정보 (이미 파악됨)\n${imageInfo}\n사진 정보를 기반으로 장소/분위기/경험에 대해 질문하세요.` : ""}
+${tmdbDetail ? `\n## 관련 작품 조사 데이터 (TMDB — 이미 파악됨)\n${safeSlice(tmdbDetail, 2000)}\n감독·출연·줄거리 등 사실관계는 이미 확보됐으니 재질문 금지. 이 데이터와 사용자의 실제 경험(GV 발언, 개인적 소감 등)을 엮는 질문에 활용하세요.` : ""}
 
 ## 포스팅 정보
 - 타입: ${typeLabel[strategy.postType]}

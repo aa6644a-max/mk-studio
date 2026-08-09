@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useWorkflowStore } from "@/lib/workflow-store";
 import type { PostType } from "@/lib/types";
+import type { TmdbSelection } from "@/lib/workflow-store";
 
 const TYPE_CHIPS: { type: PostType; label: string; icon: string; placeholder: string }[] = [
   { type: "review",   label: "리뷰",    icon: "🎥",  placeholder: "예) 어벤져스 인피니티 워 리뷰 써줘" },
@@ -49,10 +50,15 @@ export default function TopicInput() {
     fileContent,
     setTopic, setStrategy, setStage, setError,
     setSelectedType, setPostType, setFileContent, setImageData, setPdfMode,
+    setTmdbSelections,
   } = useWorkflowStore();
 
   // PDF 작성 방식 (pdf 타입 전용) — 서사형 줄글 / 정보형 표·박스
   const [pdfModeLocal, setPdfModeLocal] = useState<"narrative" | "info">("narrative");
+
+  // 에세이 — 관련 작품 (선택): 입력하면 TMDB/Naver 자동조사 후 인터뷰·생성에 반영
+  const [relatedWork, setRelatedWork] = useState("");
+  const [relatedWorkStatus, setRelatedWorkStatus] = useState<"idle" | "loading" | "found" | "notfound">("idle");
 
   const isFileType = FILE_TYPES.includes(selectedType);
   const isPhotoType = selectedType === "photo";
@@ -68,6 +74,26 @@ export default function TopicInput() {
     setImagePreviewUrls([]);
     setImageData([], [], []);
     setInput("");
+    setRelatedWork("");
+    setRelatedWorkStatus("idle");
+    setTmdbSelections([]);
+  }
+
+  /** 에세이 관련 작품명 → TMDB 영화/드라마 순으로 상위 1건 자동 매칭. */
+  async function resolveRelatedWork(title: string): Promise<TmdbSelection | null> {
+    for (const type of ["movie", "tv"] as const) {
+      try {
+        const res = await fetch(`/api/tmdb?q=${encodeURIComponent(title)}&type=${type}`);
+        const data = await res.json();
+        const top = data.results?.[0];
+        if (top) {
+          return { id: top.id, title: top.title, year: top.year, posterUrl: top.posterUrl, mediaType: type };
+        }
+      } catch {
+        // 다음 타입으로 계속 시도
+      }
+    }
+    return null;
   }
 
   // 추출 완료된 PDF 텍스트를 파일명 헤더로 구분해 하나로 합쳐 store에 반영
@@ -167,6 +193,15 @@ export default function TopicInput() {
     setLoading(true);
     setError("");
 
+    // 에세이 + 관련 작품 입력됨: 전략 수립 전 TMDB 자동 매칭 (검색 결과 고르는 UI 없이 상위 1건)
+    let tmdbSel: TmdbSelection | null = null;
+    if (selectedType === "essay" && relatedWork.trim()) {
+      setRelatedWorkStatus("loading");
+      tmdbSel = await resolveRelatedWork(relatedWork.trim());
+      setRelatedWorkStatus(tmdbSel ? "found" : "notfound");
+      setTmdbSelections(tmdbSel ? [tmdbSel] : []);
+    }
+
     const storeState = useWorkflowStore.getState();
     const imageInfo = isPhotoType
       ? storeState.imageNames
@@ -186,6 +221,7 @@ export default function TopicInput() {
           pdfText: isFileType ? storeState.fileContent : undefined,
           imageInfo: isPhotoType ? imageInfo : undefined,
           photoCategory: isPhotoType ? photoCategory : undefined,
+          tmdbSelections: tmdbSel ? [{ id: tmdbSel.id, title: tmdbSel.title, mediaType: tmdbSel.mediaType }] : undefined,
         }),
       });
       if (!res.ok) throw new Error("전략 분석 실패");
@@ -428,6 +464,31 @@ export default function TopicInput() {
               </div>
             </div>
           </>
+        )}
+
+        {/* 에세이 — 관련 작품 (선택): 입력 시 TMDB 상세 + 관련 뉴스 자동조사해서 인터뷰·생성에 반영 */}
+        {selectedType === "essay" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <span style={{ fontSize: "12px", color: "#5a5c63", fontWeight: 600 }}>
+              관련 영화·드라마 <span style={{ color: "#aaa", fontWeight: 400 }}>(선택 — GV·시사회 등 특정 작품 관련이면 제목 입력)</span>
+            </span>
+            <input
+              type="text"
+              value={relatedWork}
+              onChange={(e) => { setRelatedWork(e.target.value); setRelatedWorkStatus("idle"); }}
+              placeholder="예) 여름이 지나가면"
+              style={{ width: "100%", border: "1.5px solid rgba(112,115,124,0.2)", borderRadius: "10px", padding: "10px 14px", fontSize: "14px", outline: "none", fontFamily: "inherit", color: "#171719", background: "#fff", boxSizing: "border-box" }}
+            />
+            {relatedWorkStatus === "loading" && (
+              <p style={{ fontSize: "11px", color: "#0066FF", margin: 0 }}>🔍 TMDB·뉴스 조사 중…</p>
+            )}
+            {relatedWorkStatus === "found" && (
+              <p style={{ fontSize: "11px", color: "#16a34a", margin: 0 }}>✓ 작품 정보를 찾았어요 — 감독·출연·줄거리·관련 뉴스를 조사에 반영합니다</p>
+            )}
+            {relatedWorkStatus === "notfound" && (
+              <p style={{ fontSize: "11px", color: "#aaa", margin: 0 }}>TMDB에서 찾지 못했어요 — 작품 정보 없이 진행합니다</p>
+            )}
+          </div>
         )}
 
         {/* 에세이 — 참고자료 붙여넣기 (선택) */}

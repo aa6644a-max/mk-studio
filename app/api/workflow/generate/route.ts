@@ -3,7 +3,8 @@ import { getRssLatestText, TYPE_STYLE_KEYWORDS } from "@/lib/rss-client";
 import { lintPost } from "@/lib/post-lint";
 import type { PostType } from "@/lib/types";
 import { getPostsByType } from "@/lib/google-sheets";
-import { searchMovies, getMovieDetails, searchTv, getTvDetails } from "@/lib/tmdb";
+import { searchMovies, getMovieDetails, searchTv, getTvDetails, formatTmdbDetailsText } from "@/lib/tmdb";
+import { searchNews, formatNewsForPrompt } from "@/lib/naver-search";
 import {
   buildWorkflowGenerateSystem,
   buildWorkflowGenerateUser,
@@ -159,9 +160,13 @@ export async function POST(req: Request) {
       userPrompt = user;
     } else {
       // 폴백 → V4 워크플로우 프롬프트
-      const extraData = MOVIE_TYPES.includes(strategy.postType)
-        ? await fetchExtraData(topic, strategy.postType).catch(() => "")
-        : "";
+      let extraData = "";
+      if (MOVIE_TYPES.includes(strategy.postType)) {
+        extraData = await fetchExtraData(topic, strategy.postType).catch(() => "");
+      } else if (strategy.postType === "essay" && tmdbSelections?.length) {
+        // 에세이 + 관련 작품 지정됨: TMDB 작품 데이터 + Naver 관련 뉴스 조사
+        extraData = await fetchEssayResearch(tmdbSelections).catch(() => "");
+      }
       systemPrompt = buildWorkflowGenerateSystem();
       userPrompt = buildWorkflowGenerateUser(topic, messages, strategy, references, rssText, extraData, fileContent, imageInfo);
     }
@@ -347,6 +352,24 @@ async function fetchExtraData(topic: string, postType: string): Promise<string> 
   const detail = await getMovieDetails(results[0].id);
   if (!detail) return "";
   return formatMovieData(detail);
+}
+
+/** 에세이(GV 후기 등) + 관련 작품 지정됨: TMDB 상세 + Naver 관련 뉴스를 배경 조사자료로 결합. */
+async function fetchEssayResearch(selections: TmdbSelection[]): Promise<string> {
+  if (!selections.length) return "";
+  const [tmdbText, newsResults] = await Promise.all([
+    formatTmdbDetailsText(selections).catch(() => ""),
+    searchNews(selections[0].title, 5).catch(() => []),
+  ]);
+  const parts: string[] = [];
+  if (tmdbText) parts.push(`[작품 데이터 — TMDB]\n${tmdbText}`);
+  const newsText = formatNewsForPrompt(newsResults);
+  if (newsText) {
+    parts.push(
+      `[관련 뉴스·보도자료 — Naver, 사실관계 참고용]\n${newsText}\n\n🚨 위 기사 문장을 그대로 베끼거나 짜깁기하지 말 것. 사실관계 확인·배경지식 보강 용도로만 참고하라.`,
+    );
+  }
+  return parts.join("\n\n");
 }
 
 function formatMovieData(d: MovieDetails): string {
