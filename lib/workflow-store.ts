@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { PostType } from "./types";
+import type { MarketHost, PostType } from "./types";
 
 export type WorkflowStage =
   | "input"
@@ -29,6 +29,33 @@ export type StrategyCard = {
 export type ChatMessage = {
   role: "assistant" | "user";
   content: string;
+};
+
+/**
+ * market 타입 전용 입력값.
+ * 참여 팀 목록과 팀별 현장 메모는 인터뷰로 받기엔 양이 많아(10~15팀)
+ * 입력 화면에서 구조화해 받고, 인터뷰는 총평·계기만 캐도록 한다.
+ */
+export type MarketInfo = {
+  venueName: string;
+  venueAddress: string;
+  eventDate: string;
+  eventTime: string;
+  venueInfo: string;
+  seriesInfo: string;
+  brandColor: string;
+  hosts: MarketHost[];
+};
+
+export const EMPTY_MARKET_INFO: MarketInfo = {
+  venueName: "",
+  venueAddress: "",
+  eventDate: "",
+  eventTime: "",
+  venueInfo: "",
+  seriesInfo: "",
+  brandColor: "#8E3B62",
+  hosts: [],
 };
 
 export type TmdbSelection = {
@@ -62,6 +89,12 @@ type State = {
   seed: string;
   /** PDF 작성 방식 — narrative(줄글 서사) / info(표·박스 정보 시각화) */
   pdfMode: "narrative" | "info";
+  /** market 타입 전용 — 행사·장소 정보 + 참여 팀 목록 */
+  marketInfo: MarketInfo;
+  /** "AI 맞춤 작성" 탭 여부 — input 스테이지에서 어떤 입력 화면을 보여줄지 결정 */
+  entryMode: "manual" | "smart";
+  /** 섹션 헤더 등 디자인 시스템 색상 사용자 지정 (전략카드 스와치). 비어있으면 타입별 기본색 사용 */
+  brandColor: string;
 };
 
 type Actions = {
@@ -83,7 +116,9 @@ type Actions = {
   setTmdbSelections: (items: TmdbSelection[]) => void;
   setSeed: (seed: string) => void;
   setPdfMode: (mode: "narrative" | "info") => void;
-  reset: () => void;
+  setMarketInfo: (patch: Partial<MarketInfo>) => void;
+  setBrandColor: (color: string) => void;
+  reset: (entryMode?: "manual" | "smart") => void;
 };
 
 const INIT: State = {
@@ -106,6 +141,9 @@ const INIT: State = {
   tmdbSelections: [],
   seed: "",
   pdfMode: "narrative",
+  marketInfo: EMPTY_MARKET_INFO,
+  entryMode: "manual",
+  brandColor: "",
 };
 
 export const useWorkflowStore = create<State & Actions>((set) => ({
@@ -136,5 +174,8 @@ export const useWorkflowStore = create<State & Actions>((set) => ({
   setTmdbSelections: (tmdbSelections) => set({ tmdbSelections }),
   setSeed: (seed) => set({ seed }),
   setPdfMode: (pdfMode) => set({ pdfMode }),
-  reset: () => set(INIT),
+  setMarketInfo: (patch) =>
+    set((s) => ({ marketInfo: { ...s.marketInfo, ...patch } })),
+  setBrandColor: (brandColor) => set({ brandColor }),
+  reset: (entryMode = "manual") => set({ ...INIT, entryMode }),
 }));

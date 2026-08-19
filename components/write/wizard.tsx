@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { CurationItem, MovieDetails, PostDraft, PostType, TvDetails } from "@/lib/types";
+import type { CurationItem, MarketHost, MovieDetails, PostDraft, PostType, TvDetails } from "@/lib/types";
 import { emptyDraft } from "@/lib/types";
 import MovieSearch from "./movie-search";
 import FileUpload from "./file-upload";
@@ -19,6 +19,7 @@ const TYPE_STEPS: Record<PostType, StepDef[]> = {
   pdf:      [{ id: "upload",   label: "PDF 업로드" }, { id: "body",    label: "생성 지시"  }, { id: "final", label: "생성" }],
   local:    [{ id: "upload",   label: "PDF 업로드" }, { id: "body",    label: "생성 지시"  }, { id: "final", label: "생성" }],
   essay:    [{ id: "body",     label: "생성 지시"  }, { id: "final", label: "생성" }],
+  market:   [{ id: "event",    label: "행사 정보"  }, { id: "hosts",    label: "참여 팀"   }, { id: "upload", label: "전경 사진" }, { id: "final", label: "생성" }],
 };
 
 const TYPE_CARDS = [
@@ -28,6 +29,7 @@ const TYPE_CARDS = [
   { type: "pdf"      as PostType, icon: "📄", label: "PDF 요약",   desc: "PDF 문서 기반 포스팅" },
   { type: "local"    as PostType, icon: "📢", label: "로컬소식",   desc: "지역 행사·공고문" },
   { type: "photo"    as PostType, icon: "📸", label: "사진",       desc: "사진 포스팅" },
+  { type: "market"   as PostType, icon: "🎪", label: "마켓 후기",   desc: "플리마켓·페어 참여 팀별 후기" },
 ];
 
 // ── 메인 Wizard ────────────────────────────────────────────────────────────
@@ -348,6 +350,8 @@ function StepContent({
     case "body":     return <BodyStep         draft={draft} onChange={onChange} onNext={onNext} />;
     case "upload":   return <UploadStep       draft={draft} onChange={onChange} onNext={onNext} />;
     case "category": return <PhotoCategoryStep draft={draft} onChange={onChange} onNext={onNext} />;
+    case "event":    return <MarketEventStep   draft={draft} onChange={onChange} onNext={onNext} />;
+    case "hosts":    return <MarketHostsStep   draft={draft} onChange={onChange} onNext={onNext} />;
     default:         return null;
   }
 }
@@ -748,11 +752,295 @@ function PhotoCategoryStep({ draft, onChange, onNext }: { draft: PostDraft; onCh
   );
 }
 
+// ── 행사 정보 스텝 (마켓) ─────────────────────────────────────────────────
+function MarketEventStep({ draft, onChange, onNext }: { draft: PostDraft; onChange: (p: Partial<PostDraft>) => void; onNext: () => void }) {
+  return (
+    <StepLayout
+      title="어떤 행사였나요?"
+      subtitle="장소와 일정, 그리고 이 공간·시리즈에 대해 알아낸 것을 메모로 넣어주세요"
+      onNext={onNext}
+      nextDisabled={!draft.venueName.trim()}
+    >
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="장소명" required>
+            <input
+              value={draft.venueName}
+              onChange={(e) => onChange({ venueName: e.target.value })}
+              placeholder="예: 대화장"
+              className={INPUT_CLS}
+              autoFocus
+            />
+          </Field>
+          <Field label="주소">
+            <input
+              value={draft.venueAddress}
+              onChange={(e) => onChange({ venueAddress: e.target.value })}
+              placeholder="예: 대구 중구 북성로 104-15"
+              className={INPUT_CLS}
+            />
+          </Field>
+          <Field label="행사 날짜">
+            <input
+              value={draft.eventDate}
+              onChange={(e) => onChange({ eventDate: e.target.value })}
+              placeholder="예: 2026.08.16.(일)"
+              className={INPUT_CLS}
+            />
+          </Field>
+          <Field label="운영 시간">
+            <input
+              value={draft.eventTime}
+              onChange={(e) => onChange({ eventTime: e.target.value })}
+              placeholder="예: 13:00–19:00"
+              className={INPUT_CLS}
+            />
+          </Field>
+        </div>
+
+        <Field label="장소 메모 — 이 글의 신규 정보 축">
+          <textarea
+            value={draft.venueInfo}
+            onChange={(e) => onChange({ venueInfo: e.target.value })}
+            rows={6}
+            placeholder={`건물 이력, 내부 공간 구성, 간판·벽면 문구, 분위기 등\n\n예)\n1920년대 여관 건물을 고쳐 만든 문화 공간\n슬로건: 낯선 대화로 세상을 바꾸는 문화여관\n내부가 홈스윗홈(거실)·살롱·창고·사진관으로 나뉘어 있음`}
+            className={AREA_CLS}
+          />
+        </Field>
+
+        <Field label="시리즈·남은 일정 메모">
+          <textarea
+            value={draft.seriesInfo}
+            onChange={(e) => onChange({ seriesInfo: e.target.value })}
+            rows={5}
+            placeholder={`마켓 성격, 회차 라인업, 다음 일정, 참가 모집 조건 등\n\n예)\n매주 일요일 다른 테마로 진행\n판매자를 셀러가 아니라 HOST라고 부름\n8/23 빈티지 · 8/30 마법소녀 · 9/6 포켓몬VS디지몬(연기)`}
+            className={AREA_CLS}
+          />
+        </Field>
+
+        <div className="flex items-center gap-3">
+          <label className="text-xs font-semibold text-[var(--text-secondary)]">섹션 헤더 색상</label>
+          <input
+            type="color"
+            value={draft.brandColor || "#8E3B62"}
+            onChange={(e) => onChange({ brandColor: e.target.value })}
+            className="h-8 w-14 cursor-pointer rounded border border-[var(--panel-border)]"
+          />
+          <span className="text-xs text-[var(--text-secondary)]">{draft.brandColor || "#8E3B62"}</span>
+          <button
+            onClick={() => onChange({ brandColor: "#8E3B62" })}
+            className="rounded-lg px-2 py-1 text-xs text-white hover:opacity-90"
+            style={{ backgroundColor: "#8E3B62" }}
+          >
+            마켓 자주
+          </button>
+        </div>
+      </div>
+    </StepLayout>
+  );
+}
+
+// ── 참여 팀 스텝 (마켓) ───────────────────────────────────────────────────
+function MarketHostsStep({ draft, onChange, onNext }: { draft: PostDraft; onChange: (p: Partial<PostDraft>) => void; onNext: () => void }) {
+  const hosts = draft.hosts ?? [];
+  const [bulk, setBulk] = useState("");
+
+  function update(idx: number, patch: Partial<MarketHost>) {
+    const next = [...hosts];
+    next[idx] = { ...next[idx], ...patch };
+    onChange({ hosts: next });
+  }
+
+  function addHost() {
+    onChange({ hosts: [...hosts, { name: "", handle: "", emoji: "", note: "", photoNames: [] }] });
+  }
+
+  function removeHost(idx: number) {
+    onChange({ hosts: hosts.filter((_, i) => i !== idx) });
+  }
+
+  function move(idx: number, dir: -1 | 1) {
+    const to = idx + dir;
+    if (to < 0 || to >= hosts.length) return;
+    const next = [...hosts];
+    [next[idx], next[to]] = [next[to], next[idx]];
+    onChange({ hosts: next });
+  }
+
+  /**
+   * 공지문 붙여넣기 → 팀 목록 일괄 생성.
+   * "🐰 안녕난요정 @hello.im.pixy" 형태의 줄에서 이모지·이름·핸들을 뽑는다.
+   * 소개 문구는 일부러 가져오지 않는다 — 공지문 문장을 본문에 쓰면
+   * 같은 마켓 예고글과 겹쳐 유사문서 위험이 생기기 때문이다.
+   */
+  function parseBulk() {
+    const parsed: MarketHost[] = [];
+    for (const rawLine of bulk.split("\n")) {
+      const line = rawLine.trim();
+      if (!line) continue;
+      const m = line.match(/@([A-Za-z0-9._]+)/);
+      if (!m) continue;
+      const before = line.slice(0, m.index).trim();
+      // 선행 이모지(비ASCII 기호) 분리
+      const em = before.match(/^([^\w가-힣]+)\s*/);
+      const emoji = em ? em[1].trim() : "";
+      const name = (em ? before.slice(em[0].length) : before).trim();
+      if (!name) continue;
+      parsed.push({ name, handle: m[1], emoji, note: "", photoNames: [] });
+    }
+    if (parsed.length) {
+      onChange({ hosts: [...hosts, ...parsed] });
+      setBulk("");
+    }
+  }
+
+  const filled = hosts.filter((h) => h.name.trim() && h.note.trim()).length;
+
+  return (
+    <StepLayout
+      title="참여 팀을 순서대로 추가하세요"
+      subtitle="포스팅에 나갈 순서 그대로 넣습니다. 메모에는 공지 소개문이 아니라 부스에서 본 것을 적어주세요."
+      onNext={onNext}
+      nextDisabled={hosts.length === 0}
+      nextLabel={`다음 → (${hosts.length}팀)`}
+    >
+      {/* 공지문 일괄 입력 */}
+      {hosts.length === 0 && (
+        <div className="mb-5 rounded-2xl border border-dashed border-[var(--panel-border)] p-4">
+          <p className="mb-2 text-xs font-semibold text-[var(--text-secondary)]">
+            ⚡ 공지문 붙여넣기 — 이름·핸들만 자동으로 뽑습니다
+          </p>
+          <textarea
+            value={bulk}
+            onChange={(e) => setBulk(e.target.value)}
+            rows={5}
+            placeholder={"🐰 안녕난요정 @hello.im.pixy\n📚 나루글방 @naru_books\n🐈 다그림 @dagreem"}
+            className="w-full resize-none rounded-lg border border-[var(--panel-border)] bg-[var(--page-bg)] p-3 text-xs leading-relaxed outline-none focus:border-[var(--accent)]"
+          />
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-[11px] text-[var(--text-secondary)]">
+              소개 문구는 일부러 안 가져옵니다 (예고글과 문장이 겹치면 유사문서 위험)
+            </span>
+            <button
+              onClick={parseBulk}
+              disabled={!bulk.trim()}
+              className="rounded-lg border border-[var(--panel-border)] px-3 py-1 text-xs font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-40"
+            >
+              팀 불러오기
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 팀 카드 */}
+      <div className="space-y-3">
+        {hosts.map((h, i) => (
+          <div key={i} className="rounded-2xl border border-[var(--panel-border)] bg-white p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="w-6 shrink-0 text-xs font-bold text-[var(--text-secondary)]">{i + 1}</span>
+              <input
+                value={h.emoji}
+                onChange={(e) => update(i, { emoji: e.target.value })}
+                placeholder="🐰"
+                className="w-12 shrink-0 rounded-lg border border-[var(--panel-border)] bg-[var(--page-bg)] px-2 py-1.5 text-center text-sm outline-none focus:border-[var(--accent)]"
+              />
+              <input
+                value={h.name}
+                onChange={(e) => update(i, { name: e.target.value })}
+                placeholder="팀명"
+                className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[var(--page-bg)] px-3 py-1.5 text-sm font-semibold outline-none focus:border-[var(--accent)]"
+              />
+              <input
+                value={h.handle}
+                onChange={(e) => update(i, { handle: e.target.value.replace(/^@/, "") })}
+                placeholder="인스타 핸들"
+                className="w-32 shrink-0 rounded-lg border border-[var(--panel-border)] bg-[var(--page-bg)] px-3 py-1.5 text-xs outline-none focus:border-[var(--accent)]"
+              />
+              <div className="flex shrink-0 flex-col">
+                <button onClick={() => move(i, -1)} disabled={i === 0} className="text-xs leading-none text-[var(--text-secondary)] hover:text-[var(--accent)] disabled:opacity-30">▲</button>
+                <button onClick={() => move(i, 1)} disabled={i === hosts.length - 1} className="text-xs leading-none text-[var(--text-secondary)] hover:text-[var(--accent)] disabled:opacity-30">▼</button>
+              </div>
+              <button onClick={() => removeHost(i)} className="shrink-0 text-[var(--text-secondary)] hover:text-red-500">×</button>
+            </div>
+
+            <textarea
+              value={h.note}
+              onChange={(e) => update(i, { note: e.target.value })}
+              rows={3}
+              placeholder="부스에서 본 것 — 어떤 굿즈가 있었는지, 진열이 어땠는지, 특이했던 점 (가격은 적지 마세요)"
+              className="w-full resize-none rounded-lg border border-[var(--panel-border)] bg-[var(--page-bg)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            />
+
+            {/* 이 팀 사진 파일명 (업로드 없이 이름만 수집) */}
+            <div className="mt-2 flex items-center gap-2">
+              <FileUpload
+                accept="image/png,image/jpeg,image/webp"
+                label={`사진 선택 — 파일명만 기록 (${h.photoNames.length}장)`}
+                onFiles={(files) =>
+                  update(i, { photoNames: [...h.photoNames, ...files.map((f) => f.name)] })
+                }
+              />
+            </div>
+            {h.photoNames.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {h.photoNames.map((n, j) => (
+                  <span key={j} className="flex items-center gap-1 rounded bg-[var(--page-bg)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
+                    {n}
+                    <button
+                      onClick={() => update(i, { photoNames: h.photoNames.filter((_, k) => k !== j) })}
+                      className="hover:text-red-500"
+                    >×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={addHost}
+        className="mt-3 w-full rounded-2xl border-2 border-dashed border-[var(--panel-border)] py-3 text-sm font-semibold text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+      >
+        ＋ 팀 추가
+      </button>
+
+      {hosts.length > 0 && (
+        <p className="mt-2 text-right text-xs text-[var(--text-secondary)]">
+          메모까지 채운 팀 {filled} / {hosts.length}
+          {filled < hosts.length && (
+            <span className="ml-2 text-amber-500">— 메모가 빈 팀은 두 문장으로만 짧게 나옵니다</span>
+          )}
+        </p>
+      )}
+    </StepLayout>
+  );
+}
+
+const INPUT_CLS =
+  "w-full rounded-xl border border-[var(--panel-border)] bg-white px-4 py-2 text-sm outline-none focus:border-[var(--accent)]";
+const AREA_CLS =
+  "w-full resize-none rounded-xl border border-[var(--panel-border)] bg-white p-4 text-sm leading-relaxed outline-none focus:border-[var(--accent)]";
+
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
+        {label}
+        {required && <span className="ml-0.5 text-[var(--accent)]">*</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
 // ── 업로드 스텝 (사진·PDF·로컬) ───────────────────────────────────────────
 function UploadStep({ draft, onChange, onNext }: { draft: PostDraft; onChange: (p: Partial<PostDraft>) => void; onNext: () => void }) {
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
-  const isPhoto = draft.postType === "photo";
+  const isMarket = draft.postType === "market";
+  // market도 이미지 업로드 화면을 쓴다 (팀에 속하지 않는 전경·장소 사진)
+  const isPhoto = draft.postType === "photo" || isMarket;
 
   async function handlePdfs(files: File[]) {
     setPdfBusy(true);
@@ -785,12 +1073,23 @@ function UploadStep({ draft, onChange, onNext }: { draft: PostDraft; onChange: (
     }
   }
 
-  const canNext = isPhoto ? draft.imageNames.length > 0 : draft.pdfNames.length > 0;
+  // 마켓은 전경 사진이 없어도 진행 가능 (팀별 사진은 앞 단계에서 이미 받았다)
+  const canNext = isMarket
+    ? true
+    : isPhoto
+      ? draft.imageNames.length > 0
+      : draft.pdfNames.length > 0;
 
   return (
     <StepLayout
-      title={isPhoto ? "사진을 업로드하세요" : "PDF를 업로드하세요"}
-      subtitle={isPhoto ? "포스팅에 사용할 사진을 선택해주세요" : "텍스트가 추출됩니다 (비밀번호 없는 PDF만)"}
+      title={isMarket ? "전경·장소 사진을 넣어주세요" : isPhoto ? "사진을 업로드하세요" : "PDF를 업로드하세요"}
+      subtitle={
+        isMarket
+          ? "특정 팀에 속하지 않는 사진만 — 외관, 안내판, 부스 전경 등 (없으면 건너뛰어도 됩니다)"
+          : isPhoto
+            ? "포스팅에 사용할 사진을 선택해주세요"
+            : "텍스트가 추출됩니다 (비밀번호 없는 PDF만)"
+      }
       onNext={onNext}
       nextDisabled={!canNext}
     >
@@ -898,10 +1197,13 @@ function FinalStep({
     if (draft.postType === "local" && !draft.title) {
       onChange({ title: "로컬소식 · 공고" });
     }
+    if (draft.postType === "market" && !draft.title && draft.venueName) {
+      onChange({ title: `${draft.venueName} 마켓 후기` });
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const needsShortTitle = ["pdf", "local", "photo"].includes(draft.postType);
+  const needsShortTitle = ["pdf", "local", "photo", "market"].includes(draft.postType);
 
   return (
     <StepLayout title="마지막으로 제목을 확인하고 생성하세요">
@@ -941,6 +1243,13 @@ function FinalStep({
         {draft.rating > 0 && <p>평점: {"★".repeat(draft.rating)}{"☆".repeat(5 - draft.rating)}</p>}
         {draft.pdfNames.length > 0 && <p>PDF: {draft.pdfNames.join(", ")}</p>}
         {draft.imageNames.length > 0 && <p>사진: {draft.imageNames.length}장</p>}
+        {(draft.hosts ?? []).length > 0 && (
+          <p>
+            참여 팀: {draft.hosts.length}팀 · 팀 사진{" "}
+            {draft.hosts.reduce((n, h) => n + h.photoNames.length, 0)}장
+          </p>
+        )}
+        {draft.venueName && <p>장소: {draft.venueName}{draft.eventDate ? ` · ${draft.eventDate}` : ""}</p>}
       </div>
 
       <button

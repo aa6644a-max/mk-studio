@@ -7,7 +7,8 @@ export type PostType =
   | "photo" // 사진 포스팅
   | "local" // 로컬소식/공고문
   | "pdf" // PDF 요약
-  | "essay"; // 일상·생각·경험 에세이 (GV 후기, 강연·행사 참석기 등)
+  | "essay" // 일상·생각·경험 에세이 (GV 후기, 강연·행사 참석기 등)
+  | "market"; // 마켓·플리마켓 후기 (참여 팀별 반복 카드 구조)
 
 export type PostStatus = "published" | "draft";
 
@@ -78,6 +79,19 @@ export type CurationItem = {
   reason: string;
 };
 
+/**
+ * 마켓 후기의 참여 팀(HOST) 1팀.
+ * note에는 '공지문 소개 한 줄'이 아니라 현장에서 실제로 본 것을 적는다.
+ * 공지 소개문을 그대로 넣으면 예고글과 문장이 겹쳐 유사문서 판정 위험이 생긴다.
+ */
+export type MarketHost = {
+  name: string;
+  handle: string; // 인스타 핸들 (@ 없이 저장)
+  emoji: string;
+  note: string; // 부스에서 본 굿즈·진열·특이점 메모
+  photoNames: string[]; // 이 팀 사진 파일명 (자리표시자 마커용)
+};
+
 // 작성 화면 드래프트 상태
 export type PostDraft = {
   postType: PostType;
@@ -108,6 +122,14 @@ export type PostDraft = {
   purpose: string;
   pdfText: string; // PDF에서 추출한 본문 (서버 추출)
   pdfNames: string[];
+  // 마켓 후기: 행사·장소 정보 + 참여 팀 목록
+  eventDate: string; // 예: 2026.08.16.(일)
+  eventTime: string; // 예: 13:00–19:00
+  venueName: string; // 예: 대화장
+  venueAddress: string;
+  venueInfo: string; // 장소 소개 재료 (건물 이력·내부 공간·분위기 메모)
+  seriesInfo: string; // 시리즈 개요 / 남은 일정 / 참가 모집 안내 재료
+  hosts: MarketHost[];
   // 로컬소식 브랜드 색상 (섹션 헤더 bg)
   brandColor: string;
   // 헤더 표시용 짧은 제목 (PDF·사진·로컬 전용, 비워두면 title 사용)
@@ -143,6 +165,13 @@ export function emptyDraft(postType: PostType = "review"): PostDraft {
     purpose: "",
     pdfText: "",
     pdfNames: [],
+    eventDate: "",
+    eventTime: "",
+    venueName: "",
+    venueAddress: "",
+    venueInfo: "",
+    seriesInfo: "",
+    hosts: [],
     brandColor: "#1a2e4a",
     shortTitle: "",
     body: "",
@@ -163,6 +192,7 @@ export const POST_TYPE_META: Record<
   local: { label: "로컬소식/공고문", icon: "📢" },
   pdf: { label: "PDF 요약", icon: "📄" },
   essay: { label: "일상·생각·경험", icon: "✍️" },
+  market: { label: "마켓 후기", icon: "🎪" },
 };
 
 /** 알 수 없는(레거시) post_type 도 안전 처리. */

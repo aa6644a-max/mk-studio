@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import { useWorkflowStore } from "@/lib/workflow-store";
 import Header from "@/components/header";
 import TopicInput from "./topic-input";
+import SmartTopicInput from "./smart-topic-input";
 import StrategyCardView from "./strategy-card";
 import TmdbSearchView from "./tmdb-search";
 import SeedInput from "./seed-input";
@@ -20,8 +22,17 @@ const STAGE_LABEL: Record<string, string> = {
   result: "결과",
 };
 
-export default function WorkflowShell() {
-  const { stage, error } = useWorkflowStore();
+export default function WorkflowShell({
+  entryMode = "manual",
+}: {
+  /** "manual" = 기존 리뷰 작성 탭(타입 칩 직접 선택) · "smart" = AI 맞춤 작성 탭(자동판단) */
+  entryMode?: "manual" | "smart";
+}) {
+  const { stage, error, reset } = useWorkflowStore();
+
+  // 탭 진입 시마다 store를 깨끗이 리셋 — 다른 탭에서 진행하던 흐름이 섞여 들어오는 것 방지
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { reset(entryMode); }, []);
 
   return (
     <div
@@ -56,7 +67,7 @@ export default function WorkflowShell() {
       )}
 
       <div style={{ flex: 1, overflow: "hidden", background: "#F7F7F8" }}>
-        {stage === "input" && <TopicInput />}
+        {stage === "input" && (entryMode === "smart" ? <SmartTopicInput /> : <TopicInput />)}
         {stage === "strategy" && <StrategyCardView />}
         {stage === "tmdb-search" && <TmdbSearchView />}
         {stage === "seed" && <SeedInput />}

@@ -13,7 +13,8 @@ const MAX_QUOTES = 5;
 /** postType → 프로필 그룹. */
 export function groupOf(postType: string): ProfileGroup {
   if (["review", "preview", "curation", "binge"].includes(postType)) return "movie";
-  if (postType === "photo") return "photo";
+  // market은 현장·공간을 보는 시선이 photo와 같은 계열이라 프로필을 공유한다.
+  if (postType === "photo" || postType === "market") return "photo";
   return "info"; // local, pdf
 }
 

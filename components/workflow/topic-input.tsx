@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { useWorkflowStore } from "@/lib/workflow-store";
 import type { PostType } from "@/lib/types";
 import type { TmdbSelection } from "@/lib/workflow-store";
+import { EMPTY_MARKET_INFO } from "@/lib/workflow-store";
+import MarketInput from "./market-input";
 
 const TYPE_CHIPS: { type: PostType; label: string; icon: string; placeholder: string }[] = [
   { type: "review",   label: "리뷰",    icon: "🎥",  placeholder: "예) 어벤져스 인피니티 워 리뷰 써줘" },
@@ -14,6 +16,7 @@ const TYPE_CHIPS: { type: PostType; label: string; icon: string; placeholder: st
   { type: "local",    label: "로컬",    icon: "📢",  placeholder: "예) 대구 청년 지원사업 공고" },
   { type: "pdf",      label: "PDF",     icon: "📄",  placeholder: "예) PDF 문서 요약 포스팅" },
   { type: "essay",    label: "에세이",  icon: "✍️",  placeholder: "예) 그림자 아이 GV 다녀온 이야기, 관객과의 대화 정리" },
+  { type: "market",   label: "마켓",    icon: "🎪",  placeholder: "예) 대화장 일러스트 마켓 후기" },
 ];
 
 const FILE_TYPES: PostType[] = ["local", "pdf"];
@@ -47,10 +50,10 @@ export default function TopicInput() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const {
-    fileContent,
+    fileContent, marketInfo,
     setTopic, setStrategy, setStage, setError,
     setSelectedType, setPostType, setFileContent, setImageData, setPdfMode,
-    setTmdbSelections,
+    setTmdbSelections, setMarketInfo,
   } = useWorkflowStore();
 
   // PDF 작성 방식 (pdf 타입 전용) — 서사형 줄글 / 정보형 표·박스
@@ -62,6 +65,9 @@ export default function TopicInput() {
 
   const isFileType = FILE_TYPES.includes(selectedType);
   const isPhotoType = selectedType === "photo";
+  const isMarketType = selectedType === "market";
+  // 마켓도 사진 업로드 UI를 쓴다 — 팀에 속하지 않는 전경·장소 사진용
+  const showPhotoUpload = isPhotoType || isMarketType;
   const chipInfo = TYPE_CHIPS.find((c) => c.type === selectedType)!;
 
   function handleTypeSelect(type: PostType) {
@@ -77,6 +83,7 @@ export default function TopicInput() {
     setRelatedWork("");
     setRelatedWorkStatus("idle");
     setTmdbSelections([]);
+    setMarketInfo(EMPTY_MARKET_INFO);
   }
 
   /** 에세이 관련 작품명 → TMDB 영화/드라마 순으로 상위 1건 자동 매칭. */
@@ -171,6 +178,12 @@ export default function TopicInput() {
   function canSubmit(): boolean {
     if (loading) return false;
     if (isFileType) return pdfDocs.some((d) => !d.error) && !pdfExtracting;
+    if (isMarketType) {
+      return (
+        !!marketInfo.venueName.trim() &&
+        marketInfo.hosts.some((h) => h.name.trim())
+      );
+    }
     if (isPhotoType) return imageFiles.length > 0;
     return !!input.trim();
   }
@@ -203,7 +216,7 @@ export default function TopicInput() {
     }
 
     const storeState = useWorkflowStore.getState();
-    const imageInfo = isPhotoType
+    const imageInfo = showPhotoUpload
       ? storeState.imageNames
           .map((name, i) =>
             `파일명: ${name}${storeState.imageCaptions[i] ? ` — 캡션: ${storeState.imageCaptions[i]}` : ""}`,
@@ -216,10 +229,12 @@ export default function TopicInput() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          topic: isPhotoType ? input.trim() || undefined : !isFileType ? input.trim() : undefined,
+          topic: isMarketType
+            ? marketTopic(storeState.marketInfo, input.trim())
+            : isPhotoType ? input.trim() || undefined : !isFileType ? input.trim() : undefined,
           selectedType,
           pdfText: isFileType ? storeState.fileContent : undefined,
-          imageInfo: isPhotoType ? imageInfo : undefined,
+          imageInfo: showPhotoUpload ? imageInfo : undefined,
           photoCategory: isPhotoType ? photoCategory : undefined,
           tmdbSelections: tmdbSel ? [{ id: tmdbSel.id, title: tmdbSel.title, mediaType: tmdbSel.mediaType }] : undefined,
         }),
@@ -417,10 +432,22 @@ export default function TopicInput() {
           </div>
         )}
 
-        {/* 사진 업로드 */}
-        {isPhotoType && (
+        {/* 마켓 — 행사·장소·참여 팀 입력 */}
+        {isMarketType && <MarketInput />}
+
+        {/* 사진 업로드 (사진 타입 = 본문 사진 / 마켓 타입 = 전경·장소 사진) */}
+        {showPhotoUpload && (
           <>
-            <span style={{ fontSize: "12px", color: "#5a5c63", fontWeight: 600 }}>③ 사진을 업로드하세요</span>
+            <span style={{ fontSize: "12px", color: "#5a5c63", fontWeight: 600 }}>
+              {isMarketType
+                ? "⑤ 전경·장소 사진 (선택)"
+                : "③ 사진을 업로드하세요"}
+            </span>
+            {isMarketType && (
+              <span style={{ fontSize: "11px", color: "#aaa", marginTop: "-6px" }}>
+                특정 팀에 속하지 않는 사진만 — 외관, 안내판, 부스 전경 등
+              </span>
+            )}
             <input
               ref={photoInputRef}
               type="file"
@@ -510,8 +537,8 @@ export default function TopicInput() {
           </div>
         )}
 
-        {/* 텍스트 입력 (photo/pdf/local 외 타입) */}
-        {!isFileType && !isPhotoType && (
+        {/* 텍스트 입력 (photo/market/pdf/local 외 타입) */}
+        {!isFileType && !showPhotoUpload && (
           <div style={{ background: "#fff", borderRadius: "16px", border: "1.5px solid rgba(112,115,124,0.2)", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", overflow: "hidden" }}>
             <textarea
               ref={textareaRef}
@@ -535,8 +562,8 @@ export default function TopicInput() {
           </div>
         )}
 
-        {/* PDF/사진 제출 버튼 */}
-        {(isFileType || isPhotoType) && (
+        {/* PDF/사진/마켓 제출 버튼 */}
+        {(isFileType || showPhotoUpload) && (
           <button
             onClick={handleSubmit}
             disabled={!canSubmit()}
@@ -550,6 +577,19 @@ export default function TopicInput() {
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
+}
+
+/** market: 전략 수립용 topic 문장을 행사 정보에서 조립 (SEO 키워드 추출 근거). */
+function marketTopic(
+  info: { venueName: string; eventDate: string; hosts: { name: string }[] },
+  extra: string,
+): string {
+  const parts = [
+    info.venueName && `${info.venueName} 마켓 후기`,
+    info.eventDate && info.eventDate,
+    info.hosts.length ? `참여 ${info.hosts.length}팀` : "",
+  ].filter(Boolean);
+  return [parts.join(" · "), extra].filter(Boolean).join("\n");
 }
 
 function Spinner() {

@@ -15,10 +15,10 @@ import { getInfoBlocks } from "./info-blocks";
 
 const SYSTEM = "당신은 네이버 인플루언서 'MK'입니다. 아래 데이터와 지침을 100% 준수하여 네이버 블로그 HTML 본문을 작성하세요.";
 
-function baseGuideline(): string {
+function baseGuideline(brandColor = "#2e7d32"): string {
   const { year, month, season } = nowParts();
   const timeContext = `현재 시점은 ${year}년 ${month}월(${season})입니다.`;
-  const designSystem = getDesignSystem("#2e7d32");
+  const designSystem = getDesignSystem(brandColor || "#2e7d32");
   const common = getCommonConstraints(season);
   return `
         [작성 지침]
@@ -115,10 +115,11 @@ export function buildPdfSummaryPrompt(
   userContext: string,
   refText: string,
   mode: PdfMode = "info",
+  brandColor = "",
 ): PromptResult {
   return mode === "narrative"
-    ? buildPdfNarrativePrompt(pdfText, userContext, refText)
-    : buildPdfInfoPrompt(pdfText, userContext, refText);
+    ? buildPdfNarrativePrompt(pdfText, userContext, refText, brandColor)
+    : buildPdfInfoPrompt(pdfText, userContext, refText, brandColor);
 }
 
 /** 기존 줄글 서사 방식 — 흐름이 중요한 글(프리뷰·뉴스·해설·감상). */
@@ -126,8 +127,9 @@ function buildPdfNarrativePrompt(
   pdfText: string,
   userContext: string,
   refText: string,
+  brandColor = "",
 ): PromptResult {
-  const base = baseGuideline();
+  const base = baseGuideline(brandColor);
   const ref = referencePromptDaily(refText);
   const user = `
         아래 제공된 [원본 데이터(PDF)]를 바탕으로 포스팅을 작성하세요.
@@ -168,8 +170,9 @@ function buildPdfInfoPrompt(
   pdfText: string,
   userContext: string,
   refText: string,
+  brandColor = "",
 ): PromptResult {
-  const base = pdfGuideline();
+  const base = pdfGuideline(brandColor || "#1f3a5f");
   const ref = referencePromptDaily(refText);
   const user = `
         아래 제공된 [원본 데이터(PDF)]를 바탕으로 '정보성 요약 포스팅'을 작성하세요.
@@ -274,8 +277,9 @@ export function buildPhotoPostPrompt(
   pdfText = "",
   userBody = "",
   imageMode: "url" | "placeholder" = "url",
+  brandColor = "",
 ): PromptResult {
-  const base = baseGuideline();
+  const base = baseGuideline(brandColor);
   const ref = referencePromptDaily(refText);
   const structureGuide = photoStructureGuide(photoCategory);
   const categoryLabel: Record<string, string> = {

@@ -133,10 +133,10 @@ function pickOpener(openers: string[]): string {
   return openers[Math.floor(Math.random() * openers.length)];
 }
 
-function getBaseGuideline(postType: "review" | "preview" | "news", kind: MediaKind = "movie"): string {
+function getBaseGuideline(postType: "review" | "preview" | "news", kind: MediaKind = "movie", brandColor = "#1a1a1a"): string {
   const { year, month, season } = nowParts();
   const timeContext = `현재 시점은 ${year}년 ${month}월(${season})입니다.`;
-  const designSystem = getDesignSystem("#1a1a1a");
+  const designSystem = getDesignSystem(brandColor || "#1a1a1a");
   const commonConstraints = getCommonConstraints(season);
   const { label: mediaLabel, watchVerb, releaseVerb } = mediaMeta(kind);
   const isTv = kind === "tv";
@@ -353,8 +353,9 @@ export function buildReviewPrompt(
   refText: string,
   seed?: string,
   mediaType: MediaKind = "movie",
+  brandColor = "",
 ): PromptResult {
-  const base = getBaseGuideline("review", mediaType);
+  const base = getBaseGuideline("review", mediaType, brandColor);
   const ref = referencePromptMovie(refText);
   const { posterHtml, stillsPromptText, ticketHtml } = generateMediaPrompts(d, false, mediaType);
 
@@ -408,8 +409,9 @@ export function buildPreviewPrompt(
   reason: string,
   refText: string,
   mediaType: MediaKind = "movie",
+  brandColor = "",
 ): PromptResult {
-  const base = getBaseGuideline("preview", mediaType);
+  const base = getBaseGuideline("preview", mediaType, brandColor);
   const ref = referencePromptMovie(refText);
   const { posterHtml, stillsPromptText } = generateMediaPrompts(d, true, mediaType);
   const { label: mediaLabel } = mediaMeta(mediaType);

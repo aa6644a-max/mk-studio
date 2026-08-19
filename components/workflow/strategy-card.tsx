@@ -10,8 +10,21 @@ const CONTENT_TYPE_LABEL = {
   both: "✨ Both — 검색 + 공유 둘 다",
 };
 
+/**
+ * 섹션 헤더 등 디자인 시스템 색상 프리셋.
+ * market 타입은 이 단계 이전(market-input.tsx)에서 이미 색을 고르므로 여기서 숨긴다.
+ */
+const BRAND_COLOR_SWATCHES: { color: string; label: string }[] = [
+  { color: "#1a2e4a", label: "남색" },
+  { color: "#1a3a2e", label: "녹색" },
+  { color: "#2d1a4a", label: "보라" },
+  { color: "#8E3B62", label: "자주" },
+  { color: "#4a1a2e", label: "와인" },
+  { color: "#b8560f", label: "주황" },
+];
+
 export default function StrategyCardView() {
-  const { strategy, topic, postType, setPostType, setStage, addMessage, setStreaming, setError } =
+  const { strategy, topic, postType, brandColor, setPostType, setBrandColor, setStage, addMessage, setStreaming, setError } =
     useWorkflowStore();
   const [starting, setStarting] = useState(false);
 
@@ -265,6 +278,47 @@ export default function StrategyCardView() {
             </div>
           </div>
 
+          {/* 색상 프리셋 — market은 이전 단계에서 이미 고름 */}
+          {postType !== "market" && (
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid rgba(112,115,124,0.1)" }}>
+              <div
+                style={{
+                  fontSize: "11px",
+                  color: "#5a5c63",
+                  marginBottom: "8px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                섹션 헤더 색상
+              </div>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                {BRAND_COLOR_SWATCHES.map((s) => (
+                  <button
+                    key={s.color}
+                    onClick={() => setBrandColor(brandColor === s.color ? "" : s.color)}
+                    title={s.label}
+                    style={{
+                      width: "30px",
+                      height: "30px",
+                      borderRadius: "50%",
+                      background: s.color,
+                      border: brandColor === s.color ? "3px solid #0066FF" : "2px solid #fff",
+                      boxShadow: "0 0 0 1px rgba(112,115,124,0.25)",
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                  />
+                ))}
+              </div>
+              <p style={{ fontSize: "11px", color: "#aaa", margin: "8px 0 0" }}>
+                {brandColor
+                  ? "선택한 색으로 소제목·강조박스가 생성됩니다. 네이버에 붙여넣기 전에 미리 맞춰두세요."
+                  : "고르지 않으면 타입별 기본색으로 생성됩니다."}
+              </p>
+            </div>
+          )}
+
           {/* 영화 전용 — 작품 특화 차별화 전략 */}
           {isMovie && (strategy.hook || strategy.watchPoints?.length || strategy.differentiator) && (
             <div style={{ padding: "16px 20px", background: "#FBFAFF", display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -309,7 +363,7 @@ export default function StrategyCardView() {
           }}
         >
           <button
-            onClick={() => useWorkflowStore.getState().reset()}
+            onClick={() => useWorkflowStore.getState().reset(useWorkflowStore.getState().entryMode)}
             style={{
               flex: 1,
               padding: "12px",

@@ -34,6 +34,7 @@ export const TYPE_STYLE_KEYWORDS: Record<string, string[]> = {
   photo: ["카페", "맛집", "방문", "여행", "전시"],
   local: ["모집", "공고", "지원", "교육", "행사"],
   pdf: ["안내", "정리", "총정리", "소식"],
+  market: ["마켓", "플리마켓", "페어", "행사", "후기"],
 };
 
 interface RSSPost {

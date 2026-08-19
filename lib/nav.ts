@@ -8,6 +8,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "홈", icon: "🏠" },
   { href: "/movie-news", label: "오늘의 영화소식", icon: "🍿" },
   { href: "/write", label: "리뷰 작성", icon: "✏️" },
+  { href: "/smart-write", label: "AI 맞춤 작성", icon: "🪄" },
   { href: "/images", label: "이미지 작업실", icon: "🖼️" },
   { href: "/card-news", label: "영화 카드뉴스 메이커", icon: "🎬" },
   { href: "/insta", label: "인스타 캡션 메이커", icon: "📷" },

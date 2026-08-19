@@ -5,7 +5,7 @@ import { useWorkflowStore } from "@/lib/workflow-store";
 import { wrapHtml } from "@/lib/html-formatter";
 
 export default function ResultPanel() {
-  const { generatedHtml, rawHtml, seoTitles, topic, postType, messages, seed, reset, setGeneratedHtml } =
+  const { generatedHtml, rawHtml, seoTitles, topic, postType, messages, seed, entryMode, reset, setGeneratedHtml } =
     useWorkflowStore();
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -159,7 +159,7 @@ export default function ResultPanel() {
             {copied ? "복사됨 ✓" : "HTML 복사"}
           </button>
           <button
-            onClick={reset}
+            onClick={() => reset(entryMode)}
             style={{
               padding: "6px 14px",
               borderRadius: "8px",

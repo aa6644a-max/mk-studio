@@ -28,6 +28,8 @@ export default function ChatInterview() {
     tmdbSelections,
     seed,
     pdfMode,
+    marketInfo,
+    brandColor,
     setStage,
     addMessage,
     appendToLastMessage,
@@ -93,6 +95,7 @@ export default function ChatInterview() {
           seed: seed || undefined,
           fileContent: fileContent || undefined,
           imageInfo: imageInfo || undefined,
+          marketInfo: postType === "market" ? marketInfo : undefined,
         }),
       });
 
@@ -125,6 +128,8 @@ export default function ChatInterview() {
           tmdbSelections: tmdbSelections.length > 0 ? tmdbSelections : undefined,
           seed: seed || undefined,
           pdfMode: postType === "pdf" ? pdfMode : undefined,
+          marketInfo: postType === "market" ? marketInfo : undefined,
+          brandColor: brandColor || undefined,
         }),
       });
 

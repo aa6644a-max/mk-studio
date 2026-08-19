@@ -37,10 +37,19 @@ function pureText(html: string): string {
     .trim();
 }
 
+/**
+ * market은 참여 팀 수에 따라 분량이 크게 달라지므로 고정 범위를 쓸 수 없다.
+ * prompts/market.ts의 lengthTarget()과 같은 식을 사용한다.
+ */
+function marketRange(hostCount: number): [number, number] {
+  return [1600 + hostCount * 150, 2400 + hostCount * 260];
+}
+
 export function lintPost(
   html: string,
   postType: PostType,
   titles: string[],
+  hostCount = 0,
 ): LintIssue[] {
   const issues: LintIssue[] = [];
   const text = pureText(html);
@@ -92,8 +101,41 @@ export function lintPost(
     }
   }
 
+  // 4-b. 마켓 후기 — 팀 카드 누락 / <img> 생성 검사
+  if (postType === "market") {
+    if (/<img[\s>]/i.test(html)) {
+      issues.push({
+        rule: "market-img",
+        message:
+          "<img> 태그가 생성되었습니다. 마켓 후기는 실제 이미지를 붙이지 않습니다. 모든 사진 위치를 노란 점선 자리표시자 테이블(bgcolor=\"#fff3cd\")로 교체하세요.",
+      });
+    }
+    if (hostCount > 0) {
+      // 팀 카드는 bgcolor + border-left 조합으로 식별한다.
+      // bgcolor="#faf6f8" 단독으로 세면 2열 정보 테이블의 헤더 셀까지 잡혀 과다 집계된다.
+      const cards = (
+        html.match(/bgcolor="#faf6f8"[^>]*border-left:\s*4px/gi) ?? []
+      ).length;
+      if (cards < hostCount) {
+        issues.push({
+          rule: "market-hosts",
+          message: `참여 팀 카드가 ${cards}개뿐입니다. 제공된 ${hostCount}팀 전원을 순서 그대로, 각각 경량 카드(bgcolor="#faf6f8" + border-left)로 빠짐없이 다루세요.`,
+        });
+      }
+    }
+    const markers = (html.match(/bgcolor="#fff3cd"/gi) ?? []).length;
+    if (markers === 0) {
+      issues.push({
+        rule: "market-markers",
+        message:
+          "사진 자리표시자 마커가 하나도 없습니다. 제공된 사진 파일명을 근거로 노란 점선 마커를 각 팀·전경 위치에 넣으세요.",
+      });
+    }
+  }
+
   // 5. 글자수
-  const range = LENGTH_RANGES[postType];
+  const range =
+    postType === "market" ? marketRange(hostCount) : LENGTH_RANGES[postType];
   if (range) {
     const [min, max] = range;
     if (text.length < min) {

@@ -19,10 +19,12 @@ import {
 } from "@/lib/prompts/movie";
 import { buildAnnouncementPrompt } from "@/lib/prompts/local";
 import { buildPdfSummaryPrompt, buildPhotoPostPrompt } from "@/lib/prompts/daily";
+import { buildMarketPrompt } from "@/lib/prompts/market";
+import { emptyDraft } from "@/lib/types";
 import { referenceText } from "@/lib/prompts/base";
 import { getProfile } from "@/lib/google-sheets";
 import { groupOf, buildProfileInjection } from "@/lib/prompts/profile";
-import type { StrategyCard, ChatMessage, TmdbSelection } from "@/lib/workflow-store";
+import type { StrategyCard, ChatMessage, TmdbSelection, MarketInfo } from "@/lib/workflow-store";
 import type { MovieDetails, TvDetails, CurationItem } from "@/lib/types";
 
 export const maxDuration = 300;
@@ -32,7 +34,7 @@ const TV_TYPES = ["binge"];
 
 export async function POST(req: Request) {
   try {
-    const { messages, strategy, topic, fileContent, imageInfo, tmdbSelections, seed, pdfMode } = (await req.json()) as {
+    const { messages, strategy, topic, fileContent, imageInfo, tmdbSelections, seed, pdfMode, marketInfo, brandColor } = (await req.json()) as {
       messages: ChatMessage[];
       strategy: StrategyCard;
       topic: string;
@@ -41,6 +43,8 @@ export async function POST(req: Request) {
       tmdbSelections?: TmdbSelection[];
       seed?: string; // 사용자 감상평 — review 생성 시 문장 골격 보존
       pdfMode?: "narrative" | "info"; // PDF 작성 방식 — 서사형/정보형
+      marketInfo?: MarketInfo; // market 타입: 행사·장소 정보 + 참여 팀 목록
+      brandColor?: string; // 전략카드에서 고른 섹션 헤더 색상 (비어있으면 타입별 기본색)
     };
 
     const [rssText, references] = await Promise.all([
@@ -60,21 +64,21 @@ export async function POST(req: Request) {
         const details = await fetchSelectionDetailsList(tmdbSelections);
         if (details.length > 0) {
           const mediaType = tmdbSelections[0]?.mediaType === "tv" ? "tv" : "movie";
-          const { system, user } = buildReviewPrompt(details[0], conversationText, topic, refText, seed, mediaType);
+          const { system, user } = buildReviewPrompt(details[0], conversationText, topic, refText, seed, mediaType, brandColor);
           systemPrompt = system;
           userPrompt = user;
         } else {
-          ({ systemPrompt, userPrompt } = await fallbackWorkflowPrompt(topic, messages, strategy, references, rssText, fileContent, imageInfo));
+          ({ systemPrompt, userPrompt } = await fallbackWorkflowPrompt(topic, messages, strategy, references, rssText, fileContent, imageInfo, brandColor));
         }
       } else if (strategy.postType === "preview") {
         const details = await fetchSelectionDetailsList(tmdbSelections);
         if (details.length > 0) {
           const mediaType = tmdbSelections[0]?.mediaType === "tv" ? "tv" : "movie";
-          const { system, user } = buildPreviewPrompt(details[0], conversationText, topic, refText, mediaType);
+          const { system, user } = buildPreviewPrompt(details[0], conversationText, topic, refText, mediaType, brandColor);
           systemPrompt = system;
           userPrompt = user;
         } else {
-          ({ systemPrompt, userPrompt } = await fallbackWorkflowPrompt(topic, messages, strategy, references, rssText, fileContent, imageInfo));
+          ({ systemPrompt, userPrompt } = await fallbackWorkflowPrompt(topic, messages, strategy, references, rssText, fileContent, imageInfo, brandColor));
         }
       } else if (strategy.postType === "binge") {
         const tvDetails = await fetchTvDetailsList(tmdbSelections);
@@ -129,7 +133,7 @@ export async function POST(req: Request) {
         fileContent ?? "",
         userContext,
         refText,
-        "#1a2e4a",
+        brandColor || "#1a2e4a",
       );
       systemPrompt = system;
       userPrompt = user;
@@ -137,7 +141,29 @@ export async function POST(req: Request) {
       // PDF 요약 — 서사형/정보형 분기
       const refText = referenceText(references, rssText);
       const userContext = joinContext(topic, messages);
-      const { system, user } = buildPdfSummaryPrompt(fileContent ?? "", userContext, refText, pdfMode ?? "info");
+      const { system, user } = buildPdfSummaryPrompt(fileContent ?? "", userContext, refText, pdfMode ?? "info", brandColor);
+      systemPrompt = system;
+      userPrompt = user;
+    } else if (strategy.postType === "market" && marketInfo) {
+      // 마켓 후기 — 참여 팀별 반복 카드 구조. 사진은 자리표시자 마커만 생성한다.
+      const { names, captions } = parseImageInfo(imageInfo);
+      const draft = {
+        ...emptyDraft("market"),
+        title: topic,
+        venueName: marketInfo.venueName,
+        venueAddress: marketInfo.venueAddress,
+        eventDate: marketInfo.eventDate,
+        eventTime: marketInfo.eventTime,
+        venueInfo: marketInfo.venueInfo,
+        seriesInfo: marketInfo.seriesInfo,
+        brandColor: marketInfo.brandColor,
+        hosts: marketInfo.hosts,
+        imageNames: names,
+        imageCaptions: captions,
+        // 인터뷰에서 얻은 계기·총평은 '포스팅 방향 지시'로 주입
+        body: formatConversation(messages),
+      };
+      const { system, user } = buildMarketPrompt(draft, references, rssText);
       systemPrompt = system;
       userPrompt = user;
     } else if (strategy.postType === "photo") {
@@ -155,6 +181,7 @@ export async function POST(req: Request) {
         "",
         userBody,
         "placeholder",
+        brandColor,
       );
       systemPrompt = system;
       userPrompt = user;
@@ -168,7 +195,7 @@ export async function POST(req: Request) {
         extraData = await fetchEssayResearch(tmdbSelections).catch(() => "");
       }
       systemPrompt = buildWorkflowGenerateSystem();
-      userPrompt = buildWorkflowGenerateUser(topic, messages, strategy, references, rssText, extraData, fileContent, imageInfo);
+      userPrompt = buildWorkflowGenerateUser(topic, messages, strategy, references, rssText, extraData, fileContent, imageInfo, brandColor);
     }
 
     // MK 프로필 주입 (과거 인터뷰 누적 → 문체·취향·관점 반영)
@@ -218,6 +245,7 @@ export async function POST(req: Request) {
             fullText,
             strategy.postType as PostType,
             titles,
+            marketInfo?.hosts.length ?? 0,
           ).map((v) => v.message);
 
           controller.enqueue(
@@ -287,6 +315,25 @@ function formatPhotoMemos(imageInfo?: string): string {
     .join("\n");
 }
 
+/** imageInfo("파일명: X — 캡션: Y" 줄들) → 파일명·캡션 배열로 역파싱. */
+function parseImageInfo(imageInfo?: string): { names: string[]; captions: string[] } {
+  const names: string[] = [];
+  const captions: string[] = [];
+  for (const line of (imageInfo ?? "").split("\n")) {
+    const t = line.trim();
+    if (!t) continue;
+    const m = t.match(/^파일명:\s*(.+?)(?:\s*—\s*캡션:\s*(.*))?$/);
+    if (m) {
+      names.push(m[1].trim());
+      captions.push((m[2] ?? "").trim());
+    } else {
+      names.push(t);
+      captions.push("");
+    }
+  }
+  return { names, captions };
+}
+
 async function fallbackWorkflowPrompt(
   topic: string,
   messages: ChatMessage[],
@@ -295,11 +342,12 @@ async function fallbackWorkflowPrompt(
   rssText: string,
   fileContent?: string,
   imageInfo?: string,
+  brandColor = "",
 ) {
   const extraData = await fetchExtraData(topic, strategy.postType).catch(() => "");
   return {
     systemPrompt: buildWorkflowGenerateSystem(),
-    userPrompt: buildWorkflowGenerateUser(topic, messages, strategy, references, rssText, extraData, fileContent, imageInfo),
+    userPrompt: buildWorkflowGenerateUser(topic, messages, strategy, references, rssText, extraData, fileContent, imageInfo, brandColor),
   };
 }
 

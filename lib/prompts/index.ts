@@ -3,6 +3,7 @@ import type { PromptResult } from "./base";
 import { buildMoviePrompt } from "./movie";
 import { buildDailyPrompt } from "./daily";
 import { buildLocalPrompt } from "./local";
+import { buildMarketPrompt } from "./market";
 
 /** 포스팅 타입에 맞는 프롬프트 빌더로 분기. */
 export function buildPrompt(
@@ -22,6 +23,8 @@ export function buildPrompt(
       return buildDailyPrompt(draft, references, rssText);
     case "local":
       return buildLocalPrompt(draft, references, rssText);
+    case "market":
+      return buildMarketPrompt(draft, references, rssText);
   }
 }
 

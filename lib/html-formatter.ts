@@ -6,6 +6,8 @@ const TYPE_LABEL: Record<string, string> = {
   photo: "MK LINK DAILY",
   local: "MK LINK LOCAL",
   pdf: "MK LINK DAILY",
+  essay: "MK LINK DAILY",
+  market: "MK LINK DAILY",
 };
 
 export function wrapHtml(content: string, title: string, postType: string): string {

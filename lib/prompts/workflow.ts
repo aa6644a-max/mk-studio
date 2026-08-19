@@ -63,6 +63,7 @@ export function buildInterviewSystem(
     local: "로컬소식/공고문",
     pdf: "PDF 요약",
     essay: "일상·생각·경험 에세이",
+    market: "마켓 후기",
   };
 
   const requiredInfo: Record<PostType, string> = {
@@ -73,6 +74,7 @@ export function buildInterviewSystem(
     photo: "방문/경험 계기, 각 사진 순간의 상황과 느낌, 전체적으로 강조하고 싶은 포인트, 실용 정보(영업시간·주차·입장료·동선 등 알면)",
     local: "이 소식을 전하는 이유/기록 목적, 특히 강조하고 싶은 혜택·자격 요건, 타겟 독자에게 전달할 핵심 메시지 (날짜·장소·신청링크는 PDF에서 자동 추출하니 재질문 금지)",
     pdf: "이 자료를 들여다보는 상황/기록 목적, 내용 중 가장 중요한 포인트, 독자에게 전달할 핵심 메시지 (세부 사실은 PDF에서 자동 추출하니 재질문 금지)",
+    market: "방문 계기, 한 바퀴 돌고 난 전체 인상(참여 팀들을 관통하는 공통점 또는 대비), 특히 기억에 남은 팀과 그 이유, 날씨·현장 분위기 (🚨 참여 팀 목록·인스타 핸들·팀별 굿즈 메모·장소 주소·일정은 입력 화면에서 이미 구조화 입력받았으므로 절대 재질문 금지)",
     essay: "🚨 가장 먼저 반드시 확인: 이 경험에서 본인의 역할이 무엇이었는지(단순 참석자였는지, 아니면 주최·진행·발표·출연 등 직접 만든 자리였는지) — 이건 절대 넘겨짚지 말고 명시적으로 물을 것. 그다음 이 글을 쓰게 된 계기·상황, 전하고 싶은 생각이나 감정, 독자에게 남기고 싶은 한마디 (참고자료를 첨부했다면 그 안의 사실관계는 이미 확보됐으니 재질문 금지 — 역할과 개인적 의미·소감만 확인)",
   };
 
@@ -166,6 +168,7 @@ export function buildWorkflowGenerateUser(
   extraData: string,
   fileContent?: string,
   imageInfo?: string,
+  brandColorOverride = "",
 ): string {
   const { year, month, season } = nowParts();
   const refText = referenceText(references, rssText);
@@ -174,7 +177,7 @@ export function buildWorkflowGenerateUser(
     .map((m) => `[${m.role === "assistant" ? "인터뷰어" : "MK"}] ${m.content}`)
     .join("\n");
 
-  const { brandColor } = getBrandColor(strategy.postType);
+  const brandColor = brandColorOverride || getBrandColor(strategy.postType).brandColor;
   const ds = getDesignSystem(brandColor);
   const cc = getCommonConstraints(season);
 
@@ -234,6 +237,7 @@ function getBrandColor(postType: PostType): { brandColor: string } {
     local: "#1a2e4a",
     pdf: "#1a1a4a",
     essay: "#2b2420",
+    market: "#8E3B62",
   };
   return { brandColor: map[postType] ?? "#1a2e4a" };
 }

@@ -80,7 +80,7 @@ export async function generatePost(draft: PostDraft): Promise<GenerateResult> {
 
   // 린트 → 위반 시 1회 수정 요청
   let warnings: string[] = [];
-  const issues = lintPost(rawHtml, draft.postType, titles);
+  const issues = lintPost(rawHtml, draft.postType, titles, (draft.hosts ?? []).length);
   if (issues.length) {
     try {
       const fixedRaw = await askClaude(client, system, [
@@ -97,7 +97,7 @@ export async function generatePost(draft: PostDraft): Promise<GenerateResult> {
     } catch {
       // 수정 요청 실패 시 1차 결과 사용
     }
-    const remaining = lintPost(rawHtml, draft.postType, titles);
+    const remaining = lintPost(rawHtml, draft.postType, titles, (draft.hosts ?? []).length);
     warnings = remaining.map((v) => v.message);
   }
 
