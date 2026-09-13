@@ -10,6 +10,7 @@ import {
   getDesignSystem,
   getCommonConstraints,
   getHashtagRule,
+  getMkVoiceBlock,
   nowParts,
   referenceText,
   safeSlice,
@@ -114,7 +115,7 @@ ${strategy.differentiator ? `- 차별화 각도: ${strategy.differentiator}` : "
 5. 감상평에 **평점·추천 대상**이 안 보이면, 종료 직전 그 두 가지만 가볍게 확인하세요. (이미 있으면 묻지 말 것)
 
 ## MK 문체 참고 (질문 스타일에만)
-${rssText ? safeSlice(rssText, 500) : "자연스럽고 친근한 대화체"}
+${rssText ? safeSlice(rssText, 500) : getMkVoiceBlock("full")}
 ${refText ? `\n## 동일 타입 기존 포스팅 구조 참고\n${safeSlice(refText, 300)}` : ""}`;
   }
 
@@ -146,7 +147,7 @@ ${requiredInfo[strategy.postType]}
 ${autoTerminate ? "6. 이 타입은 PDF 업로드가 필요해서 인터뷰 없이 바로 포스팅 생성할게요 — 첫 메시지에서 바로 종료 선언" : ""}
 
 ## MK 문체 참고 (인터뷰 질문 스타일에만 참고)
-${rssText ? safeSlice(rssText, 500) : "자연스럽고 친근한 대화체"}
+${rssText ? safeSlice(rssText, 500) : getMkVoiceBlock("full")}
 
 ${refText ? `## 동일 타입 기존 포스팅 구조 참고\n${safeSlice(refText, 300)}` : ""}`;
 }

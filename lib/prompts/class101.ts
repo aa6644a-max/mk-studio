@@ -1,4 +1,10 @@
-import { getCommonConstraints, getDesignSystem, nowParts } from "./base";
+import {
+  buildStyleReference,
+  getCommonConstraints,
+  getDesignSystem,
+  getMkVoiceBlock,
+  nowParts,
+} from "./base";
 
 const REFERRAL_LINK = "https://abr.ge/abkqd0";
 
@@ -58,21 +64,9 @@ function buildHashtags(category: string, secondaryKeyword: string): string {
 }
 
 function rssSection(rssText: string): string {
-  if (!rssText) return "";
-  return `
-[🚨 절대 준수: MK 문체 및 시각적 구조 완벽 복제 지침]
-아래 [나의 과거 블로그 원문]은 이 블로그 주인장이 직접 쓴 글입니다.
-AI의 기계적 작문 습관을 모두 버리고 이 레퍼런스의 말투·단어 선택·문장 끝맺음·비유 방식을 흉내 내서 빙의하세요.
-
-* ⭕ 시각적 리듬 복제: 레퍼런스처럼 2~3문장 만에 <p> 태그를 닫고 새로 여세요. 긴 단락 금지.
-* ⭕ 굵은 글씨 패턴: 단순 명사가 아니라 단락의 핵심 결론 구절에 <b> 태그 사용.
-* ⭕ 조심스러운 분석체: "~이지 않을까 싶어요", "~라고 생각됩니다", "어떻게 보면 ~"을 자주 활용.
-* ❌ AI 금지어: "결론적으로", "요약하자면", "~의 향연", "과언이 아닙니다", "흥미로운".
-* 🚨 [내용 인용 금지]: 레퍼런스의 특정 사건·제품명은 절대 새 글에 가져오지 마세요. 말투 껍데기만 훔치고 내용은 완전히 새로 쓰세요.
-
-[나의 과거 블로그 원문]
-${rssText}
-`;
+  return `\n${buildStyleReference(rssText, {
+    noQuoteDomain: "레퍼런스의 특정 사건·제품명",
+  })}\n`;
 }
 
 /**
@@ -127,8 +121,7 @@ export function buildClass101Prompt(
 이 글은 **클래스101 파트너스 협업** 글이며, 아래 필수 항목이 하나라도 누락되면 비용 지급에서 제외됩니다.
 
 ## 민케이 프로필
-- 건축 전공자 출신, 영화·드라마 평론가, 네이버 블로그 "MK CINELAB" 운영
-- 대구 영화모임 운영자
+- 영화·드라마 리뷰 블로그 "MK CINELAB" 운영, 대구 영화모임 운영자
 - 다양한 분야를 구조적으로 분석하는 스타일, 감성 있되 과장 없음
 
 ## 디자인 시스템
@@ -138,10 +131,7 @@ ${designSystem}
 ${commonConstraints}
 
 ## 어조 및 페르소나
-- 경어체("~습니다", "~해요", "~죠")와 구어체를 자연스럽게 섞으세요.
-- 확정적 단정보다 조심스러운 분석 어투: "~이지 않을까 싶어요", "~라고 생각됩니다"
-- 단락 호흡: 2~3문장마다 <p> 태그 닫고 새로 열기. 긴 단락 금지.
-- 핵심 결론 구절에는 <b> 태그로 굵게 처리.
+${getMkVoiceBlock("full")}
 
 ## 🚨 강의 내용의 진실 원천 (절대 준수)
 - 첨부된 **강의 자료**가 실제 수강한 강의의 유일한 사실 원천입니다.

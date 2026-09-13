@@ -4,9 +4,12 @@
  */
 import type { PostDraft } from "@/lib/types";
 import {
+  buildStyleReference,
+  getBannedWordsLine,
   getCommonConstraints,
   getDesignSystem,
   getHashtagRule,
+  getMkVoiceBlock,
   nowParts,
   referenceText,
   type PromptResult,
@@ -29,8 +32,7 @@ function baseGuideline(brandColor = "#2e7d32"): string {
         ${common}
 
         1. 어조 및 페르소나 (Tone of Voice):
-            - 정중하고 친근한 경어체("~습니다", "~해요", "~죠")를 자연스럽게 섞어 쓰세요.
-            - 확정적 표현 대신 조심스러운 분석("~이지 않을까 싶어요", "~라고 생각됩니다")을 사용하여 독자의 공감을 유도하세요.
+${getMkVoiceBlock("full")}
             - 전문 용어는 정보 전달자로서 친절하게 풀어서 설명하세요.
 
         2. 전체 분량 및 가독성 (Layout & Readability):
@@ -43,17 +45,7 @@ function baseGuideline(brandColor = "#2e7d32"): string {
 }
 
 function referencePromptDaily(refText: string): string {
-  if (!refText) return "";
-  return `
-        [🚨 절대 준수: MK 문체 및 '시각적 구조' 완벽 복제 지침]
-        당신은 AI의 빽빽하고 기계적인 작문 습관을 버려야 합니다. 제공된 레퍼런스의 '말투'와 '단어 선택'뿐만 아니라 **단락을 나누는 방식(엔터 빈도)과 시각적인 호흡**까지 100% 복제하세요.
-
-        * ⭕ 시각적 리듬 복제: 레퍼런스에서 한두 문장 만에 줄바꿈(엔터)을 하여 여백을 주었다면, 새 글에서도 그 짧고 속도감 있는 문단 구조를 똑같이 따라 하세요. 문장이 길어지기 전에 <p> 태그를 닫고 새로 열어주는 글쓴이 특유의 엔터 타이밍을 완벽히 파악하세요.
-        * ❌ AI 금지어: "결론적으로", "요약하자면", "의 향연", "할 수밖에 없습니다", "과언이 아닙니다", "흥미로운".
-
-        [나의 과거 레퍼런스 글]
-        ${refText}
-        `;
+  return buildStyleReference(refText);
 }
 
 /** PDF 요약(정보성) 전용 작성 지침 — 영화용 디자인 대신 범용 정보 블록 사용. */
@@ -69,8 +61,7 @@ function pdfGuideline(brandColor = "#1f3a5f"): string {
         ${common}
 
         1. 어조 및 페르소나:
-            - 정중하고 친근한 경어체("~습니다", "~해요", "~죠")를 자연스럽게 섞어 쓰세요.
-            - 확정적 표현 대신 조심스러운 분석("~이지 않을까 싶어요", "~라고 생각됩니다")으로 공감을 유도하세요.
+${getMkVoiceBlock("light")}
             - 전문 용어는 정보 전달자로서 친절하게 풀어서 설명하세요.
 
         2. 분량 및 가독성:
@@ -312,9 +303,9 @@ ${photoContextsText}
 ${structureGuide}
 
 [공통 문체 규칙]
-- "~하는데요", "~했어요", "~이긴 했어요", "~싶었어요" 자연스럽게 섞기.
-- 두세 문장마다 단락 전환. AI 특유의 긴 문단 금지.
-- AI 금지어: "결론적으로", "요약하자면", "의 향연", "과언이 아닙니다", "흥미로운".
+${getMkVoiceBlock("full")}
+- "~하는데요", "~했어요", "~이긴 했어요", "~싶었어요" 같은 말끝을 자연스럽게 섞기.
+- ${getBannedWordsLine()}
 - 어려운 전문용어 금지 — 처음 듣는 사람도 이해할 수 있는 표현으로.
 
 ${base}

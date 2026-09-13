@@ -12,6 +12,8 @@
  */
 import type { MarketHost, PostDraft } from "@/lib/types";
 import {
+  buildStyleReference,
+  getBannedWordsLine,
   getCommonConstraints,
   getHashtagRule,
   nowParts,
@@ -108,7 +110,7 @@ HTML 구조:
 
 문체:
   - "안녕하세요", "반갑습니다", "${season} 인사" 등 인사말 금지
-  - "결론적으로", "요약하자면", "의 향연", "과언이 아닙니다", "흥미로운" 금지
+  - ${getBannedWordsLine()}
   - 팀마다 같은 문장 틀 반복 금지 ("~가 인상적이었습니다"를 10번 쓰지 말 것).
     관찰한 내용의 성격에 따라 문장 구조를 바꾸세요.
 
@@ -157,17 +159,7 @@ export function buildMarketPrompt(
   const { min, max } = lengthTarget(hosts.length);
   const brandColor = draft.brandColor || "#8E3B62";
   const refText = referenceText(references, rssText);
-  const refSection = refText
-    ? `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[🚨 MK 문체 참고 — 말투·단락 리듬 복제 (**표시** = 원문 굵은 글씨)]
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-AI의 빽빽한 작문 습관을 버리고, 아래 원문의 엔터 타이밍과 문장 끝맺음을 그대로 따라가세요.
-두세 문장마다 <p>를 닫고 새로 여는 리듬을 복제하세요.
-
-${refText}
-`
-    : "";
+  const refSection = `\n${buildStyleReference(refText)}\n`;
 
   const venueRows = [
     draft.venueName && `- 장소명: ${draft.venueName}`,

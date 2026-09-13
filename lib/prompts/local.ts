@@ -3,7 +3,14 @@
  * 교육/채용/공모전/지원사업 공고문 기반. 감상 도입 없이 직접 선언 구조.
  */
 import type { PostDraft } from "@/lib/types";
-import { getHashtagRule, nowParts, referenceText, type PromptResult } from "./base";
+import {
+  buildStyleReference,
+  getBannedWordsLine,
+  getHashtagRule,
+  nowParts,
+  referenceText,
+  type PromptResult,
+} from "./base";
 
 const SYSTEM = "당신은 네이버 인플루언서 'MK'입니다. 아래 공고 데이터와 디자인 시스템을 100% 준수하여 대구 로컬 소식 포스팅 HTML을 작성하세요.";
 
@@ -105,7 +112,7 @@ HTML 구조:
 문체:
   - "호기심을 자극했습니다" 류의 영화 리뷰 투 도입 금지
   - "안녕하세요", "반갑습니다" 등 인사말 금지
-  - "결론적으로", "요약하자면", "의 향연", "과언이 아닙니다" AI 금지어
+  - ${getBannedWordsLine()}
 
 정보:
   - PDF에 명시된 날짜 · 장소 · 신청링크 · 연락처는 반드시 포함
@@ -122,12 +129,7 @@ export function buildAnnouncementPrompt(
 ): PromptResult {
   const { year, month, season } = nowParts();
   const timeContext = `현재 시점은 ${year}년 ${month}월(${season})입니다.`;
-  const refSection = refText
-    ? `
-[🚨 MK 문체 참고 — 말투와 줄바꿈 리듬 복제]
-${refText}
-`
-    : "";
+  const refSection = `\n${buildStyleReference(refText, { intensity: "light" })}\n`;
 
   const user = `
 아래 [원본 공고 데이터(PDF)]를 바탕으로 대구 로컬 소식 포스팅을 작성하세요.

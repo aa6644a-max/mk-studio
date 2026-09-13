@@ -6,16 +6,20 @@
  * 생성 후 코드로 검증한다. 위반 목록은 1회 수정 요청 프롬프트에 사용된다.
  */
 import type { PostType } from "@/lib/types";
+import { MK_BANNED_WORDS } from "@/lib/prompts/base";
 
 export type LintIssue = { rule: string; message: string };
 
-/** 프롬프트에서 금지한 AI 상투 표현. */
+/**
+ * 프롬프트에서 금지한 AI 상투 표현.
+ * 금지어 원본은 prompts/base.ts의 MK_BANNED_WORDS 단일 소스.
+ * "흥미로운"·"할 수밖에 없습니다"는 일반 문맥에서도 흔해 substring 검사에서 오탐이 나므로
+ * 기계 검사에서는 제외하고, 대신 기계로 잡기 쉬운 인사말을 추가한다.
+ */
 const FORBIDDEN_PHRASES = [
-  "결론적으로",
-  "요약하자면",
-  "의 향연",
-  "과언이 아닙니다",
-  "시각적 즐거움",
+  ...MK_BANNED_WORDS.filter(
+    (w) => w !== "흥미로운" && w !== "할 수밖에 없습니다",
+  ),
   "안녕하세요",
   "반갑습니다",
 ];
