@@ -124,7 +124,11 @@ ${context(run)}
 - MK 말투는 유지하되 객관 정보 위주면 voice=light, 실제 경험·감상이 중심이면 full.
 - 이미 제공된 strategy가 있으면 사용자 수정 방향을 우선 유지하고 근거 부족으로 변경이 꼭 필요한 부분만 조정. angle·독자·목차를 초기 값으로 되돌리지 말 것.
 - 핵심 질문·독자·각도·목차를 구체적으로. 영화가 아닌 주제를 영화 리뷰로 만들지 않기.`);
-      run.strategy = parseStrategy(result.strategy);
+      // Tuning values must not discard completed research. Repair what has a safe default, keep the rest strict.
+      const proposed = record(result.strategy);
+      if (proposed.voice !== "full" && proposed.voice !== "light") { proposed.voice = "full"; notice(run, "문체 강도를 판단하지 못해 기본 MK 문체로 작성합니다."); }
+      if (typeof proposed.length === "number" && Number.isFinite(proposed.length)) proposed.length = Math.min(8000, Math.max(500, Math.round(proposed.length)));
+      run.strategy = parseStrategy(proposed);
       const before = run.tasks.length;
       if (allowResearch) enqueueTasks(run, parseTasks(result.tasks));
       if (run.tasks.length > before) { run.researchRounds++; run.stage = "researching"; log(run, "핵심 사실을 보강하기 위해 추가 자료를 확인합니다."); return; }

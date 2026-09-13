@@ -189,3 +189,28 @@ test('invalid generated structure preserves prior work and records a retry stage
   await engine.advanceRun(run); assert.equal(run.stage, 'failed'); assert.equal(run.retryStage, 'drafting');
   assert.equal(run.sources.length, 1); assert.ok(run.error);
 });
+
+test('a strategy serialized as a JSON string is still accepted', () => {
+  const parsed = types.parseStrategy(JSON.stringify(strategy()));
+  assert.equal(parsed.voice, 'light');
+  assert.equal(parsed.outline.length, 1);
+  assert.throws(() => types.parseStrategy('{ not json'), /입력 형식/);
+});
+
+test('an unusable voice or length falls back instead of discarding research', async () => {
+  const run = engine.newRun(randomUUID(), brief()); run.stage = 'planning';
+  queue.push({ strategy: { ...strategy(), voice: '감상 중심', length: 120 }, tasks: [], questions: [] });
+  await engine.advanceRun(run);
+  assert.equal(run.stage, 'drafting');
+  assert.equal(run.strategy.voice, 'full');
+  assert.equal(run.strategy.length, 500);
+  assert.ok(run.notices.some(n => n.includes('기본 MK 문체')));
+});
+
+test('a strategy the model wrapped in a string survives the planning stage', async () => {
+  const run = engine.newRun(randomUUID(), brief()); run.stage = 'planning';
+  queue.push({ strategy: JSON.stringify(strategy()), tasks: [], questions: [] });
+  await engine.advanceRun(run);
+  assert.equal(run.stage, 'drafting');
+  assert.equal(run.strategy.voice, 'light');
+});

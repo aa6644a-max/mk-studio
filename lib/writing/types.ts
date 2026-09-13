@@ -38,6 +38,8 @@ export class WritingError extends Error {
   constructor(message: string, public status = 400) { super(message); }
 }
 export function record(value: unknown): Record<string, unknown> {
+  // Models occasionally serialize a nested object argument as a JSON string. Accept that shape.
+  if (typeof value === "string") { try { value = JSON.parse(value); } catch { throw new WritingError("입력 형식을 확인해주세요."); } }
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new WritingError("입력 형식을 확인해주세요.");
   return value as Record<string, unknown>;
 }
