@@ -264,6 +264,11 @@
 .sw-loading-mark{height:66px;width:66px;display:flex;align-items:center;justify-content:center;background:#edf3df;border-radius:20px;margin-bottom:8px;animation:sw-pulse 2s infinite}
 .sw-loading strong{color:#6e8658;font-size:15px;font-weight:550}.sw-loading>span:last-child{font-size:12px}
 .sw-mobile-tabs{display:none}
+.sw-movie-media-bar{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--sw-line);background:#f8faf1;flex-wrap:wrap}
+.sw-movie-media-bar>div{flex:1;min-width:140px}.sw-movie-media-bar strong{font-size:12px}.sw-movie-media-bar p{font-size:11px;color:#738461;margin:5px 0 0;line-height:1.7}
+.sw-movie-media-bar .sw-secondary{font-size:11px!important;min-height:40px}
+.sw-source-images{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:12px 0}
+.sw-source-images:empty{display:none}.sw-source-images>a{display:flex;flex-direction:column;gap:4px;text-decoration:none;font-size:9px}.sw-source-images img{width:100%;height:65px;object-fit:cover;border-radius:5px;background:#e8edde}.sw-source-images>a:first-child img{object-fit:contain}
 
 @media(min-width:1600px){.sw-scroll{padding-top:45px}.sw-input-wrap{margin-top:15px}.sw-intro{margin-bottom:34px}.sw-intro h2{font-size:42px}.sw-creation-layout{grid-template-columns:330px minmax(0,1fr)}}
 @media(max-width:1200px){.sw-scroll{padding:26px 24px}.sw-creation-layout{grid-template-columns:240px minmax(0,1fr);gap:17px}.sw-aside-copy{padding:0 23px 23px}.sw-aside-copy h3{font-size:24px}.sw-creation-aside>.sw-visual{transform:scale(.9)}.sw-aside-footer{padding:16px 12px;font-size:9px}.sw-aside-footer svg{width:12px}.sw-composer-body{padding:24px}.sw-flow-text small{display:none}.sw-layout{grid-template-columns:minmax(0,1fr) 265px;gap:16px}.sw-progress>.sw-visual{width:155px;transform:scale(.72);margin-right:-10px}.sw-progress h3{font-size:21px}.sw-progress-copy{padding-left:22px}.sw-card{padding:18px}.sw-composer,.sw-result{padding:0}.sw-result-toolbar>.sw-toolbar{width:100%;justify-content:flex-end}}

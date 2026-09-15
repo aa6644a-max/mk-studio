@@ -44,6 +44,8 @@ rss.getRssLatestText = async () => 'MK의 실제 문체 표본입니다. 짧은 
 sheets.getProfile = async () => null;
 const engine = require('../lib/writing/engine.ts');
 const render = require('../lib/writing/render.ts');
+const media = require('../lib/writing/movie-media.ts');
+const tmdb = require('../lib/tmdb.ts');
 const { isPublicIPv4, readPublicPage } = require('../lib/writing/read-url.ts');
 const { checkOrigin } = require('../lib/writing/http.ts');
 const { NextRequest } = require('next/server');
@@ -168,7 +170,7 @@ test('full pipeline: research, original source follow-up, experience question, M
     await engine.advanceRun(run); assert.equal(run.stage, 'drafting');
     queue.push(article()); await engine.advanceRun(run); assert.equal(run.repairs, 1);
     queue.push({ issues: [] }); await engine.advanceRun(run); assert.equal(run.stage, 'ready');
-    assert.match(run.persona.version, /^smart-write-v1:/);
+    assert.match(run.persona.version, /^smart-write-v2:/);
     const draftCalls = calls.filter(c => c.tool_choice.name === 'write_article');
     assert.equal(draftCalls.length, 2);
     for (const call of draftCalls) { assert.match(call.system, /단락 호흡/); assert.match(call.messages[0].content, /진행자로 참여/); }
@@ -214,3 +216,82 @@ test('a strategy the model wrapped in a string survives the planning stage', asy
   assert.equal(run.stage, 'drafting');
   assert.equal(run.strategy.voice, 'light');
 });
+
+const movieDetail = () => ({ title: '테스트 영화', runtime: 110, posterUrl: 'https://image.tmdb.org/t/p/w500/poster.jpg', backdropUrls: Array.from({length: 7}, (_, i) => `https://image.tmdb.org/t/p/original/still${i}.jpg`) });
+function movieRun() {
+  const run = engine.newRun(randomUUID(), brief()); run.stage = 'ready'; run.strategy = strategy();
+  const src = {id:'movie-1',kind:'tmdb',title:'테스트 영화',url:'https://www.themoviedb.org/movie/27205',text:'{"runtime":110}',retrievedAt:'2026-09-14T00:00:00Z'};
+  src.images = media.movieImages(src.id,src.title,movieDetail());run.sources.push(src);
+  run.article=article();
+  run.article.sections = ['intro','synopsis','acting','direction','theme','visuals','outro'].map((id,i) => ({...article().sections[0],id,heading: i===0||i===6?'':id==='synopsis'?'줄거리':id,paragraphs:[`본문 ${i} 첫 문단입니다. 두 번째 문장입니다.`,`본문 ${i} 다음 문단입니다. 여운이 남습니다.`],facts:[],sourceIds:['movie-1'],imageIds:i===0?['attachment-2']:[]}));
+  return run;
+}
+
+test('TMDB image catalog caps at five stills, deduplicates files and rejects arbitrary image URLs', () => {
+  const detail=movieDetail();detail.backdropUrls.unshift(detail.backdropUrls[0],'https://evil.example/pic.jpg','https://image.tmdb.org@evil.example/pic.jpg','http://image.tmdb.org/t/p/original/a.jpg');
+  const images=media.movieImages('movie-1','제목 <script>',detail);
+  assert.equal(images.length,6);assert.equal(images.filter(i=>i.kind==='still').length,5);assert.equal(new Set(images.map(i=>i.url)).size,6);
+  assert.equal(media.safeTmdbImageUrl('https://image.tmdb.org/t/p/original/a.jpg?redirect=evil'),'');
+  assert.equal(media.safeTmdbImageUrl('https://image.tmdb.org.evil.example/t/p/original/a.jpg'),'');
+});
+
+test('movie sources retain images while legacy source hydration preserves factual snapshots', async () => {
+  const old=tmdb.getMovieDetails,key=process.env.TMDB_API_KEY;process.env.TMDB_API_KEY='test';let calls=0;
+  tmdb.getMovieDetails=async ()=>{calls++;return movieDetail();};
+  try {
+    const src=await tools.movieSource({id:27205,title:'테스트 영화',year:'2010',mediaType:'movie',posterUrl:null});
+    assert.equal(src.images.length,6);assert.equal(JSON.parse(src.text).runtime,110);
+    const legacy={...src,id:'legacy',images:undefined,text:'preserve old source',retrievedAt:'2020-01-01'};
+    await tools.hydrateMovieImages([legacy]);
+    assert.equal(legacy.text,'preserve old source');assert.equal(legacy.retrievedAt,'2020-01-01');assert.equal(legacy.images.length,6);
+    assert.ok(legacy.images.every(i=>i.id.startsWith('legacy-')));
+    await tools.hydrateMovieImages([legacy]);assert.equal(calls,2);
+  } finally {tmdb.getMovieDetails=old;if(key)process.env.TMDB_API_KEY=key;else delete process.env.TMDB_API_KEY;}
+});
+
+test('movie placement restores omissions and spreads stills without changing prose or uploaded photos', () => {
+  const run=movieRun();const before=run.article.sections.map(s=>s.paragraphs.join('\n'));
+  // Simulate all stills being clustered at the end by the model.
+  run.article.sections.at(-1).imageIds=run.sources[1].images.map(i=>i.id);
+  media.placeMovieImages(run);
+  assert.deepEqual(run.article.sections.map(s=>s.paragraphs.join('\n')),before);
+  assert.ok(run.article.sections[0].imageIds.includes('attachment-2'));
+  assert.ok(run.article.sections[0].imageIds.includes('movie-1-poster-1'));
+  assert.ok(run.article.sections[1].imageIds.includes('movie-1-still-1'));
+  assert.equal(run.article.sections.at(-1).imageIds.length,0);
+  const stillSections=run.article.sections.filter(s=>s.imageIds.some(id=>id.includes('-still-')));
+  assert.equal(stillSections.length,5);
+  const placed=JSON.stringify(run.article);media.placeMovieImages(run);assert.equal(JSON.stringify(run.article),placed);
+  const html=render.renderArticle(run);
+  assert.equal((html.match(/<img /g)||[]).length,6);assert.match(html,/이미지 출처: TMDB/);assert.match(html,/현장.jpg/);
+  assert.ok(!render.lintArticle(run).some(i=>i.message.includes('이미지')));
+});
+
+test('short articles interleave stills with paragraphs and never create extra prose to fit photos', () => {
+  const run=movieRun();run.article.sections=run.article.sections.slice(0,1);
+  media.placeMovieImages(run);
+  assert.equal(run.article.sections[0].paragraphs.length,2);
+  assert.equal(run.article.sections[0].imageIds.filter(id=>id.includes('-still-')).length,2);
+  const html=render.renderArticle(run);
+  assert.ok(html.indexOf('본문 0 첫')<html.indexOf('still0.jpg'));
+  assert.ok(html.indexOf('still0.jpg')<html.indexOf('본문 0 다음'));
+  assert.ok(html.indexOf('본문 0 다음')<html.indexOf('still1.jpg'));
+});
+
+test('comparison media remains within the matching film; unrelated film sources are not inserted', () => {
+  const run=movieRun(),second={...run.sources[1],id:'movie-2'};second.images=media.movieImages(second.id,'다른 영화',movieDetail());
+  run.sources.push(second);run.article.sections[3].sourceIds=['movie-2'];
+  media.placeMovieImages(run);
+  assert.ok(run.article.sections[3].imageIds.some(id=>id.startsWith('movie-2-')));
+  assert.ok(!run.article.sections[3].imageIds.some(id=>id.startsWith('movie-1-')));
+  assert.ok(run.article.sections.filter(s=>s.id!=='direction').every(s=>!s.imageIds.some(id=>id.startsWith('movie-2-'))));
+});
+
+test('completed drafts can receive movie images without AI calls or content changes', async () => {
+  const run=movieRun(),before=render.articleText(run.article),count=calls.length;
+  await engine.restoreMovieImages(run);
+  assert.equal(render.articleText(run.article),before);assert.equal(calls.length,count);assert.equal(run.stage,'ready');
+  assert.equal((render.renderArticle(run).match(/<img /g)||[]).length,6);
+  run.stage='drafting';await assert.rejects(engine.restoreMovieImages(run),/완성/);
+});
+

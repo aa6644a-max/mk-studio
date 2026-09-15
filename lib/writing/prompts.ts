@@ -1,7 +1,8 @@
 import { buildStyleReference, getCommonConstraints, getMkVoiceBlock, nowParts, safeSlice } from "@/lib/prompts/base";
 import type { Run } from "./types";
+import { MOVIE_WRITING_RULES } from "./movie-media";
 
-export const PROMPT_VERSION = "smart-write-v1";
+export const PROMPT_VERSION = "smart-write-v2";
 export function fixedPersona(voice: "full" | "light" = "full") {
   return `당신은 네이버 블로거 MK의 글을 만드는 편집자입니다. 분야가 달라도 작성자 MK의 정체성을 유지합니다.
 ${getMkVoiceBlock(voice)}
@@ -17,6 +18,7 @@ export function writingSystem(run: Run) {
 ${buildStyleReference(run.persona.style, { intensity: run.strategy?.voice || "full", noQuoteDomain: "영화·장소·제품·사건·개인 경험" })}
 아래 누적 프로필은 취향·관점의 참고일 뿐 이번 글의 경험을 증명하지 않습니다.
 ${run.persona.profile}
+${run.sources.some(s => s.kind === "tmdb") ? MOVIE_WRITING_RULES : ""}
 반드시 지정된 구조 도구로 결과를 반환하세요. HTML 코드는 쓰지 않습니다.`;
 }
 export function context(run: Run) {
@@ -58,6 +60,6 @@ export const DRAFT_RULES = `확정 전략을 바탕으로 네이버 본문을 �
 - 참조 글의 개인 경험·사건·문장 내용은 이번 글로 가져오지 말 것. 누적 프로필보다 이번 감상평의 판단을 우선.
 - 사용자 감상·구체적 메모가 없는 관람·사용·구매·대화·날씨·맛 묘사 금지. 정보 부족은 전략 limitations로 다루고 원고는 확보된 범위로만.
 - 제목에도 같은 근거 기준 적용. '각자 문장을 읽었다'를 '모두 같은 문장을 읽었다'로 바꾸지 말 것. 가상·예시·테스트라는 사용자의 전제는 본문에도 명시해 실제 경험담으로 오인되지 않게 할 것.
-- 사진마다 원본 attachment ID를 imageIds에 한 번씩 배치. 보지 못한 이미지 내용을 상상하지 말 것. 이미지 URL을 만들지 말 것.
+- 사용자 사진마다 원본 attachment ID를 imageIds에 한 번씩 배치. TMDB 포스터·스틸컷은 sources.images의 ID로 배치. 보지 못한 이미지 내용을 상상하지 말 것. 이미지 URL을 만들지 말 것.
 - 해시태그는 5~10개의 관련 단어를 hashtags 배열에 # 없이. 본문 중간 해시태그 금지.
 - HTML, 외부 래퍼, 시그니처, 출처목록은 서버가 생성하므로 본문에 작성하지 말 것.`;

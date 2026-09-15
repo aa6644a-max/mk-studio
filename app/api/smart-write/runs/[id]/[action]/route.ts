@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { mutateRun } from "@/lib/writing/repository";
-import { advanceRun, answerRun } from "@/lib/writing/engine";
+import { advanceRun, answerRun, restoreMovieImages } from "@/lib/writing/engine";
 import { owner, jsonBody, json, view, errorResponse } from "@/lib/writing/http";
 import { parseStrategy, WritingError } from "@/lib/writing/types";
 
@@ -9,12 +9,13 @@ export const maxDuration = 210;
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string; action: string }> }) {
   try {
     const { id, action } = await params;
-    if (!["advance", "answers", "strategy", "retry", "cancel"].includes(action)) throw new WritingError("지원하지 않는 작업입니다.", 404);
+    if (!["advance", "answers", "strategy", "retry", "cancel", "images"].includes(action)) throw new WritingError("지원하지 않는 작업입니다.", 404);
     const body = await jsonBody(req);
     if (!Number.isInteger(body.version) || (body.version as number) < 0) throw new WritingError("작업 버전이 올바르지 않습니다.");
     const run = await mutateRun(owner(req).id, id, body.version as number, async run => {
       if (action === "advance") await advanceRun(run);
       if (action === "answers") await answerRun(run, body.answers);
+      if (action === "images") await restoreMovieImages(run);
       if (action === "strategy") {
         if (!run.strategy || run.stage === "cancelled" || run.stage === "awaiting_input") throw new WritingError("추가 질문을 마친 뒤 방향을 수정해주세요.", 409);
         run.strategy = parseStrategy(body.strategy);

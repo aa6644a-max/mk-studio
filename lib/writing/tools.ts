@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { getMovieDetails, getTvDetails, searchMovies, searchTv, isTmdbConfigured } from "@/lib/tmdb";
 import { htmlToStyleText } from "@/lib/style-text";
 import { readPublicPage } from "./read-url";
+import { movieImages } from "./movie-media";
 import { publicUrl, record, str, WritingError, type ResearchTask, type Source, type Question, type ToolId, type MovieCandidate } from "./types";
 
 export const TOOL_CATALOG: Record<ToolId, { label: string; description: string; wiki: string; available: () => boolean }> = {
@@ -40,7 +41,20 @@ export async function movieSource(candidate: MovieCandidate): Promise<Source> {
   // Legacy TV client estimates these when unavailable; do not present them as verified facts.
   if (candidate.mediaType === "tv") { delete data.episodeRuntime; delete data.totalWatchTime; }
   delete data.backdropUrls; delete data.posterUrl;
-  return source({ kind: "tmdb", title: `${candidate.title} (${candidate.year || candidate.mediaType})`, url: `https://www.themoviedb.org/${candidate.mediaType}/${candidate.id}`, text: JSON.stringify(data), note: "작품 메타데이터. 실제 장면 분석이나 MK의 시청 경험을 증명하지 않습니다." });
+  const result = source({ kind: "tmdb", title: `${candidate.title} (${candidate.year || candidate.mediaType})`, url: `https://www.themoviedb.org/${candidate.mediaType}/${candidate.id}`, text: JSON.stringify(data), note: "작품 메타데이터와 TMDB 제공 이미지. 이미지의 장면 내용이나 MK의 시청 경험은 확인하지 않았습니다." });
+  result.images = movieImages(result.id, candidate.title, detail);
+  return result;
+}
+
+/** Upgrade saved sources from before image support without replacing their factual snapshot. */
+export async function hydrateMovieImages(sources: Source[], retryEmpty = false) {
+  for (const s of sources.filter(s => s.kind === "tmdb" && (s.images === undefined || (retryEmpty && !s.images.length)))) {
+    const url = new URL(publicUrl(s.url || ""));
+    const match = url.pathname.match(/^\/(movie|tv)\/(\d+)$/);
+    if (url.hostname !== "www.themoviedb.org" || !match) throw new WritingError("확인된 TMDB 작품 주소가 필요합니다.");
+    const fresh = await movieSource({ id: Number(match[2]), mediaType: match[1] as "movie" | "tv", title: s.title, year: "", posterUrl: null });
+    s.images = (fresh.images || []).map((i, n) => ({ ...i, id: `${s.id}-${i.kind}-${n + 1}` }));
+  }
 }
 export async function executeTool(task: ResearchTask): Promise<{ sources: Source[]; question?: Question; followups?: ResearchTask[] }> {
   if (!TOOL_CATALOG[task.tool].available()) throw new WritingError(`${TOOL_CATALOG[task.tool].label} 연결이 설정되지 않았습니다.`);
