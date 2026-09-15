@@ -9,13 +9,20 @@
  * - MK LINK 헤더 라벨·협업 시그니처 라인 제거 (문체 샘플 오염 방지)
  */
 
-/** 참조 텍스트에서 제거할 시스템 삽입 라인 (wrapHtml 헤더/시그니처 잔재). */
-const SIGNATURE_LINE_PATTERNS = [
-  /MK LINK/i,
-  /협업 문의/,
-  /제품 협찬/,
-  /콘텐츠 제휴/,
-  /편하게 연락주세요/,
+/**
+ * 참조 텍스트에서 제거할 시스템 삽입 문구 (wrapHtml 헤더/시그니처 잔재).
+ *
+ * 줄 단위로 통째 삭제하면 안 된다. 네이버 RSS의 description은 <p>·<br>가 하나도 없는
+ * 평문 한 덩어리로 오기 때문에, 맨 앞 "MK LINK REVIEW" 헤더 하나 때문에 글 전체가
+ * 한 줄로 묶여 사라졌다 (실측: 최근 50개 중 48개가 빈 문자열 → 문체 참조 무력화).
+ * 그래서 줄이 아니라 해당 문구만 잘라낸다.
+ */
+const SIGNATURE_PATTERNS: RegExp[] = [
+  // "MK LINK REVIEW"처럼 카테고리 라벨(LOCAL·DAILY·REVIEW·PREVIEW·CURATION·AI·GV 등)까지 붙는 헤더
+  /MK\s*LINK(?:\s+[A-Z]{2,12}\b)?/g,
+  /MK\s*LINK/gi,
+  // 협업 시그니처는 문구부터 줄 끝까지
+  /(?:협업 문의|제품 협찬|콘텐츠 제휴|편하게 연락주세요)[^\n]*/g,
 ];
 
 function decodeEntities(s: string): string {
@@ -44,11 +51,11 @@ export function htmlToStyleText(html: string): string {
   // 나머지 태그 제거
   s = s.replace(/<[^>]+>/g, " ");
   s = decodeEntities(s);
+  for (const re of SIGNATURE_PATTERNS) s = s.replace(re, " ");
 
   const lines = s
     .split("\n")
-    .map((l) => l.replace(/[ \t ]+/g, " ").trim())
-    .filter((l) => !SIGNATURE_LINE_PATTERNS.some((re) => re.test(l)));
+    .map((l) => l.replace(/[ \t ]+/g, " ").trim());
 
   // 연속 빈 줄은 하나로 (빈 줄 = 단락 경계 신호)
   const out: string[] = [];

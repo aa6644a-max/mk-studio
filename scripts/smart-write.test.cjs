@@ -39,7 +39,9 @@ const types = require('../lib/writing/types.ts');
 const repository = require('../lib/writing/repository.ts');
 const tools = require('../lib/writing/tools.ts');
 const rss = require('../lib/rss-client.ts');
+const styleText = require('../lib/style-text.ts');
 const sheets = require('../lib/google-sheets.ts');
+const realGetRssLatestText = rss.getRssLatestText; // 엔진 테스트용 스텁을 덮기 전에 원본을 보관한다.
 rss.getRssLatestText = async () => 'MK의 실제 문체 표본입니다. 짧은 호흡을 유지해요.';
 sheets.getProfile = async () => null;
 const engine = require('../lib/writing/engine.ts');
@@ -295,3 +297,29 @@ test('completed drafts can receive movie images without AI calls or content chan
   run.stage='drafting';await assert.rejects(engine.restoreMovieImages(run),/완성/);
 });
 
+test('plain-text RSS descriptions keep their body when signatures are stripped', () => {
+  const header=styleText.htmlToStyleText('MK LINK LOCAL 안남숙 작가 개인전 소개 얼마 전 호작질미술관에서 진행 중인 전시를 소개해드린 적이 있는데요.');
+  assert.ok(header.startsWith('안남숙 작가'));
+  assert.ok(!/MK\s*LINK/i.test(header));
+  const signed=styleText.htmlToStyleText('<p>본문 <b>핵심 구절</b>입니다.</p><p>협업 문의 메일로 주세요</p>');
+  assert.ok(signed.includes('본문 **핵심 구절**입니다.'));
+  assert.ok(!signed.includes('협업 문의'));
+});
+
+test('style reference survives the MK LINK header and ranks posts about the same subject first', async () => {
+  // 네이버 RSS의 description은 태그가 없는 평문 300~400자로 온다. 그 조건을 그대로 재현한다.
+  const body=name=>`MK LINK REVIEW ${name} 이번 작품은 생각보다 여운이 길게 남았는데요. 그래서 조금 더 적어보려 합니다. `.repeat(6);
+  const item=(title,name)=>`<item><title><![CDATA[${title}]]></title><description><![CDATA[${body(name)}]]></description></item>`;
+  const feed=`<rss><channel>${[item('대구 플리마켓 북성로 대화장날 후기','플리마켓'),item('경주기행 리뷰 | 실상은 가족의 이야기','경주기행'),item('영화 인턴 원작 복습 리뷰','인턴')].join('')}</channel></rss>`;
+  const realFetch=global.fetch;
+  global.fetch=async()=>({ok:true,status:200,text:async()=>feed});
+  try{
+    const keywords=rss.styleKeywordsForTopic('경주기행 봤는데 가족 이야기가 좋았어요');
+    assert.ok(keywords.includes('경주기행'));
+    const text=await realGetRssLatestText('shock552',3,keywords);
+    assert.ok(!/MK\s*LINK/i.test(text));
+    assert.ok(text.includes('여운이 길게 남았는데요'));
+    assert.ok(text.indexOf('경주기행 리뷰')<text.indexOf('플리마켓'));
+    assert.ok(text.length>=800);
+  } finally { global.fetch=realFetch; }
+});

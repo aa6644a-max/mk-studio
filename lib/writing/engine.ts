@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createHash, randomUUID } from "node:crypto";
-import { getRssLatestText } from "@/lib/rss-client";
+import { getRssLatestText, styleKeywordsForTopic } from "@/lib/rss-client";
 import { getProfile } from "@/lib/google-sheets";
 import { safeSlice } from "@/lib/prompts/base";
 import { articleText, lintArticle } from "./render";
@@ -49,13 +49,15 @@ async function bounded<T>(promise: Promise<T>, fallback: T): Promise<T> {
 }
 async function loadPersona(run: Run) {
   const [style, profiles] = await Promise.all([
-    bounded(getRssLatestText("shock552", 3, run.brief.topic.split(/\s+/).slice(0, 3)), ""),
+    bounded(getRssLatestText("shock552", 5, styleKeywordsForTopic(run.brief.topic)), ""),
     bounded(Promise.all([getProfile("movie"), getProfile("photo"), getProfile("info")]), [null, null, null]),
   ]);
   run.persona.style = safeSlice(style, 6000);
   run.persona.profile = profiles.filter(Boolean).map(p => `[${p!.group}] ${safeSlice(p!.profileText, 600)}\n${(p!.quotes || []).slice(0, 5).join("\n")}`).join("\n");
   run.persona.version = `${PROMPT_VERSION}:${createHash("sha256").update(fixedPersona() + run.persona.style + run.persona.profile).digest("hex").slice(0, 12)}`;
+  // buildStyleReference가 원문을 그대로 따르게 하는 기준선이 800자다. 그 아래면 정적 예시로 대체되므로 알린다.
   if (!style) notice(run, "과거 블로그 원문을 불러오지 못해 기존 MK 문체 기준과 기본 예시를 적용했습니다.");
+  else if (run.persona.style.length < 800) notice(run, "과거 블로그 원문을 충분히 불러오지 못해 기본 문체 예시를 함께 적용했습니다.");
 }
 function taskKey(t: ResearchTask) { return `${t.tool}:${t.query.trim()}:${t.tool === "tmdb_search" ? t.mediaType : ""}`; }
 export function enqueueTasks(run: Run, tasks: ResearchTask[]) {

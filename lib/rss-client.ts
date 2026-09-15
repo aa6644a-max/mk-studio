@@ -25,7 +25,11 @@ function stripHtml(html: string): string {
     .trim();
 }
 
-/** postType → RSS 문체 참조 우선 키워드 (같은 계열 글 우선 선별). */
+/**
+ * postType → RSS 문체 참조 우선 키워드 (같은 계열 글 우선 선별).
+ * 배열 앞쪽일수록 변별력이 높은 키워드를 둔다 — titleScore가 순서를 가중치로 쓴다.
+ * ("후기"는 영화 리뷰·마켓·방문기에 모두 붙으므로 "영화"·"리뷰"보다 뒤에 둔다.)
+ */
 export const TYPE_STYLE_KEYWORDS: Record<string, string[]> = {
   review: ["영화", "리뷰", "후기", "개봉"],
   preview: ["영화", "개봉", "기대", "프리뷰"],
@@ -40,6 +44,58 @@ export const TYPE_STYLE_KEYWORDS: Record<string, string[]> = {
 interface RSSPost {
   title: string;
   text: string;
+}
+
+/**
+ * 제목이 preferKeywords와 얼마나 맞는지 점수화. 배열 앞쪽 키워드일수록 가중치가 높다.
+ * 단순 포함 여부(매칭/비매칭)로만 나누면 "플리마켓 후기"와 "영화 인턴 리뷰"가 동급이 되어
+ * 최신순에 밀린 쪽이 문체 참조에서 빠진다.
+ */
+function titleScore(title: string, preferKeywords: string[]): number {
+  let score = 0;
+  preferKeywords.forEach((keyword, i) => {
+    if (keyword && title.includes(keyword)) score += preferKeywords.length - i;
+  });
+  return score;
+}
+
+/**
+ * 주제에서 제목 매칭에 쓸 소재어를 뽑는다.
+ * 같은 작품·장소를 다룬 과거 글이 있으면 그게 가장 좋은 문체 참조다.
+ * 한국어는 조사가 붙어("경주기행을") 그대로는 제목에 안 걸리므로 끝 한 글자를 뗀 형태도 함께 넣는다.
+ */
+function topicTerms(topic: string, limit = 4): string[] {
+  const terms: string[] = [];
+  let count = 0;
+  for (const raw of topic.split(/\s+/)) {
+    if (count >= limit) break;
+    const word = raw.replace(/[^가-힣A-Za-z0-9]/g, "");
+    if (word.length < 2) continue;
+    count++;
+    terms.push(word);
+    if (word.length >= 3) terms.push(word.slice(0, -1));
+  }
+  return terms;
+}
+
+/**
+ * 주제 문장에서 문체 참조용 키워드 세트를 고른다.
+ * postType이 아직 정해지지 않은 단계(AI 맞춤 작성의 첫 분석)에서 쓴다.
+ * 같은 소재를 다룬 과거 글을 최우선으로 두고, 그 뒤에 같은 계열
+ * (TYPE_STYLE_KEYWORDS 중 주제에 가장 많이 걸리는 그룹) 글을 둔다.
+ * 둘 다 없으면 빈 배열이 되어 최신순으로 떨어진다.
+ */
+export function styleKeywordsForTopic(topic: string): string[] {
+  let best: string[] = [];
+  let bestScore = 0;
+  for (const keywords of Object.values(TYPE_STYLE_KEYWORDS)) {
+    const score = titleScore(topic, keywords);
+    if (score > bestScore) {
+      bestScore = score;
+      best = keywords;
+    }
+  }
+  return [...topicTerms(topic), ...best];
 }
 
 async function parseRSS(blogId: string): Promise<RSSPost[]> {
@@ -79,11 +135,11 @@ export async function getRssLatestText(
 
   let selected = posts;
   if (preferKeywords.length) {
-    const matched = posts.filter((p) =>
-      preferKeywords.some((k) => p.title.includes(k)),
-    );
-    const rest = posts.filter((p) => !matched.includes(p));
-    selected = [...matched, ...rest];
+    // 점수 높은 순, 동점이면 원래 순서(최신순)를 유지한다.
+    selected = posts
+      .map((post, index) => ({ post, index, score: titleScore(post.title, preferKeywords) }))
+      .sort((a, b) => b.score - a.score || a.index - b.index)
+      .map((x) => x.post);
   }
 
   return selected
