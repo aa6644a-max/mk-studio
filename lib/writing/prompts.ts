@@ -47,14 +47,17 @@ export const taskSchema = object({ tool: { type: "string", enum: ["naver_web", "
 export const strategySchema = object({ domain: text, intent: text, audience: text, question: text, angle: text, keywords: list(text, 8), outline: list(text), length: { type: "integer", minimum: 500, maximum: 8000 }, voice: { type: "string", enum: ["full", "light"] }, limitations: list(text) });
 export const analysisSchema = object({ tasks: list(taskSchema, 6), rationale: text });
 export const planSchema = object({ strategy: strategySchema, tasks: list(taskSchema, 6), questions: list(object({ text, kind: { type: "string", enum: ["experience", "clarification"] }, options: list(text, 4) }), 3) });
-export const articleSchema = object({ titles: list(text, 5), sections: list(object({ id: text, heading: text, paragraphs: list(text, 20), sourceIds: list(text, 30), experienceIds: list(text, 20), imageIds: list(text, 20), facts: list(object({ label: text, value: text }), 20) }), 16), hashtags: list(text, 10) });
+export const articleSchema = object({ titles: list(text, 5), sections: list(object({ id: text, heading: text, paragraphs: list(text, 20), sourceIds: list(text, 30), experienceIds: list(text, 20), imageIds: list(text, 20), facts: list(object({ label: text, value: text }), 20), tipTitle: text, tipBody: text, highlight: text }), 16), hashtags: list(text, 10) });
 export const auditSchema = object({ issues: list(object({ kind: { type: "string", enum: ["evidence", "experience", "voice"] }, severity: { type: "string", enum: ["error", "warning"] }, message: text, sectionId: text }), 20) });
 
 export const DRAFT_RULES = `확정 전략을 바탕으로 네이버 본문을 작성하세요.
 - 제목 후보 정확히 5개, 각각 30자 이내, 핵심 키워드 앞 배치.
 - 소제목 개수·문단 수는 논점과 근거량에 맞춤. 도입과 마무리도 각각 sections 항목으로 넣고 heading은 비워도 됨.
 - paragraphs는 문단당 2~3문장. 단락 핵심 구절 1~2개만 **강조**. 상투적 도입·마무리 반복 금지.
-- facts는 날짜·조건 등 실제 정보가 있을 때만 2열 표용 항목으로. 표가 불필요하면 빈 배열.
+- facts는 날짜·조건 등 실제 정보가 있을 때만 정보 항목으로. 표가 불필요하면 빈 배열.
+- 두 작품 비교처럼 항목이 늘어나도 한 섹션에 10개를 넘기지 말 것. 독자가 먼저 볼 핵심만 추리고, 나머지는 본문 문장으로 풀 것.
+- tipTitle·tipBody는 팁·주의사항·부가정보·반전 힌트가 실제로 있는 섹션에만. 없으면 둘 다 빈 문자열. 글 전체에서 1~2회만 쓰고 남발하지 말 것.
+- highlight는 그 섹션에서 가장 인상적인 한 문장(명대사·핵심 요약·촌철살인)을 강조하고 싶을 때만. 없으면 빈 문자열. 모든 섹션에 넣지 말고 1~2군데만.
 - 각 섹션의 외부 사실은 sourceIds에 제공된 실제 ID를 연결. 경험은 experienceIds에 실제 사용자 근거 ID 연결.
 - 각 사실이 근거 본문에서 확인돼야 함. sourceId만 붙여 추측을 정당화하지 말 것. 검색 요약만으로 세부 조건·인용·장면을 만들지 말 것.
 - 참조 글의 개인 경험·사건·문장 내용은 이번 글로 가져오지 말 것. 누적 프로필보다 이번 감상평의 판단을 우선.

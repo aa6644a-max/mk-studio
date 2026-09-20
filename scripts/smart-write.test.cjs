@@ -53,7 +53,7 @@ const { checkOrigin } = require('../lib/writing/http.ts');
 const { NextRequest } = require('next/server');
 const brief = () => types.parseBrief({ topic: '전시 정보 정리', experience: '진행자로 참여했습니다. 마지막 질문이 오래 남았어요.', audience: '', length: 'short', attachments: [{ kind: 'document', name: '공지.txt', text: '전시 기간 9월 15일부터 30일까지. 입장료 무료.' }, { kind: 'photo', name: '현장.jpg', text: '전시 입구에서 본 안내판' }] });
 const strategy = () => ({ domain: '문화', intent: '정보 안내', audience: '관람객', question: '언제 방문할까요?', angle: '실제 공지를 바탕으로 관람 준비를 돕기', keywords: ['전시', '관람'], outline: ['방문 준비'], length: 500, voice: 'light', limitations: [] });
-const article = () => ({ titles: ['전시 관람 안내', '전시 방문 준비', '전시 일정 정리', '전시를 보는 방법', '전시 입장 정보'], sections: [{ id: 'intro', heading: '방문 준비', paragraphs: Array.from({ length: 5 }, () => '이번 전시는 공지에 안내된 일정에 맞춰 살펴보면 좋겠습니다. **입장 정보를 먼저 확인**하고 내게 맞는 시간을 골라 보는 것도 한 방법이겠죠.'), sourceIds: ['attachment-1'], experienceIds: [], imageIds: ['attachment-2'], facts: [{ label: '입장료', value: '무료' }] }], hashtags: ['전시', '문화', '관람', '일정', '안내'] });
+const article = () => ({ titles: ['전시 관람 안내', '전시 방문 준비', '전시 일정 정리', '전시를 보는 방법', '전시 입장 정보'], sections: [{ id: 'intro', heading: '방문 준비', paragraphs: Array.from({ length: 5 }, () => '이번 전시는 공지에 안내된 일정에 맞춰 살펴보면 좋겠습니다. **입장 정보를 먼저 확인**하고 내게 맞는 시간을 골라 보는 것도 한 방법이겠죠.'), sourceIds: ['attachment-1'], experienceIds: [], imageIds: ['attachment-2'], facts: [{ label: '입장료', value: '무료' }], tipTitle: '', tipBody: '', highlight: '' }], hashtags: ['전시', '문화', '관람', '일정', '안내'] });
 
 test('mixed attachments preserve topic, experience and separate sources; invalid inputs fail', () => {
   const b = brief();
@@ -119,6 +119,33 @@ test('renderer escapes all model content and only renders attached photo markers
   assert.match(html, /<b>강조<\/b>/);
   assert.match(html, /현장.jpg/);
   assert.equal((html.match(/MK LINK \| 협업 문의/g) || []).length, 1);
+});
+
+test('facts render as one stacked icon box; tip and highlight appear only when filled, always escaped', () => {
+  const run = engine.newRun(randomUUID(), brief()); run.article = article(); run.strategy = strategy();
+  const section = run.article.sections[0];
+  section.facts = [{ label: '원제', value: 'The Intern' }, { label: '러닝타임', value: '121분' }, { label: '입장료', value: '무료' }];
+  section.tipTitle = '<b>제목</b>의 숨은 뜻';
+  section.tipBody = '원제는 **다른 뜻**도 담고 있습니다.<script>alert(1)</script>';
+  section.highlight = '가장 오래 남은 문장 <img src=x onerror=alert(1)>';
+  const html = render.renderArticle(run);
+  assert.equal((html.match(/<table[^>]*bgcolor="#f8f9fa"/g) || []).length, 2); // 정보 상자 1 + 팁 상자 1
+  assert.equal((html.match(/<p style="margin:0">/g) || []).length, 3);
+  assert.ok(html.includes('📽️ <b>원제</b>'));
+  assert.ok(html.includes('⏳ <b>러닝타임</b>'));
+  assert.ok(html.includes('📌 <b>입장료</b>'));
+  assert.match(html, /border-left:5px solid #1a2e4a/);
+  assert.match(html, /💡 <b>&lt;b&gt;제목&lt;\/b&gt;/);
+  assert.match(html, /<b>다른 뜻<\/b>/);
+  assert.ok(!html.includes('<script>'));
+  assert.ok(!html.includes('<img src=x'));
+  const empty = engine.newRun(randomUUID(), brief()); empty.article = article(); empty.strategy = strategy();
+  const bare = render.renderArticle(empty);
+  assert.ok(!bare.includes('💡'));
+  assert.ok(!bare.includes('border-left:5px solid #1a2e4a'));
+  section.facts = Array.from({ length: 11 }, (_, i) => ({ label: `항목 ${i}`, value: '값' }));
+  const issue = render.lintArticle(run).find(i => i.message.includes('정보표 항목'));
+  assert.equal(issue.severity, 'warning');
 });
 
 test('quality checks unknown sources, empty experience, missing photos and persona violations', () => {
@@ -287,6 +314,19 @@ test('comparison media remains within the matching film; unrelated film sources 
   assert.ok(run.article.sections[3].imageIds.some(id=>id.startsWith('movie-2-')));
   assert.ok(!run.article.sections[3].imageIds.some(id=>id.startsWith('movie-1-')));
   assert.ok(run.article.sections.filter(s=>s.id!=='direction').every(s=>!s.imageIds.some(id=>id.startsWith('movie-2-'))));
+});
+
+test('comparison posters never stack: each film poster lands in its own section', () => {
+  const run=movieRun(),second={...run.sources[1],id:'movie-2'};second.images=media.movieImages(second.id,'원작 영화',movieDetail());
+  run.sources.push(second);
+  // 비교 리뷰에서는 도입 구역이 두 작품을 모두 참조한다. 이때 포스터 2장이 같은 구역에 쌓였다.
+  run.article.sections[0].sourceIds=['movie-1','movie-2'];
+  media.placeMovieImages(run);
+  const posters=id=>run.sources.flatMap(s=>s.images||[]).some(i=>i.id===id&&i.kind==='poster');
+  for(const s of run.article.sections) assert.ok(s.imageIds.filter(posters).length<=1,`${s.id}에 포스터가 겹쳤습니다`);
+  assert.equal(run.article.sections.flatMap(s=>s.imageIds).filter(posters).length,2);
+  const html=render.renderArticle(run);
+  assert.ok(html.indexOf('본문 0 첫')<html.lastIndexOf('poster.jpg'),'두 번째 포스터가 본문보다 앞에 있습니다');
 });
 
 test('completed drafts can receive movie images without AI calls or content changes', async () => {

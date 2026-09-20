@@ -6,6 +6,13 @@ import { sourceImages, stillsAfterParagraph } from "./movie-media";
 export function escapeHtml(s: string) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
 function rich(s: string) { return escapeHtml(s).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/\n/g, "<br>"); }
 function safeHref(s?: string) { try { const u = new URL(s || ""); return ["http:", "https:"].includes(u.protocol) && !u.username && !u.password ? u.href : ""; } catch { return ""; } }
+const FACT_ICONS: [string, string][] = [
+  ["원제", "📽️"], ["제목", "📽️"], ["장르", "🎞️"], ["국가", "🌍"],
+  ["감독", "🎬"], ["연출", "🎬"], ["출연", "👤"], ["배우", "👤"],
+  ["러닝타임", "⏳"], ["개봉", "📅"], ["공개", "📅"], ["시즌", "📺"],
+  ["화수", "📺"], ["관람등급", "🔞"], ["등급", "🔞"], ["쿠키", "🍪"],
+];
+function factIcon(label: string) { return (FACT_ICONS.find(([k]) => label.includes(k)) || ["", "📌"])[1]; }
 export function renderArticle(run: Pick<Run, "article" | "sources" | "brief">, titleIndex = 0): string {
   const a = run.article;
   if (!a) return "";
@@ -21,10 +28,16 @@ export function renderArticle(run: Pick<Run, "article" | "sources" | "brief">, t
   const references = run.sources.filter(s => used.has(s.id));
   const body = a.sections.map(s => {
     const stills = stillsAfterParagraph(s.imageIds.filter(id => mediaById.get(id)?.kind === "still"), s.paragraphs.length);
+    const posters = s.imageIds.filter(id => mediaById.get(id)?.kind === "poster");
+    // 포스터가 있는 섹션은 포스터 바로 밑이 정보 박스 자리다. 나머지는 본문 뒤에 붙인다.
+    const factsHtml = s.facts.length ? `<table width="100%" border="0" cellpadding="20" cellspacing="0" bgcolor="#f8f9fa" style="border:1px solid #eee;border-radius:8px;margin:20px 0"><tr><td style="font-size:15px;line-height:2">${s.facts.map(f => `<p style="margin:0">${factIcon(f.label)} <b>${escapeHtml(f.label)}</b> : ${rich(f.value)}</p>`).join("")}</td></tr></table>` : "";
     return `${s.heading ? `<table width="100%" border="0" cellpadding="15" bgcolor="#1a2e4a" style="margin:28px 0 18px"><tr><td><b style="color:#fff;font-size:18px">${escapeHtml(s.heading)}</b></td></tr></table>` : ""}
-${s.imageIds.filter(id => mediaById.get(id)?.kind === "poster").map(imageHtml).join("\n")}
+${posters.map(imageHtml).join("\n")}
+${posters.length ? factsHtml : ""}
 ${s.paragraphs.map((p, i) => `<p style="margin:16px 0;line-height:1.9">${rich(p)}</p>${stills.has(i) ? imageHtml(stills.get(i)!) : ""}`).join("\n")}
-${s.facts.length ? `<table width="100%" cellpadding="12" cellspacing="0" style="border:1px solid #e2e8f0;margin:20px 0">${s.facts.map(f => `<tr><td width="30%" bgcolor="#f1f5f9" style="border-bottom:1px solid #e2e8f0"><b>${escapeHtml(f.label)}</b></td><td style="border-bottom:1px solid #e2e8f0">${rich(f.value)}</td></tr>`).join("")}</table>` : ""}
+${s.highlight ? `<div style="border-left:5px solid #1a2e4a;padding-left:15px;margin:20px 0;color:#555;line-height:1.8">${rich(s.highlight)}</div>` : ""}
+${s.tipTitle ? `<table width="100%" border="0" cellpadding="16" cellspacing="0" bgcolor="#f8f9fa" style="border:1px solid #eee;border-radius:8px;margin:20px 0"><tr><td style="line-height:1.8">💡 <b>${escapeHtml(s.tipTitle)}</b>${s.tipBody ? `<br><span style="color:#666;font-size:14px">${rich(s.tipBody)}</span>` : ""}</td></tr></table>` : ""}
+${posters.length ? "" : factsHtml}
 ${s.imageIds.map(id => run.brief.attachments.find(x => x.id === id && x.kind === "photo")).filter(Boolean).map(p => `<table width="100%" cellpadding="12" bgcolor="#fff3cd" style="border:2px dashed #f0ad4e;margin:20px 0"><tr><td style="text-align:center;color:#8a6d3b;font-size:13px">📷 ${escapeHtml(p!.name)}${p!.text ? ` — ${escapeHtml(p!.text)}` : ""}</td></tr></table>`).join("\n")}`;
   }).join("\n");
   return `<div style="max-width:800px;margin:0 auto;font-family:'NanumSquare','나눔스퀘어',sans-serif;color:#333;line-height:1.8;word-break:keep-all;overflow-wrap:anywhere">
@@ -34,7 +47,7 @@ ${references.length ? `<div style="margin:28px 0;color:#777;font-size:12px"><b>�
 <p style="color:#777;font-size:13px">${a.hashtags.map(t => `#${escapeHtml(t.replace(/^#/, ""))}`).join(" ")}</p>
 ${MK_LINK_SIGNATURE}</div>`;
 }
-export function articleText(a: Article) { return a.sections.map(s => [s.heading, ...s.paragraphs, ...s.facts.map(f => `${f.label} ${f.value}`)].join("\n")).join("\n\n"); }
+export function articleText(a: Article) { return a.sections.map(s => [s.heading, ...s.paragraphs, s.highlight, s.tipTitle, s.tipBody, ...s.facts.map(f => `${f.label} ${f.value}`)].filter(Boolean).join("\n")).join("\n\n"); }
 export function lintArticle(run: Run): Issue[] {
   const a = run.article; if (!a) return [{ kind: "format", severity: "error", message: "본문이 없습니다." }];
   const issues: Issue[] = [];
@@ -53,7 +66,8 @@ export function lintArticle(run: Run): Issue[] {
     if (section.sourceIds.some(id => run.sources.find(s => s.id === id)?.kind === "snippet")) add("evidence", "검색 요약을 근거로 사용한 부분입니다. 원문 확인이 필요합니다.", section.id, "warning");
     for (const id of section.imageIds) if (!images.some(p => p.id === id) && !movieMedia.some(p => p.id === id)) add("format", "첨부·수집하지 않은 이미지를 참조했습니다.", section.id);
     if (section.imageIds.filter(id => movieMedia.some(m => m.id === id && m.kind === "still")).length > section.paragraphs.length) add("format", "스틸컷 사이에 본문 문단을 배치해주세요.", section.id);
-    if (/<\/?[a-z][^>]*>/i.test([section.heading, ...section.paragraphs, ...section.facts.map(f => f.value)].join(" "))) add("format", "HTML 코드 대신 본문 텍스트를 작성해야 합니다.", section.id);
+    if (section.facts.length > 10) add("format", "정보표 항목이 많습니다. 모바일에서 읽히도록 핵심 정보만 남겨주세요.", section.id, "warning");
+    if (/<\/?[a-z][^>]*>/i.test([section.heading, ...section.paragraphs, section.highlight, section.tipTitle, section.tipBody, ...section.facts.map(f => f.value)].join(" "))) add("format", "HTML 코드 대신 본문 텍스트를 작성해야 합니다.", section.id);
     if (section.paragraphs.some(p => (p.match(/[.!?。！？](?:\s|$)/g) || []).length >= 4)) add("voice", "긴 문단을 2~3문장 호흡으로 나눠주세요.", section.id);
     if (/#[가-힣\w]+/.test(section.paragraphs.join(" "))) add("format", "본문 중간 해시태그를 제거해주세요.", section.id);
   }

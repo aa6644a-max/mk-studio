@@ -21,7 +21,7 @@ export type ResearchTask = { tool: ToolId; query: string; reason: string; mediaT
 export type MovieCandidate = { id: number; title: string; year: string; mediaType: "movie" | "tv"; posterUrl: string | null };
 export type Question = { id: string; text: string; kind: "experience" | "clarification" | "movie"; options: string[]; candidates?: MovieCandidate[]; answer?: string };
 export type Strategy = { domain: string; intent: string; audience: string; question: string; angle: string; keywords: string[]; outline: string[]; length: number; voice: "full" | "light"; limitations: string[] };
-export type Section = { id: string; heading: string; paragraphs: string[]; sourceIds: string[]; experienceIds: string[]; imageIds: string[]; facts: { label: string; value: string }[] };
+export type Section = { id: string; heading: string; paragraphs: string[]; sourceIds: string[]; experienceIds: string[]; imageIds: string[]; facts: { label: string; value: string }[]; tipTitle: string; tipBody: string; highlight: string };
 export type Article = { titles: string[]; sections: Section[]; hashtags: string[] };
 export type Issue = { kind: "format" | "evidence" | "experience" | "voice"; severity: "warning" | "error"; message: string; sectionId?: string };
 export type Run = {
@@ -92,7 +92,7 @@ export function parseArticle(value: unknown): Article {
   const sections = a.sections.map((raw): Section => {
     const s = record(raw);
     if (!Array.isArray(s.facts) || s.facts.length > 20) throw new WritingError("정보표 형식이 올바르지 않습니다.");
-    return { id: str(s.id, 80, true), heading: str(s.heading, 200), paragraphs: strings(s.paragraphs, 20, 3000), sourceIds: strings(s.sourceIds, 30, 80), experienceIds: strings(s.experienceIds, 20, 80), imageIds: strings(s.imageIds, 20, 80), facts: s.facts.map(f => { const r = record(f); return { label: str(r.label, 100, true), value: str(r.value, 1000, true) }; }) };
+    return { id: str(s.id, 80, true), heading: str(s.heading, 200), paragraphs: strings(s.paragraphs, 20, 3000), sourceIds: strings(s.sourceIds, 30, 80), experienceIds: strings(s.experienceIds, 20, 80), imageIds: strings(s.imageIds, 20, 80), facts: s.facts.map(f => { const r = record(f); return { label: str(r.label, 100, true), value: str(r.value, 1000, true) }; }), tipTitle: str(s.tipTitle, 100), tipBody: str(s.tipBody, 500), highlight: str(s.highlight, 300) };
   });
   if (new Set(sections.map(s => s.id)).size !== sections.length) throw new WritingError("본문 구역 ID가 중복됐습니다.");
   return { titles: strings(a.titles, 8, 200), sections, hashtags: strings(a.hashtags, 15, 100) };
