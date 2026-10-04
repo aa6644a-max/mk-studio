@@ -30,13 +30,26 @@ export function friendlyError(e: unknown): string {
   }
   return "서비스 연결을 완료하지 못했습니다. 저장된 단계에서 다시 시도해주세요.";
 }
-async function structured(run: Run, name: string, schema: Anthropic.Tool.InputSchema, system: string, user: string, maxTokens = 4000): Promise<Record<string, unknown>> {
+export const TOKEN_BUDGET = 500000;
+export const BUDGET_MESSAGE = "이 작업에서 AI 호출이 누적돼 사용량 한도에 도달했습니다. ‘다시 시도’를 누르면 저장된 단계부터 새 한도로 이어갑니다.";
+// 초안·검수는 같은 자료 context를 반복해 보낸다. 도구 목록과 system을 같게 두고 context를 캐시 블록으로 앞세워 재사용한다.
+const CACHED_TOOLS = [
+  { name: "write_article", description: "현재 작성 단계의 구조화 결과", input_schema: articleSchema },
+  { name: "audit_article", description: "현재 작성 단계의 구조화 결과", input_schema: auditSchema },
+] as Anthropic.Tool[];
+async function structured(run: Run, name: string, schema: Anthropic.Tool.InputSchema, system: string, user: string, maxTokens = 4000, shared?: string): Promise<Record<string, unknown>> {
   if (!process.env.ANTHROPIC_API_KEY) throw new WritingError("ANTHROPIC_API_KEY를 설정해주세요.", 503);
-  if (run.tokens > 180000) throw new WritingError("이 작업의 AI 사용량 한도에 도달했습니다. 자료를 나누어 새 글을 작성해주세요.");
+  if (run.tokens > TOKEN_BUDGET) throw new WritingError(BUDGET_MESSAGE);
   const client = new Anthropic({ timeout: 150000, maxRetries: 0 });
+  const tools = shared ? CACHED_TOOLS : [{ name, description: "현재 작성 단계의 구조화 결과", input_schema: schema }];
+  const content: Anthropic.TextBlockParam[] = shared
+    ? [{ type: "text", text: shared, cache_control: { type: "ephemeral" } }, { type: "text", text: user }]
+    : [{ type: "text", text: user }];
   const result = await client.messages.create({ model: run.model, max_tokens: maxTokens, thinking: { type: "disabled" }, system,
-    tools: [{ name, description: "현재 작성 단계의 구조화 결과", input_schema: schema }], tool_choice: { type: "tool", name }, messages: [{ role: "user", content: user }] });
-  run.tokens += result.usage.input_tokens + result.usage.output_tokens;
+    tools, tool_choice: { type: "tool", name }, messages: [{ role: "user", content }] });
+  const u = result.usage;
+  // 캐시 읽기는 단가가 낮아 한도에는 10%만 반영한다.
+  run.tokens += Math.round(u.input_tokens + u.output_tokens + (u.cache_creation_input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) * 0.1);
   if (result.stop_reason === "max_tokens") throw new WritingError("AI 응답이 분량 한도에서 끊겼습니다. 분량을 줄이거나 다시 시도해주세요.");
   const tool = result.content.find(b => b.type === "tool_use" && b.name === name);
   if (!tool || tool.type !== "tool_use") throw new WritingError("AI 응답 형식을 확인하지 못했습니다. 다시 시도해주세요.");
@@ -145,8 +158,8 @@ ${run.sources.some(s => s.kind === "tmdb") ? MOVIE_WRITING_RULES : ""}
       try { await hydrateMovieImages(run.sources); }
       catch { notice(run, "TMDB 이미지를 불러오지 못했습니다. 초안 완성 후 ‘영화 이미지 적용’으로 다시 시도할 수 있습니다."); }
       const repair = !!run.article;
-      const result = await structured(run, "write_article", articleSchema, writingSystem(run), `${DRAFT_RULES}\n${context(run)}
-${repair ? `기존 본문: ${JSON.stringify(run.article)}\n검수 문제: ${JSON.stringify(run.issues)}\n문제 있는 부분만 수정하고 다른 사실·판단·순서·이미지·섹션 ID는 유지하세요. 전체 구조화 본문을 반환.` : "전략과 근거로 초안을 작성하세요."}`, 11000);
+      const result = await structured(run, "write_article", articleSchema, writingSystem(run), `${DRAFT_RULES}
+${repair ? `기존 본문: ${JSON.stringify(run.article)}\n검수 문제: ${JSON.stringify(run.issues)}\n문제 있는 부분만 수정하고 다른 사실·판단·순서·이미지·섹션 ID는 유지하세요. 전체 구조화 본문을 반환.` : "전략과 근거로 초안을 작성하세요."}`, 11000, context(run));
       run.article = parseArticle(result);
       placeMovieImages(run);
       if (repair) run.repairs++;
@@ -154,7 +167,7 @@ ${repair ? `기존 본문: ${JSON.stringify(run.article)}\n검수 문제: ${JSON
     } else if (stage === "checking") {
       const mechanical = lintArticle(run);
       const result = await structured(run, "audit_article", auditSchema, writingSystem(run), `본문을 근거와 대조해 검수하세요. 새로운 사실·일화를 보태지 마세요.
-${context(run)}\n본문: ${JSON.stringify(run.article)}
+본문: ${JSON.stringify(run.article)}
 - 실제 주장과 연결된 출처의 근거 구간을 대조. sourceId 존재만으로 통과시키지 말 것. 원문 없이 요약만 확인한 경우를 구분.
 - 관람·방문·구매·말한 내용·본인 역할·맛·날씨 등은 사용자 메모·답변에 근거가 있는가? 누적 취향이나 문체 예시를 실제 경험으로 바꿨는가?
 - 사소한 행동·반응·현장 분위기도 경험이다. '고개를 끄덕였다', '분위기가 잡혔다', '모두 생각에 잠겼다'처럼 사용자 근거에 없는 장면은 자연스러워도 experience error. 비유·일반적 해석과 실제로 일어났다는 진술을 구분.
@@ -163,7 +176,7 @@ ${context(run)}\n본문: ${JSON.stringify(run.article)}
 - MK의 핵심 문장·감정·판단이 보존됐는가? 공통 말투·문단 리듬·구체성을 지키는가? 반복·상투문구·억지 분량이 있는가?
 - 날짜·가격·조건 충돌이나 근거에 없는 사실은 evidence error. 없는 개인 경험은 experience error. 문체 훼손은 voice error.
 - 문제가 있으면 해당 sectionId와 구체적인 수정 방향, 근거 위치·짧은 발췌를 message에 기재. 근거로 뒷받침되는 판단은 문제 삼지 말 것.
-- 문제가 없으면 issues=[]. 오류가 없는데 형식적인 경고를 만들지 말 것.`, 4000);
+- 문제가 없으면 issues=[]. 오류가 없는데 형식적인 경고를 만들지 말 것.`, 4000, context(run));
       run.issues = [...mechanical, ...issuesFrom(result.issues, run)];
       const fixable = run.issues.some(i => i.severity === "error");
       if (fixable && run.repairs < 2) { run.stage = "drafting"; log(run, "문체·근거 문제를 제한된 범위에서 수정합니다."); }

@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { mutateRun } from "@/lib/writing/repository";
-import { advanceRun, answerRun, restoreMovieImages } from "@/lib/writing/engine";
+import { advanceRun, answerRun, restoreMovieImages, BUDGET_MESSAGE } from "@/lib/writing/engine";
 import { owner, jsonBody, json, view, errorResponse } from "@/lib/writing/http";
 import { parseStrategy, WritingError } from "@/lib/writing/types";
 
@@ -28,6 +28,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
       if (action === "retry") {
         if (run.stage !== "failed" || !run.retryStage) throw new WritingError("다시 시도할 단계가 없습니다.", 409);
+        if (run.error === BUDGET_MESSAGE) run.tokens = 0;
         run.stage = run.retryStage; delete run.error;
       }
       if (action === "cancel") { run.stage = "cancelled"; delete run.error; run.log.push({ at: new Date().toISOString(), message: "작성을 중지했습니다. 현재까지의 자료는 저장돼 있습니다." }); }
