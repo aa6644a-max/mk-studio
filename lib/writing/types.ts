@@ -49,6 +49,10 @@ export function str(value: unknown, max: number, required = false): string {
   if (typeof value !== "string" || value.length > max || (required && !value.trim())) throw new WritingError(`텍스트 입력을 확인해주세요 (최대 ${max.toLocaleString()}자).`);
   return value.trim();
 }
+/** 모델이 **강조** 대신 <b>태그를 그대로 쓰는 경우가 있다. 렌더러는 이스케이프하므로 태그가 글자로 노출되기 전에 **로 통일한다. */
+export function normalizeBold(s: string): string {
+  return s.replace(/<(b|strong)\s*>([\s\S]*?)<\/\1\s*>/gi, "**$2**").replace(/<\/?(b|strong)\s*>/gi, "");
+}
 export function strings(value: unknown, maxItems = 12, maxChars = 1000): string[] {
   if (!Array.isArray(value) || value.length > maxItems) throw new WritingError("목록 형식을 확인해주세요.");
   return value.map(v => str(v, maxChars, true));
@@ -92,8 +96,8 @@ export function parseArticle(value: unknown): Article {
   const sections = a.sections.map((raw): Section => {
     const s = record(raw);
     if (!Array.isArray(s.facts) || s.facts.length > 20) throw new WritingError("정보표 형식이 올바르지 않습니다.");
-    return { id: str(s.id, 80, true), heading: str(s.heading, 200), paragraphs: strings(s.paragraphs, 20, 3000), sourceIds: strings(s.sourceIds, 30, 80), experienceIds: strings(s.experienceIds, 20, 80), imageIds: strings(s.imageIds, 20, 80), facts: s.facts.map(f => { const r = record(f); return { label: str(r.label, 100, true), value: str(r.value, 1000, true) }; }), tipTitle: str(s.tipTitle, 100), tipBody: str(s.tipBody, 500), highlight: str(s.highlight, 300) };
+    return { id: str(s.id, 80, true), heading: normalizeBold(str(s.heading, 200)), paragraphs: strings(s.paragraphs, 20, 3000).map(normalizeBold), sourceIds: strings(s.sourceIds, 30, 80), experienceIds: strings(s.experienceIds, 20, 80), imageIds: strings(s.imageIds, 20, 80), facts: s.facts.map(f => { const r = record(f); return { label: normalizeBold(str(r.label, 100, true)), value: normalizeBold(str(r.value, 1000, true)) }; }), tipTitle: normalizeBold(str(s.tipTitle, 100)), tipBody: normalizeBold(str(s.tipBody, 500)), highlight: normalizeBold(str(s.highlight, 300)) };
   });
   if (new Set(sections.map(s => s.id)).size !== sections.length) throw new WritingError("본문 구역 ID가 중복됐습니다.");
-  return { titles: strings(a.titles, 8, 200), sections, hashtags: strings(a.hashtags, 15, 100) };
+  return { titles: strings(a.titles, 8, 200).map(normalizeBold), sections, hashtags: strings(a.hashtags, 15, 100) };
 }

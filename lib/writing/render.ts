@@ -1,10 +1,10 @@
 import { MK_LINK_SIGNATURE } from "@/lib/html-formatter";
 import { MK_BANNED_WORDS } from "@/lib/prompts/base";
-import type { Run, Article, Issue } from "./types";
+import { normalizeBold, type Run, type Article, type Issue } from "./types";
 import { sourceImages, stillsAfterParagraph } from "./movie-media";
 
 export function escapeHtml(s: string) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
-function rich(s: string) { return escapeHtml(s).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/\n/g, "<br>"); }
+function rich(s: string) { return escapeHtml(normalizeBold(s)).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/\n/g, "<br>"); }
 function safeHref(s?: string) { try { const u = new URL(s || ""); return ["http:", "https:"].includes(u.protocol) && !u.username && !u.password ? u.href : ""; } catch { return ""; } }
 const FACT_ICONS: [string, string][] = [
   ["원제", "📽️"], ["제목", "📽️"], ["장르", "🎞️"], ["국가", "🌍"],
