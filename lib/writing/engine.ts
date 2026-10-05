@@ -6,6 +6,7 @@ import { safeSlice } from "@/lib/prompts/base";
 import { articleText, lintArticle } from "./render";
 import { toolSummary, toolWiki, parseTasks, executeTool, movieSource, hydrateMovieImages } from "./tools";
 import { MOVIE_WRITING_RULES, placeMovieImages, sourceImages } from "./movie-media";
+import { cookieQuestion, movieFrame, normalizeMovieSections, UNKNOWN } from "./movie-frame";
 import { analysisSchema, planSchema, articleSchema, auditSchema, context, fixedPersona, writingSystem, DRAFT_RULES, PROMPT_VERSION } from "./prompts";
 import { ACTIVE_STAGES, parseStrategy, parseArticle, publicUrl, record, str, strings, WritingError, type Run, type Brief, type ResearchTask, type Issue, type Question } from "./types";
 
@@ -141,7 +142,8 @@ ${run.sources.some(s => s.kind === "tmdb") ? MOVIE_WRITING_RULES : ""}
 - 분량은 입력 length short≈1000, standard≈2200, long≈4000, auto는 근거량에 맞춤(500~8000). 길이를 맞추려고 없는 경험을 만들지 않기.
 - MK 말투는 유지하되 객관 정보 위주면 voice=light, 실제 경험·감상이 중심이면 full.
 - 이미 제공된 strategy가 있으면 사용자 수정 방향을 우선 유지하고 근거 부족으로 변경이 꼭 필요한 부분만 조정. angle·독자·목차를 초기 값으로 되돌리지 말 것.
-- 핵심 질문·독자·각도·목차를 구체적으로. 영화가 아닌 주제를 영화 리뷰로 만들지 않기.`);
+- 핵심 질문·독자·각도·목차를 구체적으로. 영화가 아닌 주제를 영화 리뷰로 만들지 않기.
+${run.sources.filter(s => s.kind === "tmdb").length === 1 ? "- 작품 하나를 다루는 영화·TV 글의 outline은 위 영화 구성 순서(도입 → ■ 어떤 이야기인가요? → 본론 소제목들 → 🔎 관전 포인트 → 마무리)를 그대로 따를 것. 정보표 내용을 목차 항목으로 만들지 말 것." : ""}`);
       // Tuning values must not discard completed research. Repair what has a safe default, keep the rest strict.
       const proposed = record(result.strategy);
       if (proposed.voice !== "full" && proposed.voice !== "light") { proposed.voice = "full"; notice(run, "문체 강도를 판단하지 못해 기본 MK 문체로 작성합니다."); }
@@ -151,6 +153,10 @@ ${run.sources.some(s => s.kind === "tmdb") ? MOVIE_WRITING_RULES : ""}
       if (allowResearch) enqueueTasks(run, parseTasks(result.tasks));
       if (run.tasks.length > before) { run.researchRounds++; run.stage = "researching"; log(run, "핵심 사실을 보강하기 위해 추가 자료를 확인합니다."); return; }
       const questions = parseQuestions(result.questions);
+      // 정보표의 쿠키영상은 TMDB에 없다. 사용자가 적지 않았다면 한 번만 묻고, 끝내 모르면 ‘정보 없음’으로 표시한다.
+      const cookie = allowQuestions ? cookieQuestion(run) : null;
+      if (cookie) questions.push(cookie);
+      if (!run.sources.some(s => s.kind === "tmdb") && /영화|드라마|시리즈|애니/.test(`${run.strategy.domain} ${run.strategy.intent}`) && /리뷰|후기|프리뷰|정주행|감상/.test(`${run.strategy.domain} ${run.strategy.intent} ${run.brief.topic}`)) notice(run, "작품 자료(TMDB)를 확보하지 못해 정보표와 영화 글 구성을 적용하지 못했습니다. 작품을 선택해 다시 시도해주세요.");
       if (allowQuestions && questions.length) { run.questions.push(...questions); run.questionRounds++; run.stage = "awaiting_input"; log(run, "작성에 필요한 경험·대상만 확인합니다."); return; }
       if (questions.length) run.strategy.limitations.push("추가 확인이 끝나지 않은 경험·사실은 본문에서 제외합니다.");
       run.stage = "drafting"; log(run, `글의 방향: ${run.strategy.angle}`);
@@ -161,7 +167,10 @@ ${run.sources.some(s => s.kind === "tmdb") ? MOVIE_WRITING_RULES : ""}
       const result = await structured(run, "write_article", articleSchema, writingSystem(run), `${DRAFT_RULES}
 ${repair ? `기존 본문: ${JSON.stringify(run.article)}\n검수 문제: ${JSON.stringify(run.issues)}\n문제 있는 부분만 수정하고 다른 사실·판단·순서·이미지·섹션 ID는 유지하세요. 전체 구조화 본문을 반환.` : "전략과 근거로 초안을 작성하세요."}`, 11000, context(run));
       run.article = parseArticle(result);
+      normalizeMovieSections(run);
       placeMovieImages(run);
+      const frame = movieFrame(run);
+      if (frame) notice(run, frame.facts.some(f => f.value === UNKNOWN) ? "정보표의 ‘정보 없음’ 항목과 개봉일(TMDB 기준)은 국내 정보와 다를 수 있으니 발행 전에 확인해주세요." : "정보표의 개봉일은 TMDB 기준입니다. 국내 개봉일과 다르면 발행 전에 수정해주세요.");
       if (repair) run.repairs++;
       run.stage = "checking"; log(run, repair ? "검수에서 지적된 부분을 수정했습니다." : "초안을 작성했습니다. 문체와 근거를 점검합니다.");
     } else if (stage === "checking") {

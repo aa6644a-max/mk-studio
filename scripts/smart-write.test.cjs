@@ -47,6 +47,7 @@ sheets.getProfile = async () => null;
 const engine = require('../lib/writing/engine.ts');
 const render = require('../lib/writing/render.ts');
 const media = require('../lib/writing/movie-media.ts');
+const frame = require('../lib/writing/movie-frame.ts');
 const tmdb = require('../lib/tmdb.ts');
 const { isPublicIPv4, readPublicPage } = require('../lib/writing/read-url.ts');
 const { checkOrigin } = require('../lib/writing/http.ts');
@@ -202,7 +203,7 @@ test('full pipeline: research, original source follow-up, experience question, M
     assert.match(run.persona.version, /^smart-write-v2:/);
     const draftCalls = calls.filter(c => c.tool_choice.name === 'write_article');
     assert.equal(draftCalls.length, 2);
-    for (const call of draftCalls) { assert.match(call.system, /단락 호흡/); assert.match(call.messages[0].content, /진행자로 참여/); }
+    for (const call of draftCalls) { assert.match(call.system, /단락 호흡/); assert.match(call.messages[0].content.map(b => b.text).join(' '), /진행자로 참여/); }
     assert.equal(queue.length, 0);
   } finally { tools.executeTool = originalTool; }
 });
@@ -362,4 +363,65 @@ test('style reference survives the MK LINK header and ranks posts about the same
     assert.ok(text.indexOf('경주기행 리뷰')<text.indexOf('플리마켓'));
     assert.ok(text.length>=800);
   } finally { global.fetch=realFetch; }
+});
+
+// ── 영화·TV 고정 골격 ──────────────────────────────────────────────────────
+function frameRun(over = {}) {
+  const run = engine.newRun(randomUUID(), types.parseBrief({ topic: '테스트 영화 리뷰', experience: '극장에서 봤어요. 쿠키영상은 없었어요. 15세 이상 관람가였습니다.', audience: '', length: 'auto', attachments: [] }));
+  run.stage = 'ready'; run.strategy = { ...strategy(), domain: '영화 리뷰', intent: '감상 후기' };
+  const detail = { title: '테스트 영화', originalTitle: 'Test Movie', country: '미국', releaseDate: '2026-08-05', director: '홍길동', genres: '모험, 액션', runtime: 173, overview: '줄거리' };
+  const src = { id: 'movie-1', kind: 'tmdb', title: '테스트 영화 (2026)', url: 'https://www.themoviedb.org/movie/1', text: JSON.stringify(detail), retrievedAt: '2026-09-14T00:00:00Z', ...over };
+  src.images = media.movieImages(src.id, src.title, movieDetail()); run.sources.push(src);
+  const sec = (id, heading, n = 2) => ({ ...article().sections[0], id, heading, paragraphs: Array.from({ length: n }, (_, i) => `${id} ${i} 문단입니다. 두 번째 문장입니다.`), facts: [{ label: '장르', value: '모델이 만든 값' }], sourceIds: ['movie-1'], imageIds: [] });
+  run.article = { ...article(), sections: [sec('intro', ''), sec('acting', '연기가 남긴 인상'), sec('plot', '줄거리'), sec('direction', '연출의 힘'), sec('pt', '관전 포인트', 1), sec('outro', '')] };
+  return run;
+}
+test('movie frame: fixed facts order from TMDB and user statements, never from the model', () => {
+  const f = frame.movieFrame(frameRun());
+  assert.deepEqual(f.facts.map(x => x.label), ['원제', '장르', '국가', '감독', '러닝타임', '관람등급', '개봉일', '쿠키영상']);
+  const v = Object.fromEntries(f.facts.map(x => [x.label, x.value]));
+  assert.equal(v['원제'], 'Test Movie'); assert.equal(v['러닝타임'], '173분'); assert.equal(v['개봉일'], '2026년 8월 5일');
+  assert.equal(v['쿠키영상'], '없음'); assert.equal(v['관람등급'], '15세 이상 관람가');
+  const none = frameRun(); none.brief.experience = '재밌게 봤어요.';
+  const w = Object.fromEntries(frame.movieFrame(none).facts.map(x => [x.label, x.value]));
+  assert.equal(w['쿠키영상'], '정보 없음'); assert.equal(w['관람등급'], '정보 없음');
+  const conflict = frameRun(); conflict.brief.experience = '쿠키영상은 없는 줄 알았는데 쿠키 영상이 있었다.';
+  assert.equal(Object.fromEntries(frame.movieFrame(conflict).facts.map(x => [x.label, x.value]))['쿠키영상'], '정보 없음');
+});
+test('movie frame: cookie question is asked once for reviews only, answers feed the table', () => {
+  const run = frameRun(); run.brief.experience = '재밌게 봤어요.'; run.questions = [];
+  const q = frame.cookieQuestion(run); assert.ok(q); assert.deepEqual(q.options, ['있음', '없음', '잘 모르겠음']);
+  run.questions.push({ ...q, answer: '있음' });
+  assert.equal(frame.cookieQuestion(run), null);
+  assert.equal(Object.fromEntries(frame.movieFrame(run).facts.map(x => [x.label, x.value]))['쿠키영상'], '있음');
+  const preview = frameRun(); preview.brief.experience = ''; preview.brief.topic = '개봉 전 프리뷰'; assert.equal(frame.cookieQuestion(preview), null);
+  const tv = frameRun({ url: 'https://www.themoviedb.org/tv/9' }); tv.brief.experience = ''; assert.equal(frame.cookieQuestion(tv), null);
+  assert.deepEqual(frame.movieFrame(tv).facts.map(x => x.label), ['원제', '장르', '국가', '연출/원작', '출연', '시즌/화수', '편당 러닝타임', '공개일']);
+});
+test('movie frame: sections are renamed and ordered without touching the prose', () => {
+  const run = frameRun(); const prose = () => run.article.sections.map(s => s.paragraphs.join('|')).sort();
+  const before = prose();
+  frame.normalizeMovieSections(run);
+  assert.deepEqual(run.article.sections.map(s => s.id), ['intro', 'plot', 'acting', 'direction', 'pt', 'outro']);
+  assert.equal(run.article.sections[1].heading, '■ 어떤 이야기인가요?'); assert.equal(run.article.sections[4].heading, '🔎 관전 포인트');
+  assert.ok(run.article.sections.every(s => s.facts.length === 0));
+  assert.deepEqual(prose(), before);
+  assert.deepEqual(frame.lintMovieFrame(run).filter(i => i.severity === 'error'), []);
+});
+test('movie frame: renderer puts facts under the poster, then slots, synopsis and the watch-points box', () => {
+  const run = frameRun(); frame.normalizeMovieSections(run); media.placeMovieImages(run);
+  const html = render.renderArticle(run);
+  const at = needle => { const i = html.indexOf(needle); assert.ok(i >= 0, needle); return i; };
+  assert.ok(at('<img') < at('원제') && at('원제') < at('링크카드 자리') && at('링크카드 자리') < at('intro 0 문단') && at('intro 0 문단') < at('스포일러 안내 박스 자리') && at('스포일러 안내 박스 자리') < at('■ 어떤 이야기인가요?') && at('■ 어떤 이야기인가요?') < at('연기가 남긴 인상') && at('연기가 남긴 인상') < at('🔎 관전 포인트') && at('🔎 관전 포인트') < at('outro 0 문단'));
+  assert.equal((html.match(/📽️ <b>원제/g) || []).length, 1); assert.ok(!html.includes('모델이 만든 값')); assert.match(html, /MK LINK REVIEW/);
+  assert.match(html, /쿠키영상<\/b> : 없음/);
+});
+test('movie frame lint: a draft without synopsis or watch points is sent back for repair; comparisons and non-movie posts are untouched', () => {
+  const run = frameRun(); run.article.sections = run.article.sections.filter(s => s.id !== 'plot' && s.id !== 'pt');
+  const errs = render.lintArticle(run).filter(i => i.severity === 'error').map(i => i.message);
+  assert.ok(errs.some(m => /줄거리 구역/.test(m))); assert.ok(errs.some(m => /관전 포인트 구역/.test(m)));
+  const two = frameRun(); two.sources.push({ ...two.sources[0], id: 'movie-2' });
+  assert.equal(frame.movieFrame(two), null); assert.deepEqual(frame.lintMovieFrame(two), []);
+  const plain = engine.newRun(randomUUID(), brief()); plain.article = article(); assert.equal(frame.movieFrame(plain), null);
+  assert.ok(!render.renderArticle(plain).includes('링크카드'));
 });
