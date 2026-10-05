@@ -8,7 +8,7 @@ import { toolSummary, toolWiki, parseTasks, executeTool, movieSource, hydrateMov
 import { MOVIE_WRITING_RULES, placeMovieImages, sourceImages } from "./movie-media";
 import { cookieQuestion, movieFrame, normalizeMovieSections, UNKNOWN } from "./movie-frame";
 import { analysisSchema, planSchema, articleSchema, auditSchema, context, fixedPersona, writingSystem, DRAFT_RULES, PROMPT_VERSION } from "./prompts";
-import { ACTIVE_STAGES, parseStrategy, parseArticle, publicUrl, record, str, strings, WritingError, type Run, type Brief, type ResearchTask, type Issue, type Question } from "./types";
+import { ACTIVE_STAGES, fitStrings, parseStrategy, parseArticle, publicUrl, record, str, strings, WritingError, type Run, type Brief, type ResearchTask, type Issue, type Question } from "./types";
 
 export const MAX_RESEARCH_CALLS = 12;
 export function newRun(id: string, brief: Brief): Run {
@@ -86,7 +86,7 @@ export function enqueueTasks(run: Run, tasks: ResearchTask[]) {
 }
 function parseQuestions(value: unknown): Question[] {
   if (!Array.isArray(value) || value.length > 3) throw new WritingError("추가 질문 형식을 확인하지 못했습니다.");
-  return value.map(raw => { const q = record(raw); return { id: `q-${randomUUID()}`, kind: q.kind === "experience" ? "experience" : "clarification", text: str(q.text, 600, true), options: strings(q.options, 4, 300) }; });
+  return value.map(raw => { const q = record(raw); return { id: `q-${randomUUID()}`, kind: q.kind === "experience" ? "experience" : "clarification", text: str(q.text, 600, true), options: fitStrings(q.options, 4, 300, "cut") }; });
 }
 function issuesFrom(value: unknown, run: Run): Issue[] {
   if (!Array.isArray(value) || value.length > 20) throw new WritingError("검수 결과 형식이 올바르지 않습니다.");
@@ -142,6 +142,7 @@ ${run.sources.some(s => s.kind === "tmdb") ? MOVIE_WRITING_RULES : ""}
 - 분량은 입력 length short≈1000, standard≈2200, long≈4000, auto는 근거량에 맞춤(500~8000). 길이를 맞추려고 없는 경험을 만들지 않기.
 - MK 말투는 유지하되 객관 정보 위주면 voice=light, 실제 경험·감상이 중심이면 full.
 - 이미 제공된 strategy가 있으면 사용자 수정 방향을 우선 유지하고 근거 부족으로 변경이 꼭 필요한 부분만 조정. angle·독자·목차를 초기 값으로 되돌리지 말 것.
+- 목차(outline)는 최대 12항목, 키워드 최대 8개, limitations 최대 12개. 감상평·자료의 소제목이 많으면 비슷한 것끼리 묶어 이 범위에 맞출 것.
 - 핵심 질문·독자·각도·목차를 구체적으로. 영화가 아닌 주제를 영화 리뷰로 만들지 않기.
 ${run.sources.filter(s => s.kind === "tmdb").length === 1 ? "- 작품 하나를 다루는 영화·TV 글의 outline은 위 영화 구성 순서(도입 → ■ 어떤 이야기인가요? → 본론 소제목들 → 🔎 관전 포인트 → 마무리)를 그대로 따를 것. 정보표 내용을 목차 항목으로 만들지 말 것." : ""}`);
       // Tuning values must not discard completed research. Repair what has a safe default, keep the rest strict.

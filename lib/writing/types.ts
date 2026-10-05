@@ -11,6 +11,9 @@ export const STAGE_LABELS = {
   cancelled: "작성 중지",
 } as const;
 export type Stage = keyof typeof STAGE_LABELS;
+/** 구조화 출력 한도. 스키마(prompts.ts)와 같은 값을 쓴다. */
+export const MAX_OUTLINE = 16;
+export const MAX_PARAGRAPHS = 40;
 export const ACTIVE_STAGES: Stage[] = ["analyzing", "researching", "planning", "drafting", "checking"];
 export type Attachment = { id: string; kind: "document" | "photo" | "url"; name: string; text: string };
 export type Brief = { topic: string; experience: string; audience: string; length: "auto" | "short" | "standard" | "long"; attachments: Attachment[] };
@@ -57,6 +60,19 @@ export function strings(value: unknown, maxItems = 12, maxChars = 1000): string[
   if (!Array.isArray(value) || value.length > maxItems) throw new WritingError("목록 형식을 확인해주세요.");
   return value.map(v => str(v, maxChars, true));
 }
+/**
+ * 모델이 만든 목록이 한도를 조금 넘는 일이 실제로 있다(긴 감상평의 소제목을 그대로 옮길 때 등).
+ * 이미 끝낸 조사를 버리고 실패시키지 않도록 넘친 항목은 합치거나(merge) 잘라낸다(cut).
+ */
+export function fitStrings(value: unknown, maxItems: number, maxChars: number, mode: "merge" | "cut"): string[] {
+  if (!Array.isArray(value)) throw new WritingError("목록 형식을 확인해주세요.");
+  let items: unknown[] = value;
+  if (items.length > maxItems) {
+    const rest = items.slice(maxItems - 1).filter((v): v is string => typeof v === "string" && !!v.trim());
+    items = mode === "merge" ? [...items.slice(0, maxItems - 1), rest.join(" / ").slice(0, maxChars)] : items.slice(0, maxItems);
+  }
+  return items.map(v => str(v, maxChars, true));
+}
 export function publicUrl(value: string): string {
   let url: URL;
   try { url = new URL(value); } catch { throw new WritingError("올바른 웹 주소를 입력해주세요."); }
@@ -86,9 +102,9 @@ export function parseStrategy(value: unknown): Strategy {
   const s = record(value);
   if (s.voice !== "full" && s.voice !== "light") throw new WritingError("문체 설정이 올바르지 않습니다.");
   if (typeof s.length !== "number" || !Number.isFinite(s.length) || s.length < 500 || s.length > 8000) throw new WritingError("목표 분량은 500~8,000자여야 합니다.");
-  const outline = strings(s.outline, 12, 200);
+  const outline = fitStrings(s.outline, MAX_OUTLINE, 200, "merge");
   if (!outline.length) throw new WritingError("목차가 비어 있습니다.");
-  return { domain: str(s.domain, 100, true), intent: str(s.intent, 100, true), audience: str(s.audience, 300, true), question: str(s.question, 500, true), angle: str(s.angle, 1000, true), keywords: strings(s.keywords, 8, 80), outline, length: Math.round(s.length), voice: s.voice, limitations: strings(s.limitations, 12, 500) };
+  return { domain: str(s.domain, 100, true), intent: str(s.intent, 100, true), audience: str(s.audience, 300, true), question: str(s.question, 500, true), angle: str(s.angle, 1000, true), keywords: fitStrings(s.keywords, 8, 80, "cut"), outline, length: Math.round(s.length), voice: s.voice, limitations: fitStrings(s.limitations, 12, 500, "merge") };
 }
 export function parseArticle(value: unknown): Article {
   const a = record(value);
@@ -96,8 +112,8 @@ export function parseArticle(value: unknown): Article {
   const sections = a.sections.map((raw): Section => {
     const s = record(raw);
     if (!Array.isArray(s.facts) || s.facts.length > 20) throw new WritingError("정보표 형식이 올바르지 않습니다.");
-    return { id: str(s.id, 80, true), heading: normalizeBold(str(s.heading, 200)), paragraphs: strings(s.paragraphs, 20, 3000).map(normalizeBold), sourceIds: strings(s.sourceIds, 30, 80), experienceIds: strings(s.experienceIds, 20, 80), imageIds: strings(s.imageIds, 20, 80), facts: s.facts.map(f => { const r = record(f); return { label: normalizeBold(str(r.label, 100, true)), value: normalizeBold(str(r.value, 1000, true)) }; }), tipTitle: normalizeBold(str(s.tipTitle, 100)), tipBody: normalizeBold(str(s.tipBody, 500)), highlight: normalizeBold(str(s.highlight, 300)) };
+    return { id: str(s.id, 80, true), heading: normalizeBold(str(s.heading, 200)), paragraphs: strings(s.paragraphs, MAX_PARAGRAPHS, 3000).map(normalizeBold), sourceIds: strings(s.sourceIds, 30, 80), experienceIds: strings(s.experienceIds, 20, 80), imageIds: strings(s.imageIds, 20, 80), facts: s.facts.map(f => { const r = record(f); return { label: normalizeBold(str(r.label, 100, true)), value: normalizeBold(str(r.value, 1000, true)) }; }), tipTitle: normalizeBold(str(s.tipTitle, 100)), tipBody: normalizeBold(str(s.tipBody, 500)), highlight: normalizeBold(str(s.highlight, 300)) };
   });
   if (new Set(sections.map(s => s.id)).size !== sections.length) throw new WritingError("본문 구역 ID가 중복됐습니다.");
-  return { titles: strings(a.titles, 8, 200).map(normalizeBold), sections, hashtags: strings(a.hashtags, 15, 100) };
+  return { titles: strings(a.titles, 8, 200).map(normalizeBold), sections, hashtags: fitStrings(a.hashtags, 10, 100, "cut") };
 }

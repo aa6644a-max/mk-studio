@@ -1,5 +1,5 @@
 import { buildStyleReference, getCommonConstraints, getMkVoiceBlock, nowParts, safeSlice } from "@/lib/prompts/base";
-import type { Run } from "./types";
+import { MAX_OUTLINE, MAX_PARAGRAPHS, type Run } from "./types";
 import { MOVIE_WRITING_RULES } from "./movie-media";
 
 export const PROMPT_VERSION = "smart-write-v2";
@@ -44,15 +44,15 @@ const text = { type: "string" };
 const list = (items: object, maxItems = 12) => ({ type: "array", items, maxItems });
 const object = (properties: Record<string, object>) => ({ type: "object" as const, properties, required: Object.keys(properties), additionalProperties: false });
 export const taskSchema = object({ tool: { type: "string", enum: ["naver_web", "naver_news", "tmdb_search", "read_url"] }, query: text, reason: text, mediaType: { type: "string", enum: ["movie", "tv"] } });
-export const strategySchema = object({ domain: text, intent: text, audience: text, question: text, angle: text, keywords: list(text, 8), outline: list(text), length: { type: "integer", minimum: 500, maximum: 8000 }, voice: { type: "string", enum: ["full", "light"] }, limitations: list(text) });
+export const strategySchema = object({ domain: text, intent: text, audience: text, question: text, angle: text, keywords: list(text, 8), outline: list(text, MAX_OUTLINE), length: { type: "integer", minimum: 500, maximum: 8000 }, voice: { type: "string", enum: ["full", "light"] }, limitations: list(text) });
 export const analysisSchema = object({ tasks: list(taskSchema, 6), rationale: text });
 export const planSchema = object({ strategy: strategySchema, tasks: list(taskSchema, 6), questions: list(object({ text, kind: { type: "string", enum: ["experience", "clarification"] }, options: list(text, 4) }), 3) });
-export const articleSchema = object({ titles: list(text, 5), sections: list(object({ id: text, heading: text, paragraphs: list(text, 20), sourceIds: list(text, 30), experienceIds: list(text, 20), imageIds: list(text, 20), facts: list(object({ label: text, value: text }), 20), tipTitle: text, tipBody: text, highlight: text }), 16), hashtags: list(text, 10) });
+export const articleSchema = object({ titles: list(text, 5), sections: list(object({ id: text, heading: text, paragraphs: list(text, MAX_PARAGRAPHS), sourceIds: list(text, 30), experienceIds: list(text, 20), imageIds: list(text, 20), facts: list(object({ label: text, value: text }), 20), tipTitle: text, tipBody: text, highlight: text }), 16), hashtags: list(text, 10) });
 export const auditSchema = object({ issues: list(object({ kind: { type: "string", enum: ["evidence", "experience", "voice"] }, severity: { type: "string", enum: ["error", "warning"] }, message: text, sectionId: text }), 20) });
 
 export const DRAFT_RULES = `확정 전략을 바탕으로 네이버 본문을 작성하세요.
 - 제목 후보 정확히 5개, 각각 30자 이내, 핵심 키워드 앞 배치.
-- 소제목 개수·문단 수는 논점과 근거량에 맞춤. 도입과 마무리도 각각 sections 항목으로 넣고 heading은 비워도 됨.
+- 소제목은 최대 12개, 한 구역의 문단은 최대 40개. 긴 감상평은 비슷한 소제목을 묶어 이 범위 안에 맞춤. 소제목 개수·문단 수는 논점과 근거량에 맞춤. 도입과 마무리도 각각 sections 항목으로 넣고 heading은 비워도 됨.
 - paragraphs는 문단당 2~3문장. 단락 핵심 구절 1~2개만 **강조**. 상투적 도입·마무리 반복 금지.
 - facts는 날짜·조건 등 실제 정보가 있을 때만 정보 항목으로. 표가 불필요하면 빈 배열.
 - 두 작품 비교처럼 항목이 늘어나도 한 섹션에 10개를 넘기지 말 것. 독자가 먼저 볼 핵심만 추리고, 나머지는 본문 문장으로 풀 것.

@@ -425,3 +425,14 @@ test('movie frame lint: a draft without synopsis or watch points is sent back fo
   const plain = engine.newRun(randomUUID(), brief()); plain.article = article(); assert.equal(frame.movieFrame(plain), null);
   assert.ok(!render.renderArticle(plain).includes('링크카드'));
 });
+
+test('lists slightly over the limit are fitted instead of failing the run (long reviews with many headings)', () => {
+  const base = { ...strategy(), outline: Array.from({ length: 20 }, (_, i) => `소제목 ${i + 1}`), keywords: Array.from({ length: 11 }, (_, i) => `키워드${i}`), limitations: Array.from({ length: 15 }, (_, i) => `한계 ${i}`) };
+  const s = types.parseStrategy(base);
+  assert.equal(s.outline.length, 16); assert.match(s.outline[15], /소제목 16 \/ 소제목 17/); assert.match(s.outline[15], /소제목 20$/);
+  assert.equal(s.keywords.length, 8); assert.equal(s.limitations.length, 12);
+  assert.throws(() => types.parseStrategy({ ...base, outline: 'x' }), /목록 형식/);
+  const sec = { ...article().sections[0], paragraphs: Array.from({ length: 35 }, (_, i) => `문단 ${i}입니다.`) };
+  const a = types.parseArticle({ ...article(), sections: [sec], hashtags: Array.from({ length: 13 }, (_, i) => `태그${i}`) });
+  assert.equal(a.sections[0].paragraphs.length, 35); assert.equal(a.hashtags.length, 10);
+});
