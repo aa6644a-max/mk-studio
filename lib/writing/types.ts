@@ -52,6 +52,11 @@ export function str(value: unknown, max: number, required = false): string {
   if (typeof value !== "string" || value.length > max || (required && !value.trim())) throw new WritingError(`텍스트 입력을 확인해주세요 (최대 ${max.toLocaleString()}자).`);
   return value.trim();
 }
+/** 모델이 만든 짧은 서술(분류명·소제목 등)이 한도를 넘었다고 끝낸 조사를 버리지 않도록 잘라서 받는다. */
+export function clip(value: unknown, max: number, required = false): string {
+  if (typeof value === "string" && value.trim().length > max) value = value.trim().slice(0, max).trim();
+  return str(value, max, required);
+}
 /** 모델이 **강조** 대신 <b>태그를 그대로 쓰는 경우가 있다. 렌더러는 이스케이프하므로 태그가 글자로 노출되기 전에 **로 통일한다. */
 export function normalizeBold(s: string): string {
   return s.replace(/<(b|strong)\s*>([\s\S]*?)<\/\1\s*>/gi, "**$2**").replace(/<\/?(b|strong)\s*>/gi, "");
@@ -104,7 +109,7 @@ export function parseStrategy(value: unknown): Strategy {
   if (typeof s.length !== "number" || !Number.isFinite(s.length) || s.length < 500 || s.length > 8000) throw new WritingError("목표 분량은 500~8,000자여야 합니다.");
   const outline = fitStrings(s.outline, MAX_OUTLINE, 200, "merge");
   if (!outline.length) throw new WritingError("목차가 비어 있습니다.");
-  return { domain: str(s.domain, 100, true), intent: str(s.intent, 100, true), audience: str(s.audience, 300, true), question: str(s.question, 500, true), angle: str(s.angle, 1000, true), keywords: fitStrings(s.keywords, 8, 80, "cut"), outline, length: Math.round(s.length), voice: s.voice, limitations: fitStrings(s.limitations, 12, 500, "merge") };
+  return { domain: clip(s.domain, 100, true), intent: clip(s.intent, 100, true), audience: clip(s.audience, 300, true), question: clip(s.question, 500, true), angle: clip(s.angle, 1000, true), keywords: fitStrings(s.keywords, 8, 80, "cut"), outline, length: Math.round(s.length), voice: s.voice, limitations: fitStrings(s.limitations, 12, 500, "merge") };
 }
 export function parseArticle(value: unknown): Article {
   const a = record(value);
@@ -112,7 +117,7 @@ export function parseArticle(value: unknown): Article {
   const sections = a.sections.map((raw): Section => {
     const s = record(raw);
     if (!Array.isArray(s.facts) || s.facts.length > 20) throw new WritingError("정보표 형식이 올바르지 않습니다.");
-    return { id: str(s.id, 80, true), heading: normalizeBold(str(s.heading, 200)), paragraphs: strings(s.paragraphs, MAX_PARAGRAPHS, 3000).map(normalizeBold), sourceIds: strings(s.sourceIds, 30, 80), experienceIds: strings(s.experienceIds, 20, 80), imageIds: strings(s.imageIds, 20, 80), facts: s.facts.map(f => { const r = record(f); return { label: normalizeBold(str(r.label, 100, true)), value: normalizeBold(str(r.value, 1000, true)) }; }), tipTitle: normalizeBold(str(s.tipTitle, 100)), tipBody: normalizeBold(str(s.tipBody, 500)), highlight: normalizeBold(str(s.highlight, 300)) };
+    return { id: str(s.id, 80, true), heading: normalizeBold(clip(s.heading, 200)), paragraphs: strings(s.paragraphs, MAX_PARAGRAPHS, 3000).map(normalizeBold), sourceIds: strings(s.sourceIds, 30, 80), experienceIds: strings(s.experienceIds, 20, 80), imageIds: strings(s.imageIds, 20, 80), facts: s.facts.map(f => { const r = record(f); return { label: normalizeBold(clip(r.label, 100, true)), value: normalizeBold(str(r.value, 1000, true)) }; }), tipTitle: normalizeBold(clip(s.tipTitle, 100)), tipBody: normalizeBold(str(s.tipBody, 500)), highlight: normalizeBold(clip(s.highlight, 300)) };
   });
   if (new Set(sections.map(s => s.id)).size !== sections.length) throw new WritingError("본문 구역 ID가 중복됐습니다.");
   return { titles: strings(a.titles, 8, 200).map(normalizeBold), sections, hashtags: fitStrings(a.hashtags, 10, 100, "cut") };
