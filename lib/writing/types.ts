@@ -61,22 +61,28 @@ export function clip(value: unknown, max: number, required = false): string {
 export function normalizeBold(s: string): string {
   return s.replace(/<(b|strong)\s*>([\s\S]*?)<\/\1\s*>/gi, "**$2**").replace(/<\/?(b|strong)\s*>/gi, "");
 }
+/** 모델은 빈 목록을 null로 주거나 빼먹고, 빈 문자열 항목을 섞기도 한다. 목록으로 볼 수 없는 값만 실패시킨다. */
+function listItems(value: unknown): string[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) throw new WritingError("목록 형식을 확인해주세요.");
+  return value.filter((v): v is string => typeof v === "string" && !!v.trim());
+}
 export function strings(value: unknown, maxItems = 12, maxChars = 1000): string[] {
-  if (!Array.isArray(value) || value.length > maxItems) throw new WritingError("목록 형식을 확인해주세요.");
-  return value.map(v => str(v, maxChars, true));
+  const items = listItems(value);
+  if (items.length > maxItems) throw new WritingError("목록 형식을 확인해주세요.");
+  return items.map(v => str(v, maxChars, true));
 }
 /**
  * 모델이 만든 목록이 한도를 조금 넘는 일이 실제로 있다(긴 감상평의 소제목을 그대로 옮길 때 등).
  * 이미 끝낸 조사를 버리고 실패시키지 않도록 넘친 항목은 합치거나(merge) 잘라낸다(cut).
  */
 export function fitStrings(value: unknown, maxItems: number, maxChars: number, mode: "merge" | "cut"): string[] {
-  if (!Array.isArray(value)) throw new WritingError("목록 형식을 확인해주세요.");
-  let items: unknown[] = value;
+  let items = listItems(value);
   if (items.length > maxItems) {
-    const rest = items.slice(maxItems - 1).filter((v): v is string => typeof v === "string" && !!v.trim());
-    items = mode === "merge" ? [...items.slice(0, maxItems - 1), rest.join(" / ").slice(0, maxChars)] : items.slice(0, maxItems);
+    const rest = items.slice(maxItems - 1);
+    items = mode === "merge" ? [...items.slice(0, maxItems - 1), rest.join(" / ")] : items.slice(0, maxItems);
   }
-  return items.map(v => str(v, maxChars, true));
+  return items.map(v => clip(v, maxChars, true));
 }
 export function publicUrl(value: string): string {
   let url: URL;
@@ -117,8 +123,8 @@ export function parseArticle(value: unknown): Article {
   const sections = a.sections.map((raw): Section => {
     const s = record(raw);
     if (!Array.isArray(s.facts) || s.facts.length > 20) throw new WritingError("정보표 형식이 올바르지 않습니다.");
-    return { id: str(s.id, 80, true), heading: normalizeBold(clip(s.heading, 200)), paragraphs: strings(s.paragraphs, MAX_PARAGRAPHS, 3000).map(normalizeBold), sourceIds: strings(s.sourceIds, 30, 80), experienceIds: strings(s.experienceIds, 20, 80), imageIds: strings(s.imageIds, 20, 80), facts: s.facts.map(f => { const r = record(f); return { label: normalizeBold(clip(r.label, 100, true)), value: normalizeBold(str(r.value, 1000, true)) }; }), tipTitle: normalizeBold(clip(s.tipTitle, 100)), tipBody: normalizeBold(str(s.tipBody, 500)), highlight: normalizeBold(clip(s.highlight, 300)) };
+    return { id: str(s.id, 80, true), heading: normalizeBold(clip(s.heading, 200)), paragraphs: strings(s.paragraphs, MAX_PARAGRAPHS, 3000).map(normalizeBold), sourceIds: fitStrings(s.sourceIds, 30, 80, "cut"), experienceIds: fitStrings(s.experienceIds, 20, 80, "cut"), imageIds: fitStrings(s.imageIds, 20, 80, "cut"), facts: s.facts.map(f => { const r = record(f); return { label: normalizeBold(clip(r.label, 100, true)), value: normalizeBold(str(r.value, 1000, true)) }; }), tipTitle: normalizeBold(clip(s.tipTitle, 100)), tipBody: normalizeBold(str(s.tipBody, 500)), highlight: normalizeBold(clip(s.highlight, 300)) };
   });
   if (new Set(sections.map(s => s.id)).size !== sections.length) throw new WritingError("본문 구역 ID가 중복됐습니다.");
-  return { titles: strings(a.titles, 8, 200).map(normalizeBold), sections, hashtags: fitStrings(a.hashtags, 10, 100, "cut") };
+  return { titles: fitStrings(a.titles, 8, 200, "cut").map(normalizeBold), sections, hashtags: fitStrings(a.hashtags, 10, 100, "cut") };
 }

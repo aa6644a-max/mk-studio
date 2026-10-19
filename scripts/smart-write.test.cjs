@@ -436,3 +436,12 @@ test('lists slightly over the limit are fitted instead of failing the run (long 
   const a = types.parseArticle({ ...article(), sections: [sec], hashtags: Array.from({ length: 13 }, (_, i) => `태그${i}`) });
   assert.equal(a.sections[0].paragraphs.length, 35); assert.equal(a.hashtags.length, 10);
 });
+
+test('missing or null lists and blank items do not fail the run (info posts with no experience)', () => {
+  const sec = { ...article().sections[0], experienceIds: null, imageIds: undefined, sourceIds: ["", "s1"], paragraphs: ["문단입니다.", ""] };
+  const a = types.parseArticle({ ...article(), sections: [sec], titles: Array.from({ length: 10 }, (_, i) => `제목 ${i}`) });
+  assert.deepEqual(a.sections[0].experienceIds, []); assert.deepEqual(a.sections[0].imageIds, []);
+  assert.deepEqual(a.sections[0].sourceIds, ["s1"]); assert.equal(a.sections[0].paragraphs.length, 1); assert.equal(a.titles.length, 8);
+  const s = types.parseStrategy({ ...strategy(), limitations: null });
+  assert.deepEqual(s.limitations, []);
+});
