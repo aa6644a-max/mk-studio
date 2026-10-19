@@ -148,7 +148,10 @@ ${run.sources.filter(s => s.kind === "tmdb").length === 1 ? "- 작품 하나를 
       // Tuning values must not discard completed research. Repair what has a safe default, keep the rest strict.
       const proposed = record(result.strategy);
       if (proposed.voice !== "full" && proposed.voice !== "light") { proposed.voice = "full"; notice(run, "문체 강도를 판단하지 못해 기본 MK 문체로 작성합니다."); }
-      if (typeof proposed.length === "number" && Number.isFinite(proposed.length)) proposed.length = Math.min(8000, Math.max(500, Math.round(proposed.length)));
+      // 모델이 분량을 "약 2,500자"처럼 문자열로 주거나 빠뜨리는 일이 있다. 숫자를 뽑고, 없으면 입력한 분량 설정을 따른다.
+      let length: unknown = typeof proposed.length === "string" ? Number(proposed.length.replace(/[^\d.]/g, "")) : proposed.length;
+      if (typeof length !== "number" || !Number.isFinite(length) || length <= 0) length = { short: 1000, standard: 2200, long: 4000, auto: 2200 }[run.brief.length];
+      proposed.length = Math.min(8000, Math.max(500, Math.round(length as number)));
       run.strategy = parseStrategy(proposed);
       const before = run.tasks.length;
       if (allowResearch) enqueueTasks(run, parseTasks(result.tasks));
