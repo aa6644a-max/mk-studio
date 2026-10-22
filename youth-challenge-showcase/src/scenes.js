@@ -8,16 +8,17 @@
   const photo = (src, alt) => src ? `<img src="${esc(src)}" alt="${esc(alt)}">` : '';
 
   const body = {
-    hook: s => `<div class="hook-ring"></div><div class="hook-ring b"></div>`,
-    before: s => `<div class="ghost" aria-hidden="true">${esc(s.ghost)}</div>`,
-    doubt: s => `<div class="track a" aria-hidden="true">${(esc(s.repeat) + ' ').repeat(6)}</div><div class="track b" aria-hidden="true">${(esc(s.repeat) + ' ').repeat(6)}</div><div class="tag">${esc(s.tag)}</div>`,
-    turn: s => `<div class="bignum" aria-hidden="true">${esc(s.bignum)}</div>`,
-    experience: s => `<div class="cards">${s.cards.map((c, i) =>
-      `<div class="card" style="--i:${i}">${photo(c.photo, c.word)}<div class="lab">${esc(c.label)}</div><div><div class="word">${esc(c.word)}</div><div class="det">${esc(c.detail)}</div></div></div>`).join('')}</div>`,
-    journey: s => `<div class="map"><svg viewBox="0 0 1000 160" preserveAspectRatio="none"><path pathLength="1" d="M0 80 C 180 10, 320 150, 500 80 S 820 10, 1000 80"/></svg>${
-      s.nodes.map((n, i) => `<div class="node" style="--i:${i};left:${[0, 50, 100][i]}%"><span class="l">${esc(n.label)}</span><span class="d">${esc(n.detail)}</span><span class="e">${esc(n.en)}</span></div>`).join('')}</div>`,
-    today: s => `<div class="photo-wrap"><div class="photo">${s.photo ? photo(s.photo, '') : '실제 사진 / 결과물'}</div><p>${esc(s.photoCaption)}</p></div>`,
-    next: s => `<div class="circle"></div><div class="thanks">${esc(s.thanks)}</div>`
+    hook: () => `<div class="hook-ring"></div><div class="hook-ring b"></div>`,
+    ghost: s => `<div class="ghost" style="font-size:${s.ghostSize || 600}px" aria-hidden="true">${esc(s.ghost)}</div>`,
+    track: s => `<div class="track a" aria-hidden="true">${(esc(s.repeat) + ' ').repeat(6)}</div><div class="track b" aria-hidden="true">${(esc(s.repeat) + ' ').repeat(6)}</div><div class="tag">${esc(s.tag)}</div>`,
+    bignum: s => `<div class="bignum" aria-hidden="true">${esc(s.bignum)}</div>`,
+    chips: s => `<div class="chips">${s.chips.map((c, i) => `<span class="chip" style="--i:${i}">${esc(c)}</span>`).join('')}</div>`,
+    cards: s => `<div class="cards${s.slots ? ' tall' : ''}">${s.cards.map((c, i) =>
+      `<div class="card" style="--i:${i}"><div class="lab">${esc(c.label)}</div>${s.slots ? `<div class="slot">${c.photo ? photo(c.photo, c.word) : '<span>PHOTO</span>'}</div>` : photo(c.photo, c.word)}<div><div class="word">${esc(c.word)}</div>${c.detail ? `<div class="det">${esc(c.detail)}</div>` : ''}</div></div>`).join('')}</div>`,
+    timeline: s => { const n = s.nodes.length; return `<div class="map"><svg viewBox="0 0 1000 160" preserveAspectRatio="none"><path pathLength="1" d="M0 80 C 180 10, 320 150, 500 80 S 820 10, 1000 80"/></svg>${
+      s.nodes.map((x, i) => `<div class="node" style="--i:${i};left:${i / (n - 1) * 100}%"><span class="l">${esc(x.label)}</span>${x.detail ? `<span class="d">${esc(x.detail)}</span>` : ''}</div>`).join('')}</div>`; },
+    photo: s => `<div class="photo-wrap"><div class="photo">${s.photo ? photo(s.photo, '') : '실제 사진'}</div><p>${esc(s.photoCaption)}</p></div>`,
+    end: s => `<div class="circle"></div><div class="thanks">${esc(s.thanks)}</div>`
   };
 
   const stage = document.getElementById('stage');
@@ -26,7 +27,7 @@
     el.className = `scene t-${s.theme}`;
     el.dataset.id = s.id;
     el.style.setProperty('--n', s.headline.length);
-    el.innerHTML = `${(body[s.id] || (() => ''))(s)}<div class="eyebrow">${esc(s.eyebrow)}</div>${head(s.headline)}${s.sub ? `<div class="sub">${esc(s.sub)}</div>` : ''}<div class="foot">${String(idx + 1).padStart(2, '0')} / ${String(C.scenes.length).padStart(2, '0')}</div>`;
+    el.innerHTML = `${(body[s.kind] || (() => ''))(s)}<div class="eyebrow">${esc(s.eyebrow)}</div>${head(s.headline)}${s.sub ? `<div class="sub">${esc(s.sub)}</div>` : ''}<div class="foot">${String(idx + 1).padStart(2, '0')} / ${String(C.scenes.length).padStart(2, '0')}</div>`;
     stage.appendChild(el);
   });
   document.title = C.meta.title;
