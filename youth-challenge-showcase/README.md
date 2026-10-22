@@ -26,3 +26,12 @@ Pretendard → NanumSquare → Noto Sans KR → 시스템 폰트 순. 라이선�
 `assets/photos/field-1.jpg`, `field-2.jpg` … 순서대로 최대 20장(`content.json`의 `film.count`). 있는 것만 필름에 나오고 없는 번호는 자동으로 빠집니다.
 - 필름은 오른쪽에서 들어와 **한 번 지나가고 마지막 사진에서 멈춥니다**(반복 없음). 지나가는 시간은 `film.seconds`(기본 30초)로 조절.
 - 사진은 가로형(약 8:5)으로 잘려 보입니다. 세로 사진은 위아래가 크게 잘리니 가로로 크롭해 두면 좋습니다.
+
+## 사진 포함 단독 HTML (폰/메신저 전송용)
+사진을 `assets/photos/`에 넣은 뒤:
+```
+pip install pillow        # 사진을 긴 변 1400px로 줄여 용량을 낮춤 (없어도 동작)
+python3 tools/build-single.py --photos
+```
+→ 사진이 내장된 `presentation.html` 하나가 만들어집니다. 사진 25장 기준 수 MB 수준이며, 폴더 없이 폰에서 바로 열립니다.
+(`--photos` 없이 실행하면 사진 없는 가벼운 버전)

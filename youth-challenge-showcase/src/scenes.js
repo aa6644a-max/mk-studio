@@ -40,6 +40,8 @@
     const base = 'assets/photos/' + img.dataset.auto + '.';
     let k = 0;
     img.onload = () => res(true);
+    const emb = window.PHOTOS && window.PHOTOS[img.dataset.auto]; // build-single.py --photos 로 내장된 사진
+    if (emb) { img.src = emb; return; }
     img.onerror = () => { if (++k < exts.length) img.src = base + exts[k]; else { img.remove(); res(false); } };
     img.src = base + exts[0];
   });
