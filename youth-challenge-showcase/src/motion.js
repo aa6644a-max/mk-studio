@@ -5,7 +5,8 @@
   const count = document.getElementById('count'), notes = document.getElementById('notes');
   const params = new URLSearchParams(location.search);
   const ch = 'BroadcastChannel' in window ? new BroadcastChannel('youth-showcase') : null;
-  let cur = -1, gen = 0;
+  let cur = -1, gen = 0, filmAnim = null;
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches || params.has('static');
 
   function fit() {
     const k = Math.min(innerWidth / 1920, innerHeight / 1080);
@@ -31,7 +32,18 @@
     count.textContent = `${String(cur + 1).padStart(2, '0')} / ${String(N).padStart(2, '0')} · ${C.scenes[cur].name}`;
     if (!notes.hidden) renderNotes();
     history.replaceState(null, '', '#' + (cur + 1));
+    if (filmAnim) { filmAnim.cancel(); filmAnim = null; }
+    const strip = el.querySelector('.film-strip');
+    if (strip) window.photosReady.then(() => { if (gen === my) runFilm(strip); });
     if (!fromRemote && ch) ch.postMessage({ go: cur });
+  }
+
+  // 필름 스트립: 오른쪽에서 들어와 한 번 지나가고 마지막 프레임에서 멈춘다(반복 없음).
+  function runFilm(strip) {
+    const W = strip.scrollWidth, end = W > 1920 ? 1920 - W : (1920 - W) / 2;
+    const sec = still ? 0.001 : Number(strip.dataset.seconds) || 30;
+    filmAnim = strip.animate([{ transform: 'translateX(1920px)' }, { transform: `translateX(${end}px)` }],
+      { duration: sec * 1000, delay: still ? 0 : 1000, easing: 'linear', fill: 'both' });
   }
 
   function toggleNotes() { notes.hidden = !notes.hidden; if (!notes.hidden) renderNotes(); }

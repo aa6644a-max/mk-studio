@@ -31,11 +31,12 @@
       "repeat": "하고 싶은 일", "tag": "PANDEMIC",
       "note": "[원래 하고 싶었던 일이 무엇이었는지 한 문장]. 팬데믹으로 결국 전공을 선택하게 된 이야기. 문장이 정착하면 2초 쉬기." },
 
-    { "id": "field", "kind": "ghost", "name": "FIELD", "time": "01:15–01:45", "theme": "blue",
+    { "id": "field", "kind": "film", "name": "FIELD", "time": "01:15–01:45", "theme": "blue",
       "eyebrow": "03. WORK / 건설 현장",
       "headline": [{ "t": "건설 현장에서" }, { "t": "해야만 하는 일을 했습니다.", "accent": true }],
       "sub": "건축학 전공 · 건설회사 현장대리인 · 현장시공 직접 담당",
       "ghost": "해야만", "ghostSize": 380,
+      "film": { "count": 20, "seconds": 30, "prefix": "field" },
       "note": "건설회사에서 현장대리인 및 현장시공을 직접 담당하며 회사생활. [배운 점/힘들었던 점 한 줄]" },
 
     { "id": "kept", "kind": "chips", "name": "KEPT GOING", "time": "01:45–02:10", "theme": "paper",

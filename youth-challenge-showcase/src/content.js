@@ -83,7 +83,7 @@ window.CONTENT = {
     },
     {
       "id": "field",
-      "kind": "ghost",
+      "kind": "film",
       "name": "FIELD",
       "time": "01:15–01:45",
       "theme": "blue",
@@ -100,6 +100,11 @@ window.CONTENT = {
       "sub": "건축학 전공 · 건설회사 현장대리인 · 현장시공 직접 담당",
       "ghost": "해야만",
       "ghostSize": 380,
+      "film": {
+        "count": 20,
+        "seconds": 30,
+        "prefix": "field"
+      },
       "note": "건설회사에서 현장대리인 및 현장시공을 직접 담당하며 회사생활. [배운 점/힘들었던 점 한 줄]"
     },
     {

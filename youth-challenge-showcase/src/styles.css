@@ -183,3 +183,13 @@ html,body{background:#e9e7e1}
 .thanks{color:var(--ink)}
 #ui{background:rgba(16,21,27,.78)}
 .t-lime .sub{max-width:800px}
+
+/* film strip (scene: field) */
+.film{position:absolute;left:0;width:1920px;top:520px;height:340px;overflow:hidden;z-index:1}
+.film-strip{position:absolute;left:0;top:0;height:100%;display:flex;align-items:center;gap:26px;padding:0 26px;background:#10151B;transform:translateX(1920px);width:max-content}
+.film-strip::before,.film-strip::after{content:"";position:absolute;left:0;right:0;height:14px;background:repeating-linear-gradient(90deg,#EAEFFE 0 22px,transparent 22px 44px);opacity:.9}
+.film-strip::before{top:14px}.film-strip::after{bottom:14px}
+.film-frame{position:relative;flex:none;width:400px;height:250px;background:linear-gradient(125deg,#34474c,#8da6a0);display:grid;place-items:center;color:rgba(255,255,255,.75);font-size:22px;letter-spacing:.2em;overflow:hidden}
+.film-frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.t-blue .headline{margin-top:60px}
+.t-blue .sub{max-width:1500px;left:var(--safe-x);right:auto;border-top:0;padding-top:0}

@@ -21,3 +21,8 @@ Pretendard → NanumSquare → Noto Sans KR → 시스템 폰트 순. 라이선�
 `assets/photos/`에 아래 이름으로 넣으면 자동 반영됩니다 (jpg/jpeg/png/webp). 코드 수정 불필요.
 - `now.jpg` — 6번 장면(대화장)
 - `rainmaker-1.jpg` 영화모임 · `rainmaker-2.jpg` 프로토타운 전시 설치 · `rainmaker-3.jpg` 동대구역 팝업
+
+## 현장 사진 필름 (4번 장면)
+`assets/photos/field-1.jpg`, `field-2.jpg` … 순서대로 최대 20장(`content.json`의 `film.count`). 있는 것만 필름에 나오고 없는 번호는 자동으로 빠집니다.
+- 필름은 오른쪽에서 들어와 **한 번 지나가고 마지막 사진에서 멈춥니다**(반복 없음). 지나가는 시간은 `film.seconds`(기본 30초)로 조절.
+- 사진은 가로형(약 8:5)으로 잘려 보입니다. 세로 사진은 위아래가 크게 잘리니 가로로 크롭해 두면 좋습니다.

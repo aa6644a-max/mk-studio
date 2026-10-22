@@ -11,6 +11,8 @@
 
   const body = {
     hook: () => `<div class="hook-ring"></div><div class="hook-ring b"></div>`,
+    film: s => body.ghost(s) + `<div class="film"><div class="film-strip" data-seconds="${s.film.seconds || 30}">${Array.from({ length: s.film.count }, (_, i) =>
+      `<div class="film-frame"><span>현장 ${String(i + 1).padStart(2, '0')}</span>${auto(s.film.prefix + '-' + (i + 1))}</div>`).join('')}</div></div>`,
     ghost: s => `<div class="ghost" style="font-size:${s.ghostSize || 600}px" aria-hidden="true">${esc(s.ghost)}</div>`,
     track: s => `<div class="track a" aria-hidden="true">${(esc(s.repeat) + ' ').repeat(6)}</div><div class="track b" aria-hidden="true">${(esc(s.repeat) + ' ').repeat(6)}</div><div class="tag">${esc(s.tag)}</div>`,
     bignum: s => `<div class="bignum" aria-hidden="true">${esc(s.bignum)}</div>`,
@@ -32,11 +34,23 @@
     el.innerHTML = `${(body[s.kind] || (() => ''))(s)}<div class="eyebrow">${esc(s.eyebrow)}</div>${head(s.headline)}${s.sub ? `<div class="sub">${esc(s.sub)}</div>` : ''}<div class="foot">${String(idx + 1).padStart(2, '0')} / ${String(C.scenes.length).padStart(2, '0')}</div>`;
     stage.appendChild(el);
   });
-  document.querySelectorAll('img[data-auto]').forEach(img => {
-    const exts = ['jpg', 'jpeg', 'png', 'webp'], base = 'assets/photos/' + img.dataset.auto + '.';
+  // 자동 사진: 확장자를 순서대로 시도. 하나라도 찾으면 못 찾은 필름 프레임은 제거한다.
+  const exts = ['jpg', 'jpeg', 'png', 'webp'];
+  const load = img => new Promise(res => {
+    const base = 'assets/photos/' + img.dataset.auto + '.';
     let k = 0;
-    img.onerror = () => { if (++k < exts.length) img.src = base + exts[k]; else img.remove(); };
+    img.onload = () => res(true);
+    img.onerror = () => { if (++k < exts.length) img.src = base + exts[k]; else { img.remove(); res(false); } };
     img.src = base + exts[0];
+  });
+  window.photosReady = Promise.all([...document.querySelectorAll('img[data-auto]')].map(img => {
+    const frame = img.closest('.film-frame');
+    return load(img).then(ok => ({ frame, ok }));
+  })).then(rs => {
+    document.querySelectorAll('.film-strip').forEach(strip => {
+      const mine = rs.filter(r => r.frame && strip.contains(r.frame));
+      if (mine.some(r => r.ok)) mine.filter(r => !r.ok).forEach(r => r.frame.remove());
+    });
   });
   document.title = C.meta.title;
 })();
