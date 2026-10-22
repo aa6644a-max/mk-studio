@@ -16,3 +16,8 @@
 
 ## 폰트
 Pretendard → NanumSquare → Noto Sans KR → 시스템 폰트 순. 라이선스를 확인한 폰트 파일은 행사 PC에 설치하거나 `assets/fonts/`에 추가하세요.
+
+## 사진 넣기 (로컬)
+`assets/photos/`에 아래 이름으로 넣으면 자동 반영됩니다 (jpg/jpeg/png/webp). 코드 수정 불필요.
+- `now.jpg` — 6번 장면(대화장)
+- `rainmaker-1.jpg` 영화모임 · `rainmaker-2.jpg` 프로토타운 전시 설치 · `rainmaker-3.jpg` 동대구역 팝업

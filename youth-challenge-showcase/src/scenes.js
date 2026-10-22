@@ -6,6 +6,8 @@
     `<h1 class="headline ${cls}">${lines.map((l, i) =>
       `<span class="ln"><span class="${l.accent ? 'accent' : ''}" style="--i:${i}">${esc(l.t)}</span></span>`).join('')}</h1>`;
   const photo = (src, alt) => src ? `<img src="${esc(src)}" alt="${esc(alt)}">` : '';
+  // 경로를 비워 두면 assets/photos/<이름>.(jpg|jpeg|png|webp) 를 자동으로 찾는다. 없으면 자리표시자 유지.
+  const auto = name => `<img data-auto="${esc(name)}" alt="">`;
 
   const body = {
     hook: () => `<div class="hook-ring"></div><div class="hook-ring b"></div>`,
@@ -14,10 +16,10 @@
     bignum: s => `<div class="bignum" aria-hidden="true">${esc(s.bignum)}</div>`,
     chips: s => `<div class="chips">${s.chips.map((c, i) => `<span class="chip" style="--i:${i}">${esc(c)}</span>`).join('')}</div>`,
     cards: s => `<div class="cards${s.slots ? ' tall' : ''}">${s.cards.map((c, i) =>
-      `<div class="card" style="--i:${i}"><div class="lab">${esc(c.label)}</div>${s.slots ? `<div class="slot">${c.photo ? photo(c.photo, c.word) : '<span>PHOTO</span>'}</div>` : photo(c.photo, c.word)}<div><div class="word">${esc(c.word)}</div>${c.detail ? `<div class="det">${esc(c.detail)}</div>` : ''}</div></div>`).join('')}</div>`,
+      `<div class="card" style="--i:${i}"><div class="lab">${esc(c.label)}</div>${s.slots ? `<div class="slot"><span>PHOTO</span>${c.photo ? photo(c.photo, c.word) : auto(s.id + '-' + (i + 1))}</div>` : photo(c.photo, c.word)}<div><div class="word">${esc(c.word)}</div>${c.detail ? `<div class="det">${esc(c.detail)}</div>` : ''}</div></div>`).join('')}</div>`,
     timeline: s => { const n = s.nodes.length; return `<div class="map"><svg viewBox="0 0 1000 160" preserveAspectRatio="none"><path pathLength="1" d="M0 80 C 180 10, 320 150, 500 80 S 820 10, 1000 80"/></svg>${
       s.nodes.map((x, i) => `<div class="node" style="--i:${i};left:${i / (n - 1) * 100}%"><span class="l">${esc(x.label)}</span>${x.detail ? `<span class="d">${esc(x.detail)}</span>` : ''}</div>`).join('')}</div>`; },
-    photo: s => `<div class="photo-wrap"><div class="photo">${s.photo ? photo(s.photo, '') : '실제 사진'}</div><p>${esc(s.photoCaption)}</p></div>`,
+    photo: s => `<div class="photo-wrap"><div class="photo"><span>실제 사진</span>${s.photo ? photo(s.photo, '') : auto(s.id)}</div><p>${esc(s.photoCaption)}</p></div>`,
     end: s => `<div class="circle"></div><div class="thanks">${esc(s.thanks)}</div>`
   };
 
@@ -29,6 +31,12 @@
     el.style.setProperty('--n', s.headline.length);
     el.innerHTML = `${(body[s.kind] || (() => ''))(s)}<div class="eyebrow">${esc(s.eyebrow)}</div>${head(s.headline)}${s.sub ? `<div class="sub">${esc(s.sub)}</div>` : ''}<div class="foot">${String(idx + 1).padStart(2, '0')} / ${String(C.scenes.length).padStart(2, '0')}</div>`;
     stage.appendChild(el);
+  });
+  document.querySelectorAll('img[data-auto]').forEach(img => {
+    const exts = ['jpg', 'jpeg', 'png', 'webp'], base = 'assets/photos/' + img.dataset.auto + '.';
+    let k = 0;
+    img.onerror = () => { if (++k < exts.length) img.src = base + exts[k]; else img.remove(); };
+    img.src = base + exts[0];
   });
   document.title = C.meta.title;
 })();
