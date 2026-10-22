@@ -9,7 +9,7 @@
 
   function fit() {
     const k = Math.min(innerWidth / 1920, innerHeight / 1080);
-    stage.style.transform = `scale(${k})`;
+    stage.style.transform = `translate(-50%,-50%) scale(${k})`;
   }
   addEventListener('resize', fit); fit();
 
@@ -63,6 +63,15 @@ addEventListener('keydown',e=>{if(['ArrowRight',' '].includes(e.key))ch.postMess
     else if (k.toLowerCase() === 'p') openPresenter();
     else if (k.toLowerCase() === 'h') document.body.classList.toggle('hide-ui');
   });
+
+  // 터치: 오른쪽 탭/왼쪽 스와이프 = 다음, 왼쪽 탭/오른쪽 스와이프 = 이전
+  let tx = 0, ty = 0;
+  addEventListener('touchstart', e => { tx = e.changedTouches[0].clientX; ty = e.changedTouches[0].clientY; }, { passive: true });
+  addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) go(cur + (dx < 0 ? 1 : -1));
+    else if (Math.abs(dx) < 10 && Math.abs(dy) < 10) go(cur + (tx > innerWidth / 2 ? 1 : -1));
+  }, { passive: true });
 
   if (params.has('static')) document.body.classList.add('static');
   if (params.has('clean')) document.body.classList.add('hide-ui');
