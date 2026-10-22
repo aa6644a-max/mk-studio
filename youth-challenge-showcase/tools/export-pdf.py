@@ -6,7 +6,7 @@ root = pathlib.Path(__file__).resolve().parent.parent
 out = root / 'fallback' / 'presentation-static.pdf'
 shots = []
 with sync_playwright() as p:
-    b = p.chromium.launch(executable_path='/opt/pw-browsers/chromium' if pathlib.Path('/opt/pw-browsers/chromium').is_file() else None)
+    import glob; ex = glob.glob('/opt/pw-browsers/chromium-*/chrome-linux/chrome'); b = p.chromium.launch(executable_path=ex[0] if ex else None)
     pg = b.new_page(viewport={'width': 1920, 'height': 1080})
     n = len(json.loads((root / 'src' / 'content.json').read_text())['scenes'])
     for i in range(1, n + 1):

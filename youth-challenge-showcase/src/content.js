@@ -131,7 +131,7 @@ window.CONTENT = {
       "kind": "bignum",
       "name": "TURNING POINT",
       "time": "02:10–02:40",
-      "theme": "ink",
+      "theme": "sage",
       "eyebrow": "05. TURNING POINT / 전환점",
       "headline": [
         {

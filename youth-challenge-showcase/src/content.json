@@ -45,7 +45,7 @@
       "sub": "학창시절부터 이어온 활동, 지금도 계속합니다.",
       "note": "학창시절 대외활동·블로그를 계속 이어 왔고, 최근에는 네이버 피드메이커로 활동 유지." },
 
-    { "id": "turn", "kind": "bignum", "name": "TURNING POINT", "time": "02:10–02:40", "theme": "ink",
+    { "id": "turn", "kind": "bignum", "name": "TURNING POINT", "time": "02:10–02:40", "theme": "sage",
       "eyebrow": "05. TURNING POINT / 전환점",
       "headline": [{ "t": "청년도전지원사업," }, { "t": "중기 수료.", "accent": true }],
       "sub": "다시, 하고 싶은 일에 도전하고 싶어졌습니다.",

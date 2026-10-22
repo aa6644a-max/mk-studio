@@ -144,3 +144,42 @@ body.static #ui,body.static #progress,body.static #notes{display:none!important}
 .slot,.photo{position:relative}.slot>img,.photo>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 @media (max-width:900px){#hint{display:none}#ui{padding:4px 10px;font-size:11px;left:8px;bottom:8px}}
 @media (orientation:portrait) and (max-width:900px){#viewport::before{content:"📱 가로로 돌려서 보세요";position:absolute;top:18px;left:0;right:0;text-align:center;color:#fff;font-size:15px;opacity:.85;z-index:5}}
+
+/* ===== LIGHT PALETTE (white tone) ===== */
+html,body{background:#e9e7e1}
+#progress{background:rgba(16,21,27,.08)}
+.t-ink,.t-coral,.t-paper,.t-dark{background:#fff;color:var(--ink)}
+.t-blue{background:#EAEFFE;color:var(--ink)}
+.t-sage{background:#E9F0EA;color:var(--ink)}
+.t-mint{background:#F3F7F4}
+.t-paper2{background:var(--paper)}
+.t-lime{background:#fff}
+.t-ink .accent,.t-dark .accent,.t-blue .accent,.t-sage .accent,.t-lime .accent{color:var(--blue)}
+.t-coral .accent,.t-paper .accent{color:var(--coral)}
+.t-ink .eyebrow,.t-dark .eyebrow,.t-blue .eyebrow,.t-sage .eyebrow,.t-lime .eyebrow,.t-paper2 .eyebrow{color:var(--blue)}
+.t-coral .eyebrow,.t-paper .eyebrow{color:var(--coral)}
+.t-ink .sub,.t-dark .sub,.t-sage .sub,.t-lime .sub,.t-blue .sub{color:#464647}
+.t-ink .headline,.t-sage .headline{margin-top:150px}
+.hook-ring.b{border-color:rgba(16,21,27,.18)}
+/* coral -> white: tracks stay coral */
+.track{-webkit-text-stroke:2px rgba(252,104,79,.5)}
+/* blue -> light blue tint */
+.t-blue .ghost{color:var(--blue);right:-20px;top:60px}
+.t-blue .sub{border-top-color:rgba(16,21,27,.35)}
+.bignum{color:rgba(16,21,27,.06)}
+/* sage (scene 6) */
+.t-sage .sub{position:absolute}
+/* timeline on light */
+.map path{stroke:var(--blue)}
+@keyframes node{to{background:var(--blue);opacity:1;box-shadow:0 0 0 14px rgba(69,104,247,.16)}}
+.node{background:#c9ced6}
+.node .e{color:var(--blue)}.node .d{color:#6b7480}
+/* cards on white */
+.card{box-shadow:0 12px 40px rgba(15,40,30,.1)}
+.card:nth-child(2){border:1px solid rgba(16,21,27,.1)}
+.t-dark .card:nth-child(2){background:#F4F0E8}
+/* ending */
+.circle{background:var(--lime);border-color:var(--ink)}
+.thanks{color:var(--ink)}
+#ui{background:rgba(16,21,27,.78)}
+.t-lime .sub{max-width:800px}
